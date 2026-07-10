@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Home — LinguistAI{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="jumbotron">
+    <h1 class="display-4">Welcome to LinguistAI</h1>
+    <p class="lead">Master languages with AI-powered conversational learning.</p>
+    <hr class="my-4">
+    {% if request.session.supabase_user_id %}
+      <a class="btn btn-primary btn-lg" href="{% url 'dashboard' %}">Go to Dashboard</a>
+    {% else %}
+      <a class="btn btn-primary btn-lg" href="{% url 'register' %}">Get Started</a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

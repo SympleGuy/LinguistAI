@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — LinguistAI{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row">
+    <div class="col-md-8">
+      <h2>Welcome, {{ user_email }}!</h2>
+      <p class="text-muted">You're now signed in to LinguistAI.</p>
+      
+      <div class="card mt-4">
+        <div class="card-body">
+          <h5 class="card-title">Learning Sessions</h5>
+          <p class="text-muted">Your learning sessions will appear here.</p>
+        </div>
+      </div>
+    </div>
+    
+    <div class="col-md-4">
+      <div class="card">
+        <div class="card-body">
+          <h5 class="card-title">Quick Stats</h5>
+          <p><strong>Email:</strong> {{ user_email }}</p>
+          <p><strong>Subscription:</strong> Free</p>
+          <a href="{% url 'logout' %}" class="btn btn-sm btn-secondary">Sign Out</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
