@@ -46,3 +46,6 @@ venv.bak/
 db.sqlite3
 /media/
 /staticfiles/
+
+# Ignore large project docs
+Project Proposal Complete Final - G3.pdf
