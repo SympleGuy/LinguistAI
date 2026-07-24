@@ -42,6 +42,8 @@
     .nav-right{display:flex;align-items:center;gap:8px}
     .btn-signin{color:var(--muted-fg);font-weight:500;font-size:.9rem;background:none;border:none;cursor:pointer;padding:8px 16px;border-radius:8px;transition:color .15s}
     .btn-signin:hover{color:var(--foreground)}
+    /* sign-in buttons that should only appear on the login page */
+    .to-login{display:none}
     .btn-try{background:var(--primary);color:#fff;font-weight:600;font-size:.9rem;border:none;border-radius:8px;padding:8px 20px;cursor:pointer;transition:opacity .15s}
     .btn-try:hover{opacity:.88}
     /* inner nav links */
@@ -243,7 +245,7 @@
         <button class="nav-link-item" id="nl-dashboard" onclick="showPage('dashboard')"><i class="bi bi-grid-1x2"></i>Dashboard</button>
         <button class="nav-link-item" id="nl-profile" onclick="showPage('profile')"><i class="bi bi-person"></i>Profile</button>
       </div>
-      <button class="btn-signin" onclick="showPage('login')">Sign in</button>
+      <button id="navbar-signin" class="btn-signin" style="display:none" onclick="showPage('login')">Sign in</button>
       <button class="btn-try" onclick="showPage('scenarios')">Try for Free</button>
     </div>
   </div>
@@ -430,7 +432,7 @@
             <li><i class="bi bi-check-circle-fill pf-check"></i>Basic grammar feedback</li>
             <li><i class="bi bi-check-circle-fill pf-check"></i>Progress tracking</li>
           </ul>
-          <button class="price-btn price-btn-default" onclick="showPage('login')">Get Started Free</button>
+          <button class="price-btn price-btn-default to-login" onclick="showPage('login')">Get Started Free</button>
         </div>
         <!-- Monthly -->
         <div class="price-card">
@@ -447,7 +449,7 @@
             <li><i class="bi bi-check-circle-fill pf-check"></i>Vocabulary suggestions</li>
             <li><i class="bi bi-check-circle-fill pf-check"></i>Priority AI responses</li>
           </ul>
-          <button class="price-btn price-btn-default" onclick="showPage('login')">Start 7-Day Trial</button>
+          <button class="price-btn price-btn-default to-login" onclick="showPage('login')">Start 7-Day Trial</button>
         </div>
         <!-- Annual -->
         <div class="price-card featured">
@@ -464,7 +466,7 @@
             <li><i class="bi bi-check-circle-fill pf-check"></i>Equivalent to $19.99 AUD/month</li>
             <li><i class="bi bi-check-circle-fill pf-check"></i>Cancel any time</li>
           </ul>
-          <button class="price-btn price-btn-featured" onclick="showPage('login')">Get Annual — Best Value</button>
+          <button class="price-btn price-btn-featured to-login" onclick="showPage('login')">Get Annual — Best Value</button>
         </div>
       </div>
     </div>
@@ -755,9 +757,14 @@ let micOn=false;
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
-  // toggle inner nav vs landing nav
   const isLanding=name==='landing';
-  document.getElementById('inner-nav').style.display=isLanding?'none':'flex';
+  const isAuthPage=name==='login';
+  // toggle inner nav vs landing/auth nav
+  document.getElementById('inner-nav').style.display=(isLanding||isAuthPage)?'none':'flex';
+  // show sign-in controls on landing (first page) and on the login page only
+  const navbarSign = document.getElementById('navbar-signin');
+  if(navbarSign) navbarSign.style.display = (isLanding||isAuthPage) ? 'inline-flex' : 'none';
+  document.querySelectorAll('.to-login').forEach(el=>{ el.style.display = (isLanding||isAuthPage) ? '' : 'none'; });
   // active nav link
   ['scenarios','dashboard','profile'].forEach(n=>{
     const el=document.getElementById('nl-'+n);
@@ -869,6 +876,15 @@ function togglePw(){
   i.type=i.type==='password'?'text':'password';
   e.className=i.type==='password'?'bi bi-eye':'bi bi-eye-slash';
 }
+
+// Ensure nav/sign-in visibility matches the initially active page on load
+document.addEventListener('DOMContentLoaded', ()=>{
+  const activePageEl = document.querySelector('.page.active');
+  const activeName = activePageEl ? activePageEl.id.replace('page-','') : 'landing';
+  // call showPage so it sets up nav and button visibility correctly
+  if(typeof showPage === 'function') showPage(activeName);
+});
+
 </script>
 </body>
 </html>
