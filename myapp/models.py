@@ -1,0 +1,82 @@
+from django.db import models
+import uuid
+
+
+class User(models.Model):
+    """
+    User model matching exactly the specification in 0001_initial.py
+    """
+    id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)
+    username = models.CharField(blank=True, max_length=255, null=True)
+    password_hash = models.CharField(blank=True, max_length=255, null=True)  # Stores hashed password from Supabase
+    target_language = models.CharField(blank=True, max_length=255, null=True)
+    proficiency_level = models.CharField(blank=True, max_length=255, null=True)
+    subscription_plan = models.CharField(blank=True, max_length=255, null=True)
+    created_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'User'
+        verbose_name_plural = 'Users'
+        db_table = 'users'
+
+    def __str__(self):
+        return self.username or f"User {self.id}"
+
+
+class Scenario(models.Model):
+    """
+    Scenario model matching exactly the specification in 0001_initial.py
+    """
+    id = models.AutoField(primary_key=True, serialize=False)
+    title = models.CharField(blank=True, max_length=255, null=True)
+    system_prompt = models.TextField(blank=True, null=True)
+    video_url = models.CharField(blank=True, max_length=500, null=True)
+
+    class Meta:
+        verbose_name = 'Scenario'
+        verbose_name_plural = 'Scenarios'
+        db_table = 'scenarios'
+
+    def __str__(self):
+        return self.title or f"Scenario {self.id}"
+
+
+class LearningSession(models.Model):
+    """
+    LearningSession model matching exactly the specification in 0001_initial.py
+    """
+    id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)
+    user_id = models.UUIDField()  # Reference to User.id
+    scenario_id = models.IntegerField()  # Reference to Scenario.id
+    started_at = models.DateTimeField(blank=True, null=True)
+    overall_score = models.FloatField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Learning Session'
+        verbose_name_plural = 'Learning Sessions'
+        db_table = 'learning_sessions'
+
+    def __str__(self):
+        return f"Session {self.id} for User {self.user_id}, Scenario {self.scenario_id}"
+
+
+class InteractionLog(models.Model):
+    """
+    InteractionLog model matching exactly the specification in 0001_initial.py
+    """
+    id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)
+    session_id = models.UUIDField()  # Reference to LearningSession.id
+    user_audio_url = models.CharField(blank=True, max_length=500, null=True)
+    user_transcript = models.TextField(blank=True, null=True)
+    ai_audio_url = models.CharField(blank=True, max_length=500, null=True)
+    ai_response_text = models.TextField(blank=True, null=True)
+    detailed_feedback = models.JSONField(blank=True, null=True)  # JSONField for feedback
+    created_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        verbose_name = 'Interaction Log'
+        verbose_name_plural = 'Interaction Logs'
+        db_table = 'interaction_logs'
+
+    def __str__(self):
+        return f"Interaction {self.id} for Session {self.session_id}"
