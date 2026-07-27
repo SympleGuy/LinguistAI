@@ -56,9 +56,12 @@ LinguistAI is a Django-based web application that helps users practice real-life
    - Create a Supabase project
    - Get your SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY
    - Create a `.env` file in the root directory with these variables
-4. Run migrations: `python manage.py migrate`
-5. Create a superuser (if needed): `python manage.py createsuperuser`
-6. Start the development server: `python manage.py runserver`
+4. Activate virtual environment:
+   - For bash/zsh: `source venv/bin/activate`
+   - For fish: `source venv/bin/activate.fish`
+5. Run migrations: `python manage.py migrate`
+6. Create a superuser (if needed): `python manage.py createsuperuser`
+7. Start the development server: `python manage.py runserver`
 
 ## Development Guidelines
 - Follow Django conventions for views, URLs, and templates

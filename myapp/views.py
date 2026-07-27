@@ -1,8 +1,15 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views import View
+import json
 from .supabase_client import supabase_admin
-from .models import Scenario
+from .models import Scenario, LearningSession, InteractionLog
+from django.contrib.auth import get_user_model
+User = get_user_model()
+from django.utils import timezone
 
 
 def register_view(request):
@@ -113,3 +120,264 @@ def scenarios_list(request):
         scenario_list.append(scenario_data)
 
     return JsonResponse(scenario_list, safe=False)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class ScenarioDetailView(View):
+    def get(self, request, scenario_id):
+        """Get detailed information about a specific scenario"""
+        try:
+            scenario = Scenario.objects.get(id=scenario_id)
+            scenario_data = {
+                "id": str(scenario.id),
+                "title": scenario.title if scenario.title is not None else "",
+                "system_prompt": scenario.system_prompt if scenario.system_prompt is not None else "",
+                "video_url": scenario.video_url if scenario.video_url is not None else ""
+            }
+            return JsonResponse(scenario_data)
+        except Scenario.DoesNotExist:
+            return JsonResponse({"error": "Scenario not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class StartSessionView(View):
+    def post(self, request):
+        """Start a new learning session for a user and scenario"""
+        try:
+            data = json.loads(request.body)
+            user_id = data.get('user_id')
+            scenario_id = int(data.get("scenario_id"))
+
+            if not user_id or not scenario_id:
+                return JsonResponse({"error": "user_id and scenario_id are required"}, status=400)
+
+            # Verify user exists (in Django auth system)
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return JsonResponse({"error": "User not found"}, status=404)
+
+            # Verify scenario exists
+            try:
+                scenario = Scenario.objects.get(id=scenario_id)
+            except Scenario.DoesNotExist:
+                return JsonResponse({"error": "Scenario not found"}, status=404)
+
+            # Create new learning session
+            session = LearningSession.objects.create(
+                user_id=user_id,
+                scenario_id=scenario_id,
+                started_at=timezone.now()
+            )
+
+            return JsonResponse({
+                "session_id": str(session.id),
+                "user_id": user_id,
+                "scenario_id": scenario_id,
+                "started_at": session.started_at.isoformat() if session.started_at else None
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SubmitResponseView(View):
+    def post(self, request, session_id):
+        """Submit a user response for a learning session and get AI feedback"""
+        try:
+            data = json.loads(request.body)
+            user_transcript = data.get('user_transcript', '')
+            user_audio_url = data.get('user_audio_url', '')
+
+            if not user_transcript:
+                return JsonResponse({"error": "user_transcript is required"}, status=400)
+
+            # Get the session
+            try:
+                session = LearningSession.objects.get(id=session_id)
+            except LearningSession.DoesNotExist:
+                return JsonResponse({"error": "Session not found"}, status=404)
+
+            # Get the scenario for context
+            try:
+                scenario = Scenario.objects.get(id=session.scenario_id)
+            except Scenario.DoesNotExist:
+                return JsonResponse({"error": "Associated scenario not found"}, status=404)
+
+            # Generate AI response and feedback (simplified version - in reality this would call Supabase/OpenAI)
+            # For now, we'll use the scenario's system_prompt as context and generate a basic response
+            ai_response = self.generate_ai_response(scenario.system_prompt, user_transcript)
+            detailed_feedback = self.generate_feedback(user_transcript)
+
+            # Create interaction log
+            interaction = InteractionLog.objects.create(
+                session_id=session.id,
+                user_transcript=user_transcript,
+                user_audio_url=user_audio_url,
+                ai_response_text=ai_response,
+                detailed_feedback=detailed_feedback
+            )
+
+            return JsonResponse({
+                "interaction_id": str(interaction.id),
+                "ai_response": ai_response,
+                "feedback": detailed_feedback,
+                "created_at": interaction.created_at.isoformat() if interaction.created_at else None
+            })
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+    def generate_ai_response(self, system_prompt, user_transcript):
+        """Generate AI response based on scenario context and user input"""
+        # This is a simplified version - in production this would call an LLM
+        # For now, return a basic acknowledgment
+        return f"I understand you said: '{user_transcript}'. Let's continue practicing!"
+
+    def generate_feedback(self, user_transcript):
+        """Generate feedback on user's response"""
+        # This is a simplified version - in production this would analyze grammar, pronunciation, etc.
+        feedback = {
+            "grammar_score": 85,
+            "pronunciation_score": 80,
+            "vocabulary_score": 78,
+            "comments": "Good effort! Try to use more complete sentences next time.",
+            "suggestions": ["Consider adding more detail to your response", "Pay attention to verb tenses"]
+        }
+        return feedback
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DashboardView(View):
+    def get(self, request, user_id):
+        """Get dashboard/progress data for a user"""
+        try:
+            # Verify user exists
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return JsonResponse({"error": "User not found"}, status=404)
+
+            # Get user's learning sessions
+            sessions = LearningSession.objects.filter(user_id=user_id).order_by('-started_at')
+
+            # Calculate stats
+            total_sessions = sessions.count()
+            completed_sessions = sessions.filter(overall_score__isnull=False).count()
+
+            # Get recent sessions with details
+            recent_sessions = []
+            for session in sessions[:10]:  # Last 10 sessions
+                try:
+                    scenario = Scenario.objects.get(id=session.scenario_id)
+                    recent_sessions.append({
+                        "session_id": str(session.id),
+                        "scenario_title": scenario.title if scenario.title else "Unknown Scenario",
+                        "scenario_id": session.scenario_id,
+                        "started_at": session.started_at.isoformat() if session.started_at else None,
+                        "overall_score": session.overall_score
+                    })
+                except Scenario.DoesNotExist:
+                    # Skip if scenario not found
+                    pass
+
+            # Calculate average scores from completed sessions
+            completed_with_scores = sessions.exclude(overall_score__isnull=True)
+            avg_grammar = 0
+            avg_pronunciation = 0
+
+            # In a real app, we'd calculate these from interaction logs
+            # For now, using placeholder values
+            if completed_with_scores.exists():
+                avg_grammar = 82  # placeholder
+                avg_pronunciation = 79  # placeholder
+
+            dashboard_data = {
+                "user_id": user_id,
+                "username": user.username if user.username else f"User {user_id}",
+                "total_sessions": total_sessions,
+                "completed_sessions": completed_sessions,
+                "average_grammar_score": avg_grammar,
+                "average_pronunciation_score": avg_pronunciation,
+                "recent_sessions": recent_sessions,
+                "streak_days": 0  # placeholder - would calculate from session dates
+            }
+
+            return JsonResponse(dashboard_data)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SessionHistoryView(View):
+    def get(self, request, user_id):
+        """Get learning session history for a user"""
+        try:
+            # Verify user exists
+            try:
+                user = User.objects.get(id=user_id)
+            except User.DoesNotExist:
+                return JsonResponse({"error": "User not found"}, status=404)
+
+            # Get user's learning sessions with scenario details
+            sessions = LearningSession.objects.filter(user_id=user_id).select_related().order_by('-started_at')
+
+            session_history = []
+            for session in sessions:
+                try:
+                    scenario = Scenario.objects.get(id=session.scenario_id)
+                    session_history.append({
+                        "session_id": str(session.id),
+                        "scenario": {
+                            "id": scenario.id,
+                            "title": scenario.title if scenario.title else "Unknown Scenario",
+                            "system_prompt": scenario.system_prompt if scenario.system_prompt else ""
+                        },
+                        "started_at": session.started_at.isoformat() if session.started_at else None,
+                        "ended_at": None,  # We don't track ended_at in current model
+                        "overall_score": session.overall_score,
+                        "interaction_count": InteractionLog.objects.filter(session_id=session.id).count()
+                    })
+                except Scenario.DoesNotExist:
+                    # Include session even if scenario is missing
+                    session_history.append({
+                        "session_id": str(session.id),
+                        "scenario": {
+                            "id": session.scenario_id,
+                            "title": "Scenario Not Found",
+                            "system_prompt": ""
+                        },
+                        "started_at": session.started_at.isoformat() if session.started_at else None,
+                        "ended_at": None,
+                        "overall_score": session.overall_score,
+                        "interaction_count": InteractionLog.objects.filter(session_id=session.id).count()
+                    })
+
+            return JsonResponse({
+                "user_id": user_id,
+                "sessions": session_history,
+                "total_count": len(session_history)
+            })
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class DebugSessionView(View):
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+            return JsonResponse({
+                'received_data': data,
+                'user_id_type': str(type(data.get('user_id'))),
+                'user_id_value': repr(data.get('user_id')),
+                'scenario_id_type': str(type(data.get('scenario_id'))),
+                'scenario_id_value': repr(data.get('scenario_id'))
+            })
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
