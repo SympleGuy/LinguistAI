@@ -3,10 +3,15 @@ from . import views
 
 urlpatterns = [
     path("", views.home_view, name="home"),
+    path("app/", views.spa_web_view, name="spa_web"),
     path("register/", views.register_view, name="register"),
     path("login/", views.login_view, name="login"),
     path("logout/", views.logout_view, name="logout"),
     path("dashboard/", views.dashboard_view, name="dashboard"),
+    path("api/auth/register/", views.register_view, name="api_register"),
+    path("api/auth/login/", views.login_view, name="api_login"),
+    path("api/auth/logout/", views.logout_view, name="api_logout"),
+    path("api/auth/me/", views.api_me, name="api_me"),
     path("api/scenarios/", views.scenarios_list, name="scenarios_list"),
     path("api/scenarios/<int:scenario_id>/", views.ScenarioDetailView.as_view(), name="scenario_detail"),
     path("api/sessions/start/", views.StartSessionView.as_view(), name="start_session"),

@@ -246,6 +246,7 @@
         <button class="nav-link-item" id="nl-profile" onclick="showPage('profile')"><i class="bi bi-person"></i>Profile</button>
       </div>
       <button id="navbar-signin" class="btn-signin" style="display:none" onclick="showPage('login')">Sign in</button>
+      <button id="navbar-logout" class="btn-signin" style="display:none" onclick="handleLogout()"><i class="bi bi-box-arrow-right"></i> Sign out</button>
       <button class="btn-try" onclick="showPage('scenarios')">Try for Free</button>
     </div>
   </div>
@@ -561,7 +562,7 @@
       <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:28px">
         <div>
           <h1 class="page-title">Progress Dashboard</h1>
-          <p style="color:var(--muted-fg);font-size:.88rem;margin-top:4px">Welcome back, Sofia — you're on a 7-day streak! 🔥</p>
+          <p style="color:var(--muted-fg);font-size:.88rem;margin-top:4px" id="dash-welcome">Welcome back!</p>
         </div>
         <button class="btn-try" onclick="showPage('scenarios')" style="display:flex;align-items:center;gap:6px">
           <i class="bi bi-mic-fill"></i> New Session
@@ -570,10 +571,10 @@
 
       <!-- Stats -->
       <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px">
-        <div class="stat-card"><div style="display:flex;justify-content:space-between;align-items:center"><span class="stat-lbl">Sessions Completed</span><div class="stat-icon"><i class="bi bi-bullseye"></i></div></div><div class="stat-val">47</div><div class="stat-delta">+3 this week</div></div>
-        <div class="stat-card"><div style="display:flex;justify-content:space-between;align-items:center"><span class="stat-lbl">Avg Grammar Score</span><div class="stat-icon"><i class="bi bi-graph-up"></i></div></div><div class="stat-val">85%</div><div class="stat-delta">+7% from last week</div></div>
-        <div class="stat-card"><div style="display:flex;justify-content:space-between;align-items:center"><span class="stat-lbl">Pronunciation Avg</span><div class="stat-icon"><i class="bi bi-mic"></i></div></div><div class="stat-val">82%</div><div class="stat-delta">+5% from last week</div></div>
-        <div class="stat-card"><div style="display:flex;justify-content:space-between;align-items:center"><span class="stat-lbl">Current Streak</span><div class="stat-icon"><i class="bi bi-fire"></i></div></div><div class="stat-val">7 days</div><div class="stat-delta">Personal best! 🏆</div></div>
+        <div class="stat-card"><div style="display:flex;justify-content:space-between;align-items:center"><span class="stat-lbl">Sessions Completed</span><div class="stat-icon"><i class="bi bi-bullseye"></i></div></div><div class="stat-val" id="dash-stat-sessions">0</div><div class="stat-delta">Real-time sync</div></div>
+        <div class="stat-card"><div style="display:flex;justify-content:space-between;align-items:center"><span class="stat-lbl">Avg Grammar Score</span><div class="stat-icon"><i class="bi bi-graph-up"></i></div></div><div class="stat-val" id="dash-stat-grammar">85%</div><div class="stat-delta">AI Evaluated</div></div>
+        <div class="stat-card"><div style="display:flex;justify-content:space-between;align-items:center"><span class="stat-lbl">Pronunciation Avg</span><div class="stat-icon"><i class="bi bi-mic"></i></div></div><div class="stat-val" id="dash-stat-pron">82%</div><div class="stat-delta">AI Evaluated</div></div>
+        <div class="stat-card"><div style="display:flex;justify-content:space-between;align-items:center"><span class="stat-lbl">Current Streak</span><div class="stat-icon"><i class="bi bi-fire"></i></div></div><div class="stat-val" id="dash-stat-streak">0 days</div><div class="stat-delta">Keep going! 🏆</div></div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
@@ -611,11 +612,8 @@
       <!-- Recent sessions -->
       <div style="background:#fff;border:1px solid var(--border);border-radius:16px;padding:24px">
         <div style="font-weight:700;font-size:.85rem;margin-bottom:16px">Recent Sessions</div>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <div class="sess-row"><div class="sess-icon">🍽️</div><div style="flex:1"><div style="font-weight:700;font-size:.875rem">At the Restaurant</div><div style="font-size:.75rem;color:var(--muted-fg)">Today, 2:15 PM · 14 min · French</div></div><span class="score-tag">G: 88%</span><span class="score-tag">P: 87%</span><button onclick="startConv('restaurant')" style="background:var(--secondary-bg);color:var(--primary);border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Retry</button></div>
-          <div class="sess-row"><div class="sess-icon">✈️</div><div style="flex:1"><div style="font-weight:700;font-size:.875rem">At the Airport</div><div style="font-size:.75rem;color:var(--muted-fg)">Yesterday, 7:00 PM · 11 min · English</div></div><span class="score-tag">G: 91%</span><span class="score-tag">P: 92%</span><button onclick="startConv('airport')" style="background:var(--secondary-bg);color:var(--primary);border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Retry</button></div>
-          <div class="sess-row"><div class="sess-icon">☕</div><div style="flex:1"><div style="font-weight:700;font-size:.875rem">Coffee Shop Small Talk</div><div style="font-size:.75rem;color:var(--muted-fg)">Mon, 9:30 AM · 9 min · Spanish</div></div><span class="score-tag">G: 79%</span><span class="score-tag">P: 81%</span><button onclick="startConv('coffee')" style="background:var(--secondary-bg);color:var(--primary);border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Retry</button></div>
-          <div class="sess-row"><div class="sess-icon">💼</div><div style="flex:1"><div style="font-weight:700;font-size:.875rem">Job Interview</div><div style="font-size:.75rem;color:var(--muted-fg)">Sun, 8:15 PM · 23 min · English</div></div><span class="score-tag">G: 85%</span><span class="score-tag">P: 78%</span><button onclick="startConv('job-interview')" style="background:var(--secondary-bg);color:var(--primary);border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Retry</button></div>
+        <div style="display:flex;flex-direction:column;gap:10px" id="dash-recent-list">
+          <div class="sess-row"><div class="sess-icon">🍽️</div><div style="flex:1"><div style="font-weight:700;font-size:.875rem">At the Restaurant</div><div style="font-size:.75rem;color:var(--muted-fg)">Today, 2:15 PM · French</div></div><span class="score-tag">Score: 88%</span><button onclick="startConv('restaurant')" style="background:var(--secondary-bg);color:var(--primary);border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Practice</button></div>
         </div>
       </div>
     </div>
@@ -686,20 +684,21 @@
         </div>
         <h2 style="font-size:1.6rem;font-weight:800;letter-spacing:-.025em;margin-bottom:6px" id="auth-heading">Welcome back</h2>
         <p style="color:var(--muted-fg);font-size:.875rem;margin-bottom:28px" id="auth-sub">Sign in to continue your language journey</p>
+        <div id="auth-error-msg" style="display:none;color:#dc2626;background:#fef2f2;border:1px solid #fecaca;padding:10px 14px;border-radius:10px;font-size:.85rem;margin-bottom:16px"></div>
         <div id="name-field" style="display:none;margin-bottom:16px">
-          <label class="form-label">Full Name</label>
-          <input class="form-field" type="text" placeholder="Your name"/>
+          <label class="form-label">Full Name / Username</label>
+          <input class="form-field" type="text" id="auth-name" placeholder="Your name"/>
         </div>
         <div style="margin-bottom:16px">
           <label class="form-label">Email</label>
-          <input class="form-field" type="email" placeholder="you@example.com"/>
+          <input class="form-field" type="email" id="auth-email" placeholder="you@example.com"/>
         </div>
         <div style="margin-bottom:28px;position:relative">
           <label class="form-label">Password</label>
           <input class="form-field" type="password" id="pw-input" placeholder="••••••••" style="padding-right:40px"/>
           <button onclick="togglePw()" style="position:absolute;right:12px;bottom:11px;background:none;border:none;color:var(--muted-fg);cursor:pointer"><i class="bi bi-eye" id="eye-i"></i></button>
         </div>
-        <button class="btn-cta-primary" style="width:100%;justify-content:center" onclick="showPage('dashboard')">
+        <button class="btn-cta-primary" style="width:100%;justify-content:center" onclick="handleAuthSubmit()">
           <span id="auth-btn-lbl">Sign In</span> <i class="bi bi-arrow-right"></i>
         </button>
         <div style="display:flex;align-items:center;gap:12px;margin:20px 0">
@@ -753,18 +752,26 @@ const SCENARIOS=[
 let activeFilter='All';
 let micOn=false;
 
-// ── NAVIGATION ────────────────────────────────────────────────
+// ── NAVIGATION & AUTH STATE ────────────────────────────────────
+let currentAuthMode = 'login';
+let currentUser = JSON.parse(localStorage.getItem('linguist_user') || 'null');
+let currentUserId = currentUser ? currentUser.id : (localStorage.getItem('linguist_user_id') || '00000000-0000-0000-0000-000000000001');
+localStorage.setItem('linguist_user_id', currentUserId);
+
 function showPage(name){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   document.getElementById('page-'+name).classList.add('active');
   const isLanding=name==='landing';
   const isAuthPage=name==='login';
+
   // toggle inner nav vs landing/auth nav
   document.getElementById('inner-nav').style.display=(isLanding||isAuthPage)?'none':'flex';
-  // show sign-in controls on landing (first page) and on the login page only
-  const navbarSign = document.getElementById('navbar-signin');
-  if(navbarSign) navbarSign.style.display = (isLanding||isAuthPage) ? 'inline-flex' : 'none';
+  
+  // toggle sign in vs sign out
+  updateUserNavUI(isLanding, isAuthPage);
+
   document.querySelectorAll('.to-login').forEach(el=>{ el.style.display = (isLanding||isAuthPage) ? '' : 'none'; });
+
   // active nav link
   ['scenarios','dashboard','profile'].forEach(n=>{
     const el=document.getElementById('nl-'+n);
@@ -772,10 +779,54 @@ function showPage(name){
   });
   window.scrollTo(0,0);
   if(name==='scenarios') renderScenarios();
+  if(name==='dashboard') loadDashboardData();
 }
 
-// ── SCENARIOS ─────────────────────────────────────────────────
-function renderScenarios(){
+function updateUserNavUI(isLanding, isAuthPage){
+  const signInBtn = document.getElementById('navbar-signin');
+  const signOutBtn = document.getElementById('navbar-logout');
+
+  if (currentUser) {
+    if(signInBtn) signInBtn.style.display = 'none';
+    if(signOutBtn) signOutBtn.style.display = (isLanding || isAuthPage) ? 'none' : 'inline-flex';
+  } else {
+    if(signInBtn) signInBtn.style.display = (isLanding || isAuthPage) ? 'inline-flex' : 'none';
+    if(signOutBtn) signOutBtn.style.display = 'none';
+  }
+}
+
+// ── SCENARIOS & SESSION STATE ──────────────────────────────────
+let currentSessionId = null;
+
+async function loadScenariosFromAPI(){
+  try {
+    const res = await fetch('/api/scenarios/');
+    if(res.ok){
+      const data = await res.json();
+      if(Array.isArray(data) && data.length > 0){
+        SCENARIOS = data.map(s=>({
+          id: String(s.id),
+          title: s.title || 'Untitled Scenario',
+          desc: s.description || s.desc || '',
+          category: s.category || 'Daily Life',
+          cefr: s.cefr || 'Beginner',
+          duration: s.duration || '10–15 min',
+          emoji: s.emoji || '💬',
+          popular: !!s.popular,
+          lang: s.lang || 'English',
+          msgs: s.msgs || [{r:'ai', t: `Welcome to ${s.title}! How can I help you today?`}],
+          fb: s.fb || [{i:'ℹ️', t:'Start speaking to receive AI feedback.'}],
+          vocab: s.vocab || []
+        }));
+      }
+    }
+  } catch(e) {
+    console.warn("Could not load scenarios from API, using fallback", e);
+  }
+}
+
+async function renderScenarios(){
+  await loadScenariosFromAPI();
   const q=(document.getElementById('scen-search')?.value||'').toLowerCase();
   const grid=document.getElementById('scenarios-grid');
   const list=SCENARIOS.filter(s=>{
@@ -810,8 +861,8 @@ function setFilter(btn,cat){
 }
 
 // ── CONVERSATION ──────────────────────────────────────────────
-function startConv(id){
-  const s=SCENARIOS.find(x=>x.id===id)||SCENARIOS[0];
+async function startConv(id){
+  const s=SCENARIOS.find(x=>String(x.id)===String(id))||SCENARIOS[0];
   document.getElementById('conv-title').textContent=s.title;
   document.getElementById('conv-lang').textContent=s.lang;
   document.getElementById('conv-banner').textContent=s.emoji;
@@ -822,14 +873,77 @@ function startConv(id){
       <div class="msg-bubble ${m.r==='ai'?'msg-ai':'msg-user'}">${m.t}</div>
     </div>`).join('');
   ml.scrollTop=ml.scrollHeight;
-  document.getElementById('fb-list').innerHTML=s.fb.map(f=>`
+  document.getElementById('fb-list').innerHTML=(s.fb||[]).map(f=>`
     <div class="fb-item"><span style="flex-shrink:0">${f.i}</span><span>${f.t}</span></div>`).join('');
-  document.getElementById('vocab-list').innerHTML=s.vocab.map(v=>`
+  document.getElementById('vocab-list').innerHTML=(s.vocab||[]).map(v=>`
     <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
       <span style="font-weight:600;color:var(--primary)">${v.w}</span>
       <span style="color:var(--muted-fg)">${v.d}</span>
     </div>`).join('');
   showPage('conversation');
+
+  // Call API to start real session
+  try {
+    const res = await fetch('/api/sessions/start/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: currentUserId, scenario_id: id })
+    });
+    if(res.ok){
+      const data = await res.json();
+      currentSessionId = data.session_id;
+      console.log('Started session:', currentSessionId);
+    }
+  } catch(e) {
+    console.warn("Could not create backend session:", e);
+  }
+}
+
+async function submitUserMessage(userText){
+  if(!userText) return;
+  const ml=document.getElementById('msg-list');
+  const d=document.createElement('div');
+  d.className='msg-wrap msg-user-wrap';
+  d.innerHTML=`<div class="msg-lbl">🧑 You</div><div class="msg-bubble msg-user">${userText}</div>`;
+  ml.appendChild(d);
+  ml.scrollTop=ml.scrollHeight;
+
+  if(!currentSessionId) return;
+
+  const typing=document.createElement('div');
+  typing.className='msg-wrap';
+  typing.id='ai-typing';
+  typing.innerHTML='<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai"><em>Typing...</em></div>';
+  ml.appendChild(typing);
+  ml.scrollTop=ml.scrollHeight;
+
+  try {
+    const res = await fetch(`/api/sessions/${currentSessionId}/respond/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_transcript: userText })
+    });
+    document.getElementById('ai-typing')?.remove();
+    if(res.ok){
+      const data = await res.json();
+      const aiMsg=document.createElement('div');
+      aiMsg.className='msg-wrap';
+      aiMsg.innerHTML=`<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response}</div>`;
+      ml.appendChild(aiMsg);
+      ml.scrollTop=ml.scrollHeight;
+
+      if(data.feedback){
+        const fbList=document.getElementById('fb-list');
+        fbList.innerHTML=`
+          <div class="fb-item"><span style="flex-shrink:0">📊</span><span>Grammar: ${data.feedback.grammar_score}% | Pronunciation: ${data.feedback.pronunciation_score}%</span></div>
+          <div class="fb-item"><span style="flex-shrink:0">💡</span><span>${data.feedback.comments}</span></div>
+        `;
+      }
+    }
+  } catch(e) {
+    document.getElementById('ai-typing')?.remove();
+    console.error("Error submitting response:", e);
+  }
 }
 
 function toggleMic(){
@@ -842,26 +956,17 @@ function toggleMic(){
   st.textContent=micOn?'🔴 Recording… speak now':'Press the mic to start speaking';
   st.style.color=micOn?'#dc2626':'';
   if(!micOn){
-    const ml=document.getElementById('msg-list');
-    const d=document.createElement('div');
-    d.className='msg-wrap msg-user-wrap';
-    d.innerHTML='<div class="msg-lbl">🧑 You</div><div class="msg-bubble msg-user">[Whisper transcription would appear here]</div>';
-    ml.appendChild(d);
-    ml.scrollTop=ml.scrollHeight;
+    submitUserMessage("Bonjour! J'aimerais commander s'il vous plaît.");
   }
 }
 
 function skipTurn(){
-  const ml=document.getElementById('msg-list');
-  const d=document.createElement('div');
-  d.className='msg-wrap';
-  d.innerHTML='<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">No problem! Let\'s move on. How else can I help you practise?</div>';
-  ml.appendChild(d);
-  ml.scrollTop=ml.scrollHeight;
+  submitUserMessage("Can you please help me practice next steps?");
 }
 
-// ── LOGIN ─────────────────────────────────────────────────────
+// ── AUTHENTICATION & DASHBOARD SYNC ────────────────────────────
 function setAuthMode(m){
+  currentAuthMode=m;
   const isReg=m==='register';
   document.getElementById('tab-login').classList.toggle('active',!isReg);
   document.getElementById('tab-register').classList.toggle('active',isReg);
@@ -869,7 +974,10 @@ function setAuthMode(m){
   document.getElementById('auth-heading').textContent=isReg?'Create your account':'Welcome back';
   document.getElementById('auth-sub').textContent=isReg?'Start your language journey today':'Sign in to continue your language journey';
   document.getElementById('auth-btn-lbl').textContent=isReg?'Create Account':'Sign In';
+  const errEl = document.getElementById('auth-error-msg');
+  if(errEl) errEl.style.display = 'none';
 }
+
 function togglePw(){
   const i=document.getElementById('pw-input');
   const e=document.getElementById('eye-i');
@@ -877,11 +985,124 @@ function togglePw(){
   e.className=i.type==='password'?'bi bi-eye':'bi bi-eye-slash';
 }
 
-// Ensure nav/sign-in visibility matches the initially active page on load
-document.addEventListener('DOMContentLoaded', ()=>{
+async function handleAuthSubmit(){
+  const email = document.getElementById('auth-email').value.trim();
+  const password = document.getElementById('pw-input').value;
+  const nameEl = document.getElementById('auth-name');
+  const username = (nameEl && nameEl.value.trim()) ? nameEl.value.trim() : email;
+  const errEl = document.getElementById('auth-error-msg');
+
+  if (errEl) errEl.style.display = 'none';
+
+  if (!email || !password) {
+    if(errEl){
+      errEl.textContent = 'Please enter email and password.';
+      errEl.style.display = 'block';
+    }
+    return;
+  }
+
+  const endpoint = currentAuthMode === 'register' ? '/api/auth/register/' : '/api/auth/login/';
+  const payload = { email, username, password };
+
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    if (res.ok && data.status === 'success') {
+      currentUser = data.user;
+      currentUserId = currentUser.id;
+      localStorage.setItem('linguist_user', JSON.stringify(currentUser));
+      localStorage.setItem('linguist_user_id', currentUserId);
+      showPage('dashboard');
+    } else {
+      if(errEl){
+        errEl.textContent = data.error || 'Authentication failed.';
+        errEl.style.display = 'block';
+      }
+    }
+  } catch(e) {
+    if(errEl){
+      errEl.textContent = 'Network or server error. Please try again.';
+      errEl.style.display = 'block';
+    }
+  }
+}
+
+async function handleLogout(){
+  try {
+    await fetch('/api/auth/logout/', { method: 'POST' });
+  } catch(e) {}
+  currentUser = null;
+  localStorage.removeItem('linguist_user');
+  showPage('landing');
+}
+
+async function loadDashboardData(){
+  if (!currentUserId) return;
+  try {
+    const res = await fetch(`/api/dashboard/${currentUserId}/`);
+    if (res.ok) {
+      const data = await res.json();
+      const welcome = document.getElementById('dash-welcome');
+      if(welcome) welcome.textContent = `Welcome back, ${data.username}! 🔥`;
+      
+      const sSess = document.getElementById('dash-stat-sessions');
+      if(sSess) sSess.textContent = data.total_sessions;
+
+      const sGram = document.getElementById('dash-stat-grammar');
+      if(sGram) sGram.textContent = `${data.average_grammar_score}%`;
+
+      const sPron = document.getElementById('dash-stat-pron');
+      if(sPron) sPron.textContent = `${data.average_pronunciation_score}%`;
+
+      const sStreak = document.getElementById('dash-stat-streak');
+      if(sStreak) sStreak.textContent = `${data.streak_days} days`;
+
+      const recList = document.getElementById('dash-recent-list');
+      if (recList && Array.isArray(data.recent_sessions)) {
+        if(data.recent_sessions.length === 0){
+          recList.innerHTML = '<div style="color:var(--muted-fg);font-size:.85rem">No sessions completed yet. Try starting a scenario!</div>';
+        } else {
+          recList.innerHTML = data.recent_sessions.map(s=>`
+            <div class="sess-row">
+              <div class="sess-icon">${s.emoji||'💬'}</div>
+              <div style="flex:1">
+                <div style="font-weight:700;font-size:.875rem">${s.scenario_title}</div>
+                <div style="font-size:.75rem;color:var(--muted-fg)">${s.started_at ? new Date(s.started_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : 'Recent'} · ${s.lang||'English'}</div>
+              </div>
+              <span class="score-tag">Score: ${s.overall_score}%</span>
+              <button onclick="startConv('${s.scenario_id}')" style="background:var(--secondary-bg);color:var(--primary);border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Practice</button>
+            </div>
+          `).join('');
+        }
+      }
+    }
+  } catch(e) {
+    console.warn("Could not load dashboard data", e);
+  }
+}
+
+// Check session on load
+document.addEventListener('DOMContentLoaded', async ()=>{
+  try {
+    const res = await fetch('/api/auth/me/');
+    if(res.ok){
+      const meData = await res.json();
+      if(meData.authenticated && meData.user){
+        currentUser = meData.user;
+        currentUserId = currentUser.id;
+        localStorage.setItem('linguist_user', JSON.stringify(currentUser));
+        localStorage.setItem('linguist_user_id', currentUserId);
+      }
+    }
+  } catch(e){}
+
   const activePageEl = document.querySelector('.page.active');
   const activeName = activePageEl ? activePageEl.id.replace('page-','') : 'landing';
-  // call showPage so it sets up nav and button visibility correctly
   if(typeof showPage === 'function') showPage(activeName);
 });
 
