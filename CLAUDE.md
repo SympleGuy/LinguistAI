@@ -1,114 +1,57 @@
-# LinguistAI - Language Learning Platform
+# CLAUDE.md: LinguistAI System Architecture & Context
 
-## Overview
-LinguistAI is a Django-based web application that helps users practice real-life conversations in various languages using AI-powered tutors. Users can practice scenarios like ordering food at a restaurant, checking into a hotel, job interviews, and more, with real-time feedback on pronunciation, grammar, and vocabulary.
+## 1. Project Overview & Objective
 
-## Tech Stack
-- **Backend**: Django 4.2
-- **Authentication & Database**: Supabase (PostgreSQL)
-- **Frontend**: 
-  - Main interface: linguistAi_web.html (single-page app with JavaScript routing)
-  - Auth views: Django templates (base.html, login.html, register.html, dashboard.html, home.html)
-  - Styling: Bootstrap 5.3
-  - Icons: Bootstrap Icons
-  - Fonts: Google Fonts (DM Sans)
-  - Interactivity: htmx for dynamic updates
-- **Environment**: Python with python-dotenv for environment management
+- **Project:** LinguistAI Capstone Project.
+- **Goal:** A web application acting as an AI language learning companion to bypass the "fluency plateau." It offers 24/7, real-time, context-specific conversational practice with multi-layered AI feedback (grammar, pronunciation).
 
-## Project Structure
-```
-/LinguistAI
-├── linguistAi_web.html          # Main frontend SPA (contains all pages: landing, scenarios, conversation, dashboard, profile, login)
-├── myapp/                       # Django application
-│   ├── views.py                 # View functions (auth, dashboard)
-│   ├── urls.py                  # URL routing
-│   ├── supabase_client.py       # Supabase client configuration
-│   └── templates/               # Django templates (used for auth flows)
-│       ├── base.html
-│       ├── home.html
-│       ├── dashboard.html
-│       ├── login.html
-│       └── register.html
-├── templates/                   # Additional Django templates (duplicate of myapp/templates/)
-│   ├── base.html
-│   ├── home.html
-│   ├── dashboard.html
-│   ├── login.html
-│   └── register.html
-├── requirements.txt             # Python dependencies
-├── README.md                    # Project overview
-└── .gitignore                   # Git ignore file
-```
+## 2. Tech Stack & Environment
 
-## Key Features
-- **Scenario-based learning**: Practice real-life conversations in various contexts
-- **Multi-language support**: 30+ languages from beginner to advanced levels
-- **Real-time AI feedback**: Instant feedback on pronunciation, grammar, and vocabulary
-- **Progress tracking**: Dashboard showing session history, scores, and streaks
-- **Voice interaction**: Microphone input simulation for speaking practice
-- **Vocabulary building**: Contextual vocabulary suggestions during conversations
-- **Responsive design**: Works on desktop and mobile devices
+- **Backend:** Django 4.2 (Python). Audio processing via `pydub` or `librosa`.
+- **Database & Auth:** Supabase (PostgreSQL).
+- **Frontend:** Single Page Application (SPA) structure (`linguistAi_web.html`) with JavaScript routing. Auth views use Django templates (`login.html`, `register.html`). UI components built with Bootstrap 5.3 (WCAG 2.1 Level AA compliant).
+- **Interactivity:** HTMX for dynamic HTML fragment swapping (no full page reloads).
+- **External AI APIs:** OpenAI Whisper (STT), Claude/GPT-4 (LLM), ElevenLabs (TTS).
+- **Security:** All API credentials MUST be stored as environment variables (via `python-dotenv`). NEVER expose them to the frontend or version control.
 
-## Setup Instructions
-1. Clone the repository
-2. Install dependencies: `pip install -r requirements.txt`
-3. Set up Supabase:
-   - Create a Supabase project
-   - Get your SUPABASE_URL, SUPABASE_ANON_KEY, and SUPABASE_SERVICE_ROLE_KEY
-   - Create a `.env` file in the root directory with these variables
-4. Activate virtual environment:
-   - For bash/zsh: `source venv/bin/activate`
-   - For fish: `source venv/bin/activate.fish`
-5. Run migrations: `python manage.py migrate`
-6. Create a superuser (if needed): `python manage.py createsuperuser`
-7. Start the development server: `python manage.py runserver`
+## 3. Database Schema & Supabase Rules
 
-## Development Guidelines
-- Follow Django conventions for views, URLs, and templates
-- Keep frontend modifications consistent with the existing Bootstrap 5.3 styling
-- When modifying linguistAi_web.html, ensure responsiveness is maintained
-- For Supabase interactions, use the existing supabase_client.py module
-- Keep user authentication flows secure - don't expose secret keys
-- Test new scenarios thoroughly across different languages and proficiency levels
-- The main frontend (linguistAi_web.html) uses JavaScript for page navigation - avoid full page reloads when possible
-- Auth views (login, register) use Django templates - maintain consistency with base.html styling
+- **Design Pattern:** Strictly Third Normal Form (3NF).
+- **Primary Keys:** Exclusively use `UUID`s to prevent IDOR vulnerabilities.
+- **Row Level Security (RLS):** Must be strictly enforced. Users can only SELECT, INSERT, UPDATE, DELETE their own sessions and logs.
+- **Core Tables & Responsibilities:**
+  - `users`: `id` (UUID), `username`, `password_hash` (Django PBKDF2), `target_language`, `proficiency_level` (CEFR), `subscription_plan`.
+  - `scenarios`: `id` (INT), `title`, `system_prompt` (defines AI persona), `video_url`. (Read-only for users).
+  - `learning_sessions`: `id` (UUID), `user_id`, `scenario_id`, `started_at`, `overall_score`.
+  - `interaction_logs`: `id` (UUID), `session_id`, `user_audio_url`, `user_transcript`, `ai_audio_url`, `ai_response_text`, `detailed_feedback`, `created_at`.
+- **JSONB Usage:** Use PostgreSQL `JSONB` for the `detailed_feedback` column in `interaction_logs` to flexibly store LLM grammar and pronunciation scores.
+- **Indexing:** B-Tree indexes required on `user_id` and `session_id` to optimize dashboard queries.
 
-## Important Notes
-- The main frontend is a single-page application (linguistAi_web.html) that uses JavaScript to show/hide different sections (landing, scenarios, conversation, dashboard, profile)
-- Authentication flows (login/register) use traditional Django views and templates
-- Supabase handles user authentication and stores user profiles, scenarios, and progress data
-- Environment variables should never be committed to version control
-- The application uses htmx for some dynamic updates in the linguistAi_web.html interface
+## 4. Coding Conventions & Best Practices
 
-## Common Development Tasks
-### Running the Development Server
-```bash
-python manage.py runserver
-```
+- **Python/Django:** Follow standard PEP-8 (`snake_case` for variables/functions, `PascalCase` for classes).
+- **Pseudocode/Documentation matching:** Abstract DB calls dynamically (e.g., mapping logical `DB_SELECT` to Django ORM or Supabase client).
+- **HTMX Swaps:** Use HTMX aggressively for chat updates (injecting transcribed text, AI feedback panels, and ElevenLabs `<audio>` elements) to prevent UI blocking.
+- **API Error Handling:** Implement exponential backoff for all external API calls (Whisper, Claude, ElevenLabs). Provide graceful UI fallbacks (e.g., text-input if mic fails).
 
-### Running Tests (if any exist)
-```bash
-python manage.py test
-```
+## 5. Core Implementation Workflows (Use Cases)
 
-### Creating New Scenarios
-1. Add new scenario objects to the SCENARIOS array in linguistAi_web.html
-2. Include appropriate messages, feedback, and vocabulary
-3. Ensure proper categorization and CEFR levels
-4. Test responsiveness on different screen sizes
+- **Audio Pipeline (UC4/UC5):** Frontend captures audio via `MediaRecorder` API -> Django verifies format/size -> Sends to Whisper STT -> Transcribed text injected via HTMX.
+- **AI Engine & Memory (UC6/UC14):** At every turn, Django queries `interaction_logs` to retrieve ordered session history. The LLM prompt = (Transcript + Scenario Context + User CEFR Level + Conversation History).
+- **Feedback Display (UC7/UC8):** HTMX injects a grammar correction panel below the chat bubble. Incorrect tokens should be highlighted via Bootstrap utility classes.
+- **AI Voice Playback (UC9):** ElevenLabs generates audio. The `<audio>` tag is injected into the DOM via HTMX to auto-play, decoupling audio loading from text rendering to maintain speed.
 
-### Modifying Styles
-- Edit the CSS variables in the <style> section of linguistAi_web.html for global theme changes
-- For component-specific styling, add to existing CSS blocks or create new ones
-- Maintain consistency with Bootstrap 5.3 utility classes when possible
+## 6. Business Logic & Constraints (NFRs)
 
-### Working with Supabase
-- Use supabase_client.py for all database operations
-- The supabase client handles user authentication
-- The supabase_admin client (using service role key) should be used for administrative operations
-- Never expose the service role key in client-side code
+- **Usage Limits (UC12):** System must intercept interactions to restrict 'Free Tier' users to a maximum of 5 conversational turns per day.
+- **Latency NFRs:** \* STT Transcript must appear in < 3 seconds.
+  - LLM first-word response in < 5 seconds.
+  - TTS playback initiates in < 2 seconds post-text generation.
+- **Garbage Collection:** CRON jobs must automatically delete heavy `.wav`/`.webm` files from cloud storage after 30 days, retaining only the text/JSON logs.
+- **Data Privacy:** Recorded audio must not be retained persistently; only text transcripts and generated AI voice files are kept long-term.
 
-## Database Schema (Supabase)
-Key tables include:
-- `users`: Stores user information (id, username, target_language, proficiency_level, subscription_plan)
-- Additional tables for scenarios, conversations, feedback, and vocabulary would be defined in Supabase
+## 7. Development Guidelines for AI Assistant
+
+- Prioritize HTMX over complex JS frameworks for UI reactivity.
+- Ensure all frontend changes remain fully responsive and accessible.
+- When writing backend views, separate concerns clearly: route handling, external API fetching, and Supabase database interactions should not be deeply tangled in a single function.
