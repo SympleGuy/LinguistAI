@@ -17,6 +17,9 @@ urlpatterns = [
     path("api/sessions/start/", views.StartSessionView.as_view(), name="start_session"),
     path("api/debug-session/", views.DebugSessionView.as_view(), name="debug_session"),
     path("api/sessions/<uuid:session_id>/respond/", views.SubmitResponseView.as_view(), name="submit_response"),
+    path("api/sessions/<uuid:session_id>/respond-audio/", views.SubmitAudioResponseView.as_view(), name="submit_audio_response"),
     path("api/dashboard/<uuid:user_id>/", views.DashboardView.as_view(), name="user_dashboard"),
     path("api/sessions/history/<uuid:user_id>/", views.SessionHistoryView.as_view(), name="session_history"),
+    path("api/user/profile/", views.UserProfileUpdateView.as_view(), name="user_profile_update_self"),
+    path("api/user/<uuid:user_id>/profile/", views.UserProfileUpdateView.as_view(), name="user_profile_update"),
 ]

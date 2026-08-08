@@ -52,16 +52,27 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'linguistai_project.wsgi.application'
+import dj_database_url
 
-# Database - We're using Supabase, so we'll use Django's default sqlite for dev
-# In production, you'd configure Supabase via dj-database-url or similar
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# Database configuration: PostgreSQL via Supabase URL if provided, otherwise fallback to SQLite for dev
+DATABASE_URL = config('DATABASE_URL', default=config('SUPABASE_DB_URL', default=''))
+
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            conn_health_checks=True,
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -91,6 +102,9 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -693,11 +693,33 @@
           <label class="form-label">Email</label>
           <input class="form-field" type="email" id="auth-email" placeholder="you@example.com"/>
         </div>
-        <div style="margin-bottom:28px;position:relative">
+        <div style="margin-bottom:16px;position:relative">
           <label class="form-label">Password</label>
           <input class="form-field" type="password" id="pw-input" placeholder="••••••••" style="padding-right:40px"/>
           <button onclick="togglePw()" style="position:absolute;right:12px;bottom:11px;background:none;border:none;color:var(--muted-fg);cursor:pointer"><i class="bi bi-eye" id="eye-i"></i></button>
         </div>
+        <div id="target-lang-field" style="display:none;margin-bottom:16px">
+          <label class="form-label">Target Language to Learn</label>
+          <select class="form-field" id="auth-target-lang">
+            <option value="English">🇬🇧 English</option>
+            <option value="French" selected>🇫🇷 French</option>
+            <option value="Spanish">🇪🇸 Spanish</option>
+            <option value="German">🇩🇪 German</option>
+            <option value="Japanese">🇯🇵 Japanese</option>
+            <option value="Chinese">🇨🇳 Chinese (Mandarin)</option>
+            <option value="Korean">🇰🇷 Korean</option>
+            <option value="Vietnamese">🇻🇳 Vietnamese</option>
+          </select>
+        </div>
+        <div id="cefr-level-field" style="display:none;margin-bottom:28px">
+          <label class="form-label">Current Proficiency Level (CEFR)</label>
+          <select class="form-field" id="auth-cefr-level">
+            <option value="Beginner">Beginner (A1 - A2)</option>
+            <option value="Intermediate">Intermediate (B1 - B2)</option>
+            <option value="Advanced">Advanced (C1 - C2)</option>
+          </select>
+        </div>
+
         <button class="btn-cta-primary" style="width:100%;justify-content:center" onclick="handleAuthSubmit()">
           <span id="auth-btn-lbl">Sign In</span> <i class="bi bi-arrow-right"></i>
         </button>
@@ -899,6 +921,34 @@ async function startConv(id){
   }
 }
 
+let mediaRecorder = null;
+let audioChunks = [];
+
+function updateFeedbackUI(feedback){
+  if(!feedback) return;
+  const fbList=document.getElementById('fb-list');
+  if(!fbList) return;
+
+  let correctionsHTML = '';
+  if(Array.isArray(feedback.corrections) && feedback.corrections.length > 0){
+    correctionsHTML = feedback.corrections.map(c => 
+      `<div class="fb-item" style="font-size:0.8rem;color:#dc2626;"><span style="flex-shrink:0">❌</span><span><s>${c.original}</s> ➔ <b style="color:#16a34a">${c.corrected}</b> (${c.explanation})</span></div>`
+    ).join('');
+  }
+
+  let suggestionsHTML = '';
+  if(Array.isArray(feedback.suggestions) && feedback.suggestions.length > 0){
+    suggestionsHTML = `<div class="fb-item" style="font-size:0.8rem;"><span style="flex-shrink:0">💡</span><span>Suggestions: ${feedback.suggestions.join('; ')}</span></div>`;
+  }
+
+  fbList.innerHTML = `
+    <div class="fb-item"><span style="flex-shrink:0">📊</span><span>Grammar: <b>${feedback.grammar_score}%</b> | Pron: <b>${feedback.pronunciation_score}%</b> | Vocab: <b>${feedback.vocabulary_score || 80}%</b></span></div>
+    <div class="fb-item"><span style="flex-shrink:0">📝</span><span>${feedback.comments}</span></div>
+    ${correctionsHTML}
+    ${suggestionsHTML}
+  `;
+}
+
 async function submitUserMessage(userText){
   if(!userText) return;
   const ml=document.getElementById('msg-list');
@@ -923,21 +973,26 @@ async function submitUserMessage(userText){
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_transcript: userText })
     });
+
     document.getElementById('ai-typing')?.remove();
+
+    if(res.status === 403){
+      const errData = await res.json();
+      alert(errData.error || "Daily limit reached for Free Tier (5/5 turns used).");
+      return;
+    }
+
     if(res.ok){
       const data = await res.json();
       const aiMsg=document.createElement('div');
       aiMsg.className='msg-wrap';
-      aiMsg.innerHTML=`<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response}</div>`;
+      let audioTag = data.ai_audio_url ? `<audio controls autoplay src="${data.ai_audio_url}" style="margin-top:8px;width:100%;height:32px;"></audio>` : '';
+      aiMsg.innerHTML=`<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response} ${audioTag}</div>`;
       ml.appendChild(aiMsg);
       ml.scrollTop=ml.scrollHeight;
 
       if(data.feedback){
-        const fbList=document.getElementById('fb-list');
-        fbList.innerHTML=`
-          <div class="fb-item"><span style="flex-shrink:0">📊</span><span>Grammar: ${data.feedback.grammar_score}% | Pronunciation: ${data.feedback.pronunciation_score}%</span></div>
-          <div class="fb-item"><span style="flex-shrink:0">💡</span><span>${data.feedback.comments}</span></div>
-        `;
+        updateFeedbackUI(data.feedback);
       }
     }
   } catch(e) {
@@ -946,23 +1001,112 @@ async function submitUserMessage(userText){
   }
 }
 
-function toggleMic(){
-  micOn=!micOn;
+async function toggleMic(){
   const btn=document.getElementById('mic-btn');
   const ico=document.getElementById('mic-icon');
   const st=document.getElementById('mic-status');
-  btn.classList.toggle('recording',micOn);
-  ico.className=micOn?'bi bi-mic-mute-fill':'bi bi-mic-fill';
-  st.textContent=micOn?'🔴 Recording… speak now':'Press the mic to start speaking';
-  st.style.color=micOn?'#dc2626':'';
+
   if(!micOn){
-    submitUserMessage("Bonjour! J'aimerais commander s'il vous plaît.");
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+
+      mediaRecorder.ondataavailable = e => {
+        if(e.data.size > 0) audioChunks.push(e.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        stream.getTracks().forEach(track => track.stop());
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        await sendAudioResponse(audioBlob);
+      };
+
+      mediaRecorder.start();
+      micOn = true;
+      btn.classList.add('recording');
+      ico.className = 'bi bi-mic-mute-fill';
+      st.textContent = '🔴 Recording… Speak now (Click mic when finished)';
+      st.style.color = '#dc2626';
+    } catch(err) {
+      console.warn("Microphone access unavailable or denied:", err);
+      st.textContent = 'Microphone unavailable. Please type below or enter sample text.';
+      const userText = prompt("Microphone access unavailable. Enter your message to practice:");
+      if(userText) submitUserMessage(userText);
+    }
+  } else {
+    micOn = false;
+    btn.classList.remove('recording');
+    ico.className = 'bi bi-mic-fill';
+    st.textContent = 'Processing audio & generating response…';
+    st.style.color = '';
+    if(mediaRecorder && mediaRecorder.state !== 'inactive'){
+      mediaRecorder.stop();
+    }
+  }
+}
+
+async function sendAudioResponse(audioBlob){
+  if(!currentSessionId) return;
+
+  const ml=document.getElementById('msg-list');
+  const typing=document.createElement('div');
+  typing.className='msg-wrap';
+  typing.id='ai-typing';
+  typing.innerHTML='<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai"><em>Transcribing audio & generating response...</em></div>';
+  ml.appendChild(typing);
+  ml.scrollTop=ml.scrollHeight;
+
+  const formData = new FormData();
+  formData.append('audio', audioBlob, 'recording.webm');
+
+  try {
+    const res = await fetch(`/api/sessions/${currentSessionId}/respond-audio/`, {
+      method: 'POST',
+      body: formData
+    });
+
+    document.getElementById('ai-typing')?.remove();
+
+    if(res.status === 403){
+      const errData = await res.json();
+      alert(errData.error || "Daily limit reached for Free Tier (5/5 turns used).");
+      return;
+    }
+
+    if(res.ok){
+      const data = await res.json();
+
+      // Show user transcribed message
+      const userMsg=document.createElement('div');
+      userMsg.className='msg-wrap msg-user-wrap';
+      userMsg.innerHTML=`<div class="msg-lbl">🧑 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || "Spoken Audio"}</div>`;
+      ml.appendChild(userMsg);
+
+      // Show AI response & play audio
+      const aiMsg=document.createElement('div');
+      aiMsg.className='msg-wrap';
+      let audioTag = data.ai_audio_url ? `<audio controls autoplay src="${data.ai_audio_url}" style="margin-top:8px;width:100%;height:32px;"></audio>` : '';
+      aiMsg.innerHTML=`<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response} ${audioTag}</div>`;
+      ml.appendChild(aiMsg);
+      ml.scrollTop=ml.scrollHeight;
+
+      if(data.feedback){
+        updateFeedbackUI(data.feedback);
+      }
+      const st=document.getElementById('mic-status');
+      if(st) st.textContent = 'Press the mic to start speaking';
+    }
+  } catch(e) {
+    document.getElementById('ai-typing')?.remove();
+    console.error("Error submitting audio response:", e);
   }
 }
 
 function skipTurn(){
-  submitUserMessage("Can you please help me practice next steps?");
+  submitUserMessage("Can you please help me practice next steps in this conversation?");
 }
+
 
 // ── AUTHENTICATION & DASHBOARD SYNC ────────────────────────────
 function setAuthMode(m){
@@ -971,6 +1115,11 @@ function setAuthMode(m){
   document.getElementById('tab-login').classList.toggle('active',!isReg);
   document.getElementById('tab-register').classList.toggle('active',isReg);
   document.getElementById('name-field').style.display=isReg?'block':'none';
+  const targetLangField = document.getElementById('target-lang-field');
+  if(targetLangField) targetLangField.style.display = isReg ? 'block' : 'none';
+  const cefrField = document.getElementById('cefr-level-field');
+  if(cefrField) cefrField.style.display = isReg ? 'block' : 'none';
+
   document.getElementById('auth-heading').textContent=isReg?'Create your account':'Welcome back';
   document.getElementById('auth-sub').textContent=isReg?'Start your language journey today':'Sign in to continue your language journey';
   document.getElementById('auth-btn-lbl').textContent=isReg?'Create Account':'Sign In';
@@ -990,6 +1139,10 @@ async function handleAuthSubmit(){
   const password = document.getElementById('pw-input').value;
   const nameEl = document.getElementById('auth-name');
   const username = (nameEl && nameEl.value.trim()) ? nameEl.value.trim() : email;
+  const targetLangEl = document.getElementById('auth-target-lang');
+  const target_language = targetLangEl ? targetLangEl.value : 'French';
+  const cefrEl = document.getElementById('auth-cefr-level');
+  const proficiency_level = cefrEl ? cefrEl.value : 'Beginner';
   const errEl = document.getElementById('auth-error-msg');
 
   if (errEl) errEl.style.display = 'none';
@@ -1003,7 +1156,8 @@ async function handleAuthSubmit(){
   }
 
   const endpoint = currentAuthMode === 'register' ? '/api/auth/register/' : '/api/auth/login/';
-  const payload = { email, username, password };
+  const payload = { email, username, password, target_language, proficiency_level };
+
 
   try {
     const res = await fetch(endpoint, {

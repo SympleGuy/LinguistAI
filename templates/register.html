@@ -7,13 +7,8 @@
     <div class="card-body p-4">
       <h3 class="text-center mb-4">Create Your Account</h3>
 
-      {% if messages %}
-        {% for message in messages %}
-          <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-        {% endfor %}
-      {% endif %}
-
       <form method="post">
+
         {% csrf_token %}
         <div class="mb-3">
           <label class="form-label">Username</label>
@@ -28,13 +23,27 @@
           <input type="password" name="password" class="form-control" minlength="6" required>
         </div>
         <div class="mb-3">
-          <label class="form-label">Proficiency Level</label>
-          <select name="proficiency_level" class="form-select">
-            <option value="Beginner">Beginner</option>
-            <option value="Intermediate">Intermediate</option>
-            <option value="Advanced">Advanced</option>
+          <label class="form-label">Target Language to Learn</label>
+          <select name="target_language" class="form-select">
+            <option value="English">🇬🇧 English</option>
+            <option value="French" selected>🇫🇷 French</option>
+            <option value="Spanish">🇪🇸 Spanish</option>
+            <option value="German">🇩🇪 German</option>
+            <option value="Japanese">🇯🇵 Japanese</option>
+            <option value="Chinese">🇨🇳 Chinese (Mandarin)</option>
+            <option value="Korean">🇰🇷 Korean</option>
+            <option value="Vietnamese">🇻🇳 Vietnamese</option>
           </select>
         </div>
+        <div class="mb-3">
+          <label class="form-label">Proficiency Level</label>
+          <select name="proficiency_level" class="form-select">
+            <option value="Beginner">Beginner (A1 - A2)</option>
+            <option value="Intermediate">Intermediate (B1 - B2)</option>
+            <option value="Advanced">Advanced (C1 - C2)</option>
+          </select>
+        </div>
+
         <button type="submit" class="btn btn-primary w-100">Sign Up</button>
       </form>
 

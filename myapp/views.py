@@ -5,12 +5,22 @@ from django.views.decorators.csrf import csrf_exempt
 from django.utils.decorators import method_decorator
 from django.views import View
 import json
+import uuid
+from pathlib import Path
+from django.conf import settings
 from .supabase_client import supabase_admin, supabase
 from django.contrib.auth.hashers import make_password, check_password
 from .models import User as AppUser, Scenario, LearningSession, InteractionLog
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.utils import timezone
+from .ai_services import (
+    generate_ai_conversation_response,
+    generate_grammar_and_feedback,
+    transcribe_audio_whisper,
+    generate_tts_elevenlabs
+)
+
 
 
 @csrf_exempt
@@ -26,56 +36,110 @@ def register_view(request):
 
         email = (data.get("email") or "").strip()
         input_username = (data.get("username") or "").strip()
-        # Primary user identifier is email if provided, otherwise username
-        user_identifier = email if email else input_username
+
+        # If username looks like email and email is empty
+        if not email and input_username and "@" in input_username:
+            email = input_username
+
+        if not email:
+            email = input_username
+
+        display_username = input_username if input_username else email.split("@")[0]
         password = data.get("password")
         proficiency_level = data.get("proficiency_level", "Beginner")
         target_language = data.get("target_language", "English")
 
-        if not user_identifier or not password:
+        if not email or not password:
             if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return JsonResponse({"error": "Email/Username and password are required"}, status=400)
-            messages.error(request, "Email/Username and password are required.")
+                return JsonResponse({"error": "Email and password are required"}, status=400)
+            messages.error(request, "Email and password are required.")
             return render(request, "register.html")
 
         # Check existing user by email or username
-        existing = AppUser.objects.filter(username=user_identifier).first()
-        if not existing and input_username:
-            existing = AppUser.objects.filter(username=input_username).first()
+        existing = AppUser.objects.filter(email=email).first() or AppUser.objects.filter(username=display_username).first()
 
         if existing:
             if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return JsonResponse({"error": "User with this email/username already exists"}, status=400)
+                return JsonResponse({"error": "User with this email or username already exists"}, status=400)
             messages.error(request, "User already exists.")
             return render(request, "register.html")
 
-        # Create user record in DB
+        # 1. Register user with Supabase Auth (if Supabase client is configured)
+        supabase_uid = None
+        if supabase:
+            try:
+                auth_res = supabase.auth.sign_up({"email": email, "password": password})
+                if auth_res and hasattr(auth_res, 'user') and auth_res.user:
+                    supabase_uid = str(auth_res.user.id)
+            except Exception as e:
+                print(f"[Supabase Auth] Sign up notice: {e}")
+
+        # 2. Assign primary key UUID (use Supabase Auth user ID if available, otherwise generate new UUID)
+        user_uuid = uuid.UUID(supabase_uid) if supabase_uid else uuid.uuid4()
+        now_dt = timezone.now()
+
+        # 3. Direct insertion into Supabase PostgreSQL Database 'users' table using Supabase Client
         hashed = make_password(password)
+        supabase_payload = {
+            "id": str(user_uuid),
+            "username": display_username,
+            "email": email,
+            "password_hash": hashed,
+            "target_language": target_language,
+            "proficiency_level": proficiency_level,
+            "subscription_plan": "Free",
+            "created_at": now_dt.isoformat()
+        }
+
+        if supabase_admin:
+            try:
+                supabase_admin.table("users").insert(supabase_payload).execute()
+            except Exception as e:
+                if "email" in str(e) and "column" in str(e):
+                    try:
+                        fallback_payload = supabase_payload.copy()
+                        fallback_payload.pop("email", None)
+                        supabase_admin.table("users").insert(fallback_payload).execute()
+                    except Exception as inner_e:
+                        print(f"[Supabase DB] Fallback insertion notice: {inner_e}")
+                else:
+                    print(f"[Supabase DB] Direct table insertion notice: {e}")
+        elif supabase:
+            try:
+                supabase.table("users").insert(supabase_payload).execute()
+            except Exception as e:
+                if "email" in str(e) and "column" in str(e):
+                    try:
+                        fallback_payload = supabase_payload.copy()
+                        fallback_payload.pop("email", None)
+                        supabase.table("users").insert(fallback_payload).execute()
+                    except Exception as inner_e:
+                        print(f"[Supabase DB] Fallback insertion notice: {inner_e}")
+                else:
+                    print(f"[Supabase DB] Direct table insertion notice: {e}")
+
+
+        # 4. Create local Django database record synced with Supabase user UUID
         app_user = AppUser.objects.create(
-            username=user_identifier,
+            id=user_uuid,
+            username=display_username,
+            email=email,
             password_hash=hashed,
             target_language=target_language,
             proficiency_level=proficiency_level,
             subscription_plan="Free",
-            created_at=timezone.now()
+            created_at=now_dt
         )
 
-        # Optional Supabase sign_up if configured
-        if supabase:
-            try:
-                supabase.auth.sign_up({"email": email or user_identifier, "password": password})
-            except Exception as e:
-                print(f"Supabase auth sign_up notice: {e}")
-
-        # Store session info
+        # 5. Store active session info
         request.session["supabase_user_id"] = str(app_user.id)
-        request.session["user_email"] = user_identifier
-        request.session["username"] = input_username or user_identifier
+        request.session["user_email"] = email
+        request.session["username"] = display_username
 
         user_data = {
             "id": str(app_user.id),
-            "username": input_username or user_identifier,
-            "email": user_identifier,
+            "username": display_username,
+            "email": email,
             "proficiency_level": app_user.proficiency_level or "Beginner",
             "target_language": app_user.target_language or "English",
             "subscription_plan": app_user.subscription_plan or "Free"
@@ -110,8 +174,8 @@ def login_view(request):
             messages.error(request, "Email and password are required.")
             return render(request, "login.html")
 
-        # Find in AppUser table
-        app_user = AppUser.objects.filter(username=login_input).first()
+        # Find in AppUser table by email or username
+        app_user = AppUser.objects.filter(email=login_input).first() or AppUser.objects.filter(username=login_input).first()
         authenticated = False
 
         if app_user and app_user.password_hash:
@@ -127,7 +191,8 @@ def login_view(request):
                     if not app_user:
                         app_user = AppUser.objects.create(
                             id=res.user.id,
-                            username=login_input,
+                            email=login_input,
+                            username=login_input.split("@")[0] if "@" in login_input else login_input,
                             created_at=timezone.now()
                         )
             except Exception:
@@ -140,14 +205,16 @@ def login_view(request):
             return render(request, "login.html")
 
         # Save session
+        user_email = app_user.email or app_user.username
+        user_display = app_user.username or user_email
         request.session["supabase_user_id"] = str(app_user.id)
-        request.session["user_email"] = app_user.username
-        request.session["username"] = app_user.username
+        request.session["user_email"] = user_email
+        request.session["username"] = user_display
 
         user_data = {
             "id": str(app_user.id),
-            "username": app_user.username,
-            "email": app_user.username,
+            "username": user_display,
+            "email": user_email,
             "proficiency_level": app_user.proficiency_level or "Beginner",
             "target_language": app_user.target_language or "English",
             "subscription_plan": app_user.subscription_plan or "Free"
@@ -168,12 +235,20 @@ def logout_view(request):
             supabase.auth.sign_out()
         except Exception:
             pass
+
+    # Clear any unconsumed messages stored in session
+    storage = messages.get_messages(request)
+    for _ in storage:
+        pass
+    storage.used = True
+
     request.session.flush()
 
     if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
         return JsonResponse({"status": "success", "message": "Logged out successfully"})
 
     return redirect("home")
+
 
 
 @csrf_exempt
@@ -186,17 +261,20 @@ def api_me(request):
     if not app_user:
         return JsonResponse({"authenticated": False}, status=401)
 
+    user_email = app_user.email or app_user.username
+    user_display = app_user.username or user_email
     return JsonResponse({
         "authenticated": True,
         "user": {
             "id": str(app_user.id),
-            "username": app_user.username,
-            "email": app_user.username,
+            "username": user_display,
+            "email": user_email,
             "proficiency_level": app_user.proficiency_level or "Beginner",
             "target_language": app_user.target_language or "English",
             "subscription_plan": app_user.subscription_plan or "Free"
         }
     })
+
 
 
 def home_view(request):
@@ -332,46 +410,103 @@ class StartSessionView(View):
             return JsonResponse({"error": str(e)}, status=500)
 
 
+def check_user_daily_turn_limit(user_id):
+    """
+    UC12: Restrict 'Free Tier' users to maximum 5 conversational turns per day.
+    Returns tuple: (is_allowed, today_turn_count, plan_name)
+    """
+    app_user = AppUser.objects.filter(id=user_id).first()
+    plan = (app_user.subscription_plan if (app_user and app_user.subscription_plan) else "Free").strip()
+
+    if plan.lower() != "free":
+        return True, 0, plan
+
+    today = timezone.now().date()
+    user_sessions = LearningSession.objects.filter(user_id=user_id).values_list('id', flat=True)
+    today_turns = InteractionLog.objects.filter(
+        session_id__in=user_sessions,
+        created_at__date=today
+    ).count()
+
+    if today_turns >= 5:
+        return False, today_turns, plan
+    return True, today_turns, plan
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class SubmitResponseView(View):
     def post(self, request, session_id):
-        """Submit a user response for a learning session and get AI feedback"""
+        """Submit a text user response for a learning session and get AI feedback"""
         try:
             data = json.loads(request.body)
-            user_transcript = data.get('user_transcript', '')
+            user_transcript = (data.get('user_transcript') or '').strip()
             user_audio_url = data.get('user_audio_url', '')
 
             if not user_transcript:
                 return JsonResponse({"error": "user_transcript is required"}, status=400)
 
-            # Get the session
             try:
                 session = LearningSession.objects.get(id=session_id)
             except LearningSession.DoesNotExist:
                 return JsonResponse({"error": "Session not found"}, status=404)
 
-            # Get the scenario for context
+            # UC12: Check daily turn limit for Free Tier users
+            is_allowed, today_turns, plan = check_user_daily_turn_limit(session.user_id)
+            if not is_allowed:
+                return JsonResponse({
+                    "error": "Daily turn limit reached. Free Tier users are restricted to 5 turns per day.",
+                    "limit_reached": True,
+                    "turns_today": today_turns,
+                    "daily_limit": 5
+                }, status=403)
+
             try:
                 scenario = Scenario.objects.get(id=session.scenario_id)
             except Scenario.DoesNotExist:
                 return JsonResponse({"error": "Associated scenario not found"}, status=404)
 
-            # Generate AI response and feedback (simplified version - in reality this would call Supabase/OpenAI)
-            # For now, we'll use the scenario's system_prompt as context and generate a basic response
-            ai_response = self.generate_ai_response(scenario.system_prompt, user_transcript)
-            detailed_feedback = self.generate_feedback(user_transcript)
+            app_user = AppUser.objects.filter(id=session.user_id).first()
+            user_level = app_user.proficiency_level if (app_user and app_user.proficiency_level) else "Beginner"
+            target_lang = app_user.target_language if (app_user and app_user.target_language) else "English"
 
-            # Create interaction log
+            # Retrieve context history from previous logs in this session
+            previous_logs = InteractionLog.objects.filter(session_id=session.id).order_by('created_at')[:10]
+            context_history = []
+            for log in previous_logs:
+                if log.user_transcript:
+                    context_history.append({"role": "user", "content": log.user_transcript})
+                if log.ai_response_text:
+                    context_history.append({"role": "assistant", "content": log.ai_response_text})
+
+            # AI Conversation Response
+            ai_response = generate_ai_conversation_response(
+                scenario_prompt=scenario.system_prompt or "",
+                user_level=user_level,
+                target_language=target_lang,
+                context_history=context_history,
+                user_transcript=user_transcript
+            )
+
+            # Multi-layered Grammar & Feedback
+            detailed_feedback = generate_grammar_and_feedback(
+                user_transcript=user_transcript,
+                target_language=target_lang,
+                user_level=user_level
+            )
+
+            # ElevenLabs Voice Audio Generation
+            ai_audio_url = generate_tts_elevenlabs(ai_response)
+
             interaction = InteractionLog.objects.create(
                 session_id=session.id,
                 user_transcript=user_transcript,
                 user_audio_url=user_audio_url,
                 ai_response_text=ai_response,
+                ai_audio_url=ai_audio_url or "",
                 detailed_feedback=detailed_feedback,
                 created_at=timezone.now()
             )
 
-            # Update overall_score of session in DB
             g_score = detailed_feedback.get("grammar_score", 85)
             p_score = detailed_feedback.get("pronunciation_score", 80)
             session.overall_score = round((g_score + p_score) / 2)
@@ -380,28 +515,122 @@ class SubmitResponseView(View):
             return JsonResponse({
                 "interaction_id": str(interaction.id),
                 "ai_response": ai_response,
+                "ai_audio_url": ai_audio_url,
                 "feedback": detailed_feedback,
-                "created_at": interaction.created_at.isoformat() if interaction.created_at else None
+                "created_at": interaction.created_at.isoformat() if interaction.created_at else None,
+                "turns_today": today_turns + 1,
+                "daily_limit": 5 if plan.lower() == "free" else None
             })
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
 
-    def generate_ai_response(self, system_prompt, user_transcript):
-        """Generate AI response based on scenario context and user input"""
-        return f"I understand you said: '{user_transcript}'. Let's continue practicing!"
 
-    def generate_feedback(self, user_transcript):
-        """Generate feedback on user's response"""
-        feedback = {
-            "grammar_score": 85,
-            "pronunciation_score": 80,
-            "vocabulary_score": 78,
-            "comments": "Good effort! Try to use more complete sentences next time.",
-            "suggestions": ["Consider adding more detail to your response", "Pay attention to verb tenses"]
-        }
-        return feedback
+@method_decorator(csrf_exempt, name='dispatch')
+class SubmitAudioResponseView(View):
+    def post(self, request, session_id):
+        """Submit audio file for speech-to-text transcription and AI response"""
+        try:
+            try:
+                session = LearningSession.objects.get(id=session_id)
+            except LearningSession.DoesNotExist:
+                return JsonResponse({"error": "Session not found"}, status=404)
+
+            # UC12: Check daily turn limit for Free Tier users
+            is_allowed, today_turns, plan = check_user_daily_turn_limit(session.user_id)
+            if not is_allowed:
+                return JsonResponse({
+                    "error": "Daily turn limit reached. Free Tier users are restricted to 5 turns per day.",
+                    "limit_reached": True,
+                    "turns_today": today_turns,
+                    "daily_limit": 5
+                }, status=403)
+
+            audio_file = request.FILES.get("audio")
+            user_transcript = (request.POST.get("user_transcript") or "").strip()
+            user_audio_url = ""
+
+            if audio_file:
+                audio_dir = Path(settings.MEDIA_ROOT) / "user_audio"
+                audio_dir.mkdir(parents=True, exist_ok=True)
+                ext = Path(audio_file.name).suffix or ".webm"
+                saved_filename = f"user_{uuid.uuid4().hex[:10]}{ext}"
+                saved_path = audio_dir / saved_filename
+
+                audio_bytes = audio_file.read()
+                with open(saved_path, "wb") as f:
+                    f.write(audio_bytes)
+
+                user_audio_url = f"{settings.MEDIA_URL}user_audio/{saved_filename}"
+
+                if not user_transcript:
+                    user_transcript = transcribe_audio_whisper(audio_bytes, filename=saved_filename)
+
+            if not user_transcript:
+                user_transcript = "Hello! I would like to practice speaking."
+
+            try:
+                scenario = Scenario.objects.get(id=session.scenario_id)
+            except Scenario.DoesNotExist:
+                return JsonResponse({"error": "Associated scenario not found"}, status=404)
+
+            app_user = AppUser.objects.filter(id=session.user_id).first()
+            user_level = app_user.proficiency_level if (app_user and app_user.proficiency_level) else "Beginner"
+            target_lang = app_user.target_language if (app_user and app_user.target_language) else "English"
+
+            previous_logs = InteractionLog.objects.filter(session_id=session.id).order_by('created_at')[:10]
+            context_history = []
+            for log in previous_logs:
+                if log.user_transcript:
+                    context_history.append({"role": "user", "content": log.user_transcript})
+                if log.ai_response_text:
+                    context_history.append({"role": "assistant", "content": log.ai_response_text})
+
+            ai_response = generate_ai_conversation_response(
+                scenario_prompt=scenario.system_prompt or "",
+                user_level=user_level,
+                target_language=target_lang,
+                context_history=context_history,
+                user_transcript=user_transcript
+            )
+
+            detailed_feedback = generate_grammar_and_feedback(
+                user_transcript=user_transcript,
+                target_language=target_lang,
+                user_level=user_level
+            )
+
+            ai_audio_url = generate_tts_elevenlabs(ai_response)
+
+            interaction = InteractionLog.objects.create(
+                session_id=session.id,
+                user_transcript=user_transcript,
+                user_audio_url=user_audio_url,
+                ai_response_text=ai_response,
+                ai_audio_url=ai_audio_url or "",
+                detailed_feedback=detailed_feedback,
+                created_at=timezone.now()
+            )
+
+            g_score = detailed_feedback.get("grammar_score", 85)
+            p_score = detailed_feedback.get("pronunciation_score", 80)
+            session.overall_score = round((g_score + p_score) / 2)
+            session.save()
+
+            return JsonResponse({
+                "interaction_id": str(interaction.id),
+                "user_transcript": user_transcript,
+                "ai_response": ai_response,
+                "ai_audio_url": ai_audio_url,
+                "feedback": detailed_feedback,
+                "created_at": interaction.created_at.isoformat() if interaction.created_at else None,
+                "turns_today": today_turns + 1,
+                "daily_limit": 5 if plan.lower() == "free" else None
+            })
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -533,3 +762,64 @@ class DebugSessionView(View):
             })
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UserProfileUpdateView(View):
+    def put(self, request, user_id=None):
+        return self.post(request, user_id)
+
+    def post(self, request, user_id=None):
+        """Update user profile preferences (Target Language, Proficiency Level, Username)"""
+        try:
+            if not user_id:
+                user_id = request.session.get("supabase_user_id")
+
+            if not user_id:
+                return JsonResponse({"error": "User authentication required"}, status=401)
+
+            app_user = AppUser.objects.filter(id=user_id).first()
+            if not app_user:
+                return JsonResponse({"error": "User not found"}, status=404)
+
+            data = json.loads(request.body)
+            new_target_lang = data.get("target_language")
+            new_level = data.get("proficiency_level")
+            new_username = data.get("username")
+
+            update_data = {}
+            if new_target_lang:
+                app_user.target_language = new_target_lang
+                update_data["target_language"] = new_target_lang
+            if new_level:
+                app_user.proficiency_level = new_level
+                update_data["proficiency_level"] = new_level
+            if new_username:
+                app_user.username = new_username
+                update_data["username"] = new_username
+
+            app_user.save()
+
+            # Sync with Supabase Database table if client is active
+            if update_data and (supabase_admin or supabase):
+                client = supabase_admin or supabase
+                try:
+                    client.table("users").update(update_data).eq("id", str(app_user.id)).execute()
+                except Exception as e:
+                    print(f"[Supabase DB Profile Sync Notice]: {e}")
+
+            return JsonResponse({
+                "status": "success",
+                "message": "Profile updated successfully",
+                "user": {
+                    "id": str(app_user.id),
+                    "username": app_user.username,
+                    "email": app_user.email or app_user.username,
+                    "target_language": app_user.target_language,
+                    "proficiency_level": app_user.proficiency_level,
+                    "subscription_plan": app_user.subscription_plan or "Free"
+                }
+            })
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
+

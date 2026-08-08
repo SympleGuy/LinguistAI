@@ -4,15 +4,17 @@ import uuid
 
 class User(models.Model):
     """
-    User model matching exactly the specification in 0001_initial.py
+    User model matching specification in 0001_initial.py
     """
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)
     username = models.CharField(blank=True, max_length=255, null=True)
+    email = models.EmailField(blank=True, max_length=255, null=True)
     password_hash = models.CharField(blank=True, max_length=255, null=True)  # Stores hashed password from Supabase
     target_language = models.CharField(blank=True, max_length=255, null=True)
     proficiency_level = models.CharField(blank=True, max_length=255, null=True)
     subscription_plan = models.CharField(blank=True, max_length=255, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
+
 
     class Meta:
         verbose_name = 'User'
@@ -55,6 +57,10 @@ class LearningSession(models.Model):
         verbose_name = 'Learning Session'
         verbose_name_plural = 'Learning Sessions'
         db_table = 'learning_sessions'
+        indexes = [
+            models.Index(fields=['user_id']),
+            models.Index(fields=['started_at']),
+        ]
 
     def __str__(self):
         return f"Session {self.id} for User {self.user_id}, Scenario {self.scenario_id}"
@@ -77,6 +83,11 @@ class InteractionLog(models.Model):
         verbose_name = 'Interaction Log'
         verbose_name_plural = 'Interaction Logs'
         db_table = 'interaction_logs'
+        indexes = [
+            models.Index(fields=['session_id']),
+            models.Index(fields=['created_at']),
+        ]
+
 
     def __str__(self):
         return f"Interaction {self.id} for Session {self.session_id}"
