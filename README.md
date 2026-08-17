@@ -191,5 +191,5 @@ LinguistAI/
 ## Capstone Project Information
 
 - **Project**: LinguistAI — Spoken Language Learning Platform
-- **Course**: Final Year Capstone Project
+- **Course**: IT Capstone Project 1 + 2
 - **License**: MIT
