@@ -12,6 +12,7 @@ urlpatterns = [
     path("api/auth/login/", views.login_view, name="api_login"),
     path("api/auth/logout/", views.logout_view, name="api_logout"),
     path("api/auth/me/", views.api_me, name="api_me"),
+    path("api/auth/oauth-sync/", views.OAuthSessionSyncView.as_view(), name="api_oauth_sync"),
     path("api/scenarios/", views.scenarios_list, name="scenarios_list"),
     path("api/scenarios/<int:scenario_id>/", views.ScenarioDetailView.as_view(), name="scenario_detail"),
     path("api/sessions/start/", views.StartSessionView.as_view(), name="start_session"),
@@ -22,4 +23,5 @@ urlpatterns = [
     path("api/sessions/history/<uuid:user_id>/", views.SessionHistoryView.as_view(), name="session_history"),
     path("api/user/profile/", views.UserProfileUpdateView.as_view(), name="user_profile_update_self"),
     path("api/user/<uuid:user_id>/profile/", views.UserProfileUpdateView.as_view(), name="user_profile_update"),
+    path("api/user/<uuid:user_id>/analytics/", views.UserAnalyticsView.as_view(), name="user_analytics"),
 ]
