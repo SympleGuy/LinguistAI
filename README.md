@@ -13,13 +13,12 @@
 ## Table of Contents
 
 1. [Key Features](#key-features)
-2. [System Architecture](#system-architecture)
-3. [Smart Fallback Simulation Engine](#smart-fallback-simulation-engine)
-4. [Local Setup and Execution Guide](#local-setup-and-execution-guide)
-5. [REST API Specification Directory](#rest-api-specification-directory)
-6. [Database Schema and Security](#database-schema-and-security)
-7. [Project Directory Layout](#project-directory-layout)
-8. [Capstone Project Information](#capstone-project-information)
+2. [Smart Fallback Simulation Engine](#smart-fallback-simulation-engine)
+3. [Local Setup and Execution Guide](#local-setup-and-execution-guide)
+4. [REST API Specification Directory](#rest-api-specification-directory)
+5. [Database Schema and Security](#database-schema-and-security)
+6. [Project Directory Layout](#project-directory-layout)
+7. [Capstone Project Information](#capstone-project-information)
 
 ---
 
@@ -36,46 +35,6 @@
   - **Global Exception Handler Middleware** preventing Python stack trace leakage.
 - **Rate Limiting**: Enforces a daily 5-turn limit on Free Tier accounts with HTTP `403 Forbidden` responses.
 - **Automated Audio Garbage Collection**: Scheduled maintenance script (`scripts/run_cleanup_cron.sh`) automatically deleting audio files older than 30 days while preserving database transcripts.
-
----
-
-## System Architecture
-
-```mermaid
-flowchart TD
-    subgraph Client["Frontend Client (Vanilla JS SPA + Bootstrap 5.3 + Chart.js)"]
-        UI["Interactive UI / Scenario Catalog / Dashboard"]
-        Mic["Web Audio MediaRecorder (Live Speech Capture)"]
-        Player["HTML5 Audio Element (AI Voice Playback)"]
-        Guard["Client-side Route Guard (Auth Protection)"]
-    end
-
-    subgraph Backend["Django 4.2 LTS Application Server"]
-        MW1["GlobalExceptionHandlerMiddleware"]
-        MW2["ApiAuthenticationMiddleware"]
-        Views["API Views & Route Handlers"]
-        AISvc["AI Services Engine (myapp/ai_services.py)"]
-        Limiter["Daily Turn Limiter (5 turns/day Free tier)"]
-        Cron["Audio Garbage Collector (manage.py cleanup_audio_files)"]
-    end
-
-    subgraph External["Cloud & Database Services"]
-        DB["PostgreSQL / SQLite (Dual dj-database-url)"]
-        Supa["Supabase Auth & Storage (RLS Enabled)"]
-        OpenAI["OpenAI Whisper (STT) + GPT-4o-mini (LLM)"]
-        Eleven["ElevenLabs API (Natural Voice TTS)"]
-        Fallback["Smart Simulation Engine (Offline Fallback)"]
-    end
-
-    UI -->|HTTP / JSON| MW1 --> MW2 --> Views
-    Mic -->|Audio Blob .webm| Views
-    Views --> Limiter --> AISvc
-    AISvc -->|API Calls| OpenAI & Eleven
-    AISvc -.->|If No API Keys| Fallback
-    Views --> DB & Supa
-    Cron --> DB
-    Player <--|Audio Stream| Views
-```
 
 ---
 
