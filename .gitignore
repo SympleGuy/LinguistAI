@@ -48,5 +48,15 @@ db.sqlite3
 /media/
 /staticfiles/
 
-# Ignore large project docs
+# Ignore large project docs & local task trackers
 Project Proposal Complete Final - G3.pdf
+CLAUDE.md
+claude.md
+*tasks*.md
+*task*.md
+*TASKS*.md
+*TASK*.md
+docs/PROJECT_TASKS.md
+docs/backend_tasks.md
+docs/*tasks*.md
+docs/*TASKS*.md

@@ -167,9 +167,7 @@ LinguistAI/
 ├── scripts/
 │   └── run_cleanup_cron.sh         # Automated audio cleanup cron script
 ├── docs/
-│   ├── CRON_SETUP.md               # Crontab schedule configuration guide
-│   ├── PROJECT_TASKS.md            # Master roadmap & task completion tracker
-│   └── backend_tasks.md            # Backend task progress checklist
+│   └── CRON_SETUP.md               # Crontab schedule configuration guide
 ├── linguistai_project/
 │   ├── settings.py                 # Global Django settings (Middleware, DB, Apps)
 │   ├── urls.py                     # Root URL routing configuration
