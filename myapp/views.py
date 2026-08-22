@@ -486,8 +486,8 @@ class SubmitResponseView(View):
                 user_level=user_level
             )
 
-            # ElevenLabs Voice Audio Generation
-            ai_audio_url = generate_tts_elevenlabs(ai_response)
+            # ElevenLabs Voice Audio Generation (supports native language intonation)
+            ai_audio_url = generate_tts_elevenlabs(ai_response, target_language=target_lang)
 
             interaction = InteractionLog.objects.create(
                 session_id=session.id,
@@ -593,7 +593,7 @@ class SubmitAudioResponseView(View):
                 user_level=user_level
             )
 
-            ai_audio_url = generate_tts_elevenlabs(ai_response)
+            ai_audio_url = generate_tts_elevenlabs(ai_response, target_language=target_lang)
 
             interaction = InteractionLog.objects.create(
                 session_id=session.id,

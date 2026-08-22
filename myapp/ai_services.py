@@ -19,8 +19,8 @@ ELEVENLABS_API_KEY = config("ELEVENLABS_API_KEY", default="")
 ELEVENLABS_VOICE_ID = config("ELEVENLABS_VOICE_ID", default="21m00Tcm4TlvDq8ikWAM")  # Default voice (Rachel)
 
 
-def _http_post_json(url, payload, headers, retries=2, timeout=10):
-    """Helper to perform HTTP POST with JSON data and exponential backoff retry."""
+def _http_post_json(url, payload, headers, retries=1, timeout=6):
+    """Helper to perform HTTP POST with JSON data."""
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
 
@@ -31,18 +31,16 @@ def _http_post_json(url, payload, headers, retries=2, timeout=10):
                     body = response.read().decode("utf-8")
                     return json.loads(body)
         except urllib.error.HTTPError as e:
-            if e.code in (400, 401, 403, 404):
+            if e.code in (400, 401, 402, 403, 404, 429):
                 print(f"[AI Services] HTTP {e.code} client error from {url}: {e.reason}")
                 raise e
             if attempt == retries - 1:
                 print(f"[AI Services] HTTP POST error to {url} after {retries} attempts: {e}")
                 raise e
-            time.sleep(1)
         except Exception as e:
             if attempt == retries - 1:
                 print(f"[AI Services] HTTP POST error to {url} after {retries} attempts: {e}")
                 raise e
-            time.sleep(1)
     return None
 
 
@@ -351,20 +349,33 @@ def transcribe_audio_whisper(audio_bytes, filename="speech.webm"):
     return ""
 
 
-def generate_tts_elevenlabs(text, voice_id=None):
+LANGUAGE_VOICE_MAP = {
+    "English": config("ELEVENLABS_VOICE_EN", default=ELEVENLABS_VOICE_ID or "21m00Tcm4TlvDq8ikWAM"),
+    "French": config("ELEVENLABS_VOICE_FR", default="ThT5KcBeYPX3keUQqHPh"),
+    "Spanish": config("ELEVENLABS_VOICE_ES", default="FGY2WhTYpPnrIDTdsKH5"),
+    "German": config("ELEVENLABS_VOICE_DE", default="pNInz6obpgDQGcFmaJgB"),
+    "Japanese": config("ELEVENLABS_VOICE_JA", default="pFZP5JQG7iQjIQuC4Bku"),
+    "Chinese": config("ELEVENLABS_VOICE_ZH", default="21m00Tcm4TlvDq8ikWAM"),
+    "Korean": config("ELEVENLABS_VOICE_KO", default="21m00Tcm4TlvDq8ikWAM"),
+    "Vietnamese": config("ELEVENLABS_VOICE_VI", default="21m00Tcm4TlvDq8ikWAM"),
+}
+
+
+def generate_tts_elevenlabs(text, voice_id=None, target_language="English"):
     """
     Generate TTS audio for AI response text using ElevenLabs API (UC9).
+    Supports dedicated Voice ID per language and ElevenLabs Multilingual v2.
     Saves audio file to MEDIA_ROOT/tts/ and returns public URL string.
     """
     if not voice_id:
-        voice_id = ELEVENLABS_VOICE_ID
+        voice_id = LANGUAGE_VOICE_MAP.get(target_language, ELEVENLABS_VOICE_ID or "21m00Tcm4TlvDq8ikWAM")
 
     if ELEVENLABS_API_KEY and voice_id:
         try:
             url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
             payload = {
                 "text": text,
-                "model_id": "eleven_monolingual_v1",
+                "model_id": "eleven_multilingual_v2",
                 "voice_settings": {
                     "stability": 0.5,
                     "similarity_boost": 0.75
@@ -380,7 +391,7 @@ def generate_tts_elevenlabs(text, voice_id=None):
                 },
                 method="POST"
             )
-            with urllib.request.urlopen(req, timeout=10) as resp:
+            with urllib.request.urlopen(req, timeout=6) as resp:
                 if resp.status == 200:
                     audio_data = resp.read()
                     tts_dir = Path(settings.MEDIA_ROOT) / "tts"
@@ -390,6 +401,8 @@ def generate_tts_elevenlabs(text, voice_id=None):
                     with open(file_path, "wb") as f:
                         f.write(audio_data)
                     return f"{settings.MEDIA_URL}tts/{filename}"
+        except urllib.error.HTTPError as e:
+            print(f"[AI Services] ElevenLabs HTTP {e.code}: {e.reason}")
         except Exception as e:
             print(f"[AI Services] ElevenLabs TTS generation failed: {e}")
 
