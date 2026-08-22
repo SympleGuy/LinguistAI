@@ -161,14 +161,16 @@ def generate_ai_conversation_response(scenario_prompt, user_level="Beginner", ta
         context_history = []
 
     system_instruction = (
-        f"You are a friendly AI language tutor helping a student practice speaking {target_language}. "
+        f"You are a friendly, encouraging AI language tutor helping a student practice speaking {target_language}. "
         f"The student's CEFR proficiency level is {user_level}.\n"
         f"Scenario Context/Persona: {scenario_prompt}\n"
         f"Instructions:\n"
-        f"1. Stay strictly in character for the scenario.\n"
-        f"2. Keep your response concise (2-4 sentences max), natural, and engaging.\n"
-        f"3. Adjust vocabulary complexity to match CEFR level '{user_level}'.\n"
-        f"4. Ask open questions to encourage the user to keep speaking."
+        f"1. You MUST ALWAYS speak and reply strictly in {target_language}.\n"
+        f"2. Stay in character for the scenario. If the user speaks off-topic, humorously steer them back to the scenario.\n"
+        f"3. If the user speaks in a language other than {target_language}, politely remind them in {target_language} to practice speaking in {target_language}.\n"
+        f"4. Keep your response concise (2-4 sentences max), natural, and engaging.\n"
+        f"5. Adjust vocabulary complexity to match CEFR level '{user_level}'.\n"
+        f"6. Ask open-ended questions in {target_language} to encourage the user to keep speaking."
     )
 
     # 1. Try Google Gemini (Free tier)
@@ -229,6 +231,9 @@ def generate_grammar_and_feedback(user_transcript, target_language="English", us
     feedback_system_instruction = (
         f"You are an expert language evaluator for {target_language} at CEFR level {user_level}.\n"
         f"Analyze the user's spoken transcript for grammar, vocabulary, and phrasing.\n"
+        f"Special Rule for Language Compliance:\n"
+        f"- If the user spoke in {target_language}: Evaluate their grammar, pronunciation, and vocabulary normally.\n"
+        f"- If the user spoke in a different language: Give a lower score (30-50), mention in 'comments' that they should speak in {target_language}, and in 'corrections' provide the proper translation/phrasing in {target_language}.\n"
         f"You MUST respond ONLY with a valid JSON object matching this schema:\n"
         f"{{\n"
         f'  "grammar_score": integer 0-100,\n'
