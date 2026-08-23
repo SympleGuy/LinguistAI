@@ -1089,16 +1089,84 @@ async function submitUserMessage(userText){
   }
 }
 
+let speechRecognizer = null;
+let liveSpeechTranscript = "";
+
+function speakAiResponse(text, langName){
+  if (!window.speechSynthesis) return;
+  try {
+    window.speechSynthesis.cancel();
+    const utter = new SpeechSynthesisUtterance(text);
+    const langCodeMap = {
+      'English': 'en-US',
+      'French': 'fr-FR',
+      'Spanish': 'es-ES',
+      'German': 'de-DE',
+      'Japanese': 'ja-JP',
+      'Chinese': 'zh-CN',
+      'Korean': 'ko-KR',
+      'Vietnamese': 'vi-VN'
+    };
+    utter.lang = langCodeMap[langName] || 'en-US';
+    utter.rate = 0.95;
+    window.speechSynthesis.speak(utter);
+  } catch(e){
+    console.warn("Speech synthesis error:", e);
+  }
+}
+
 async function toggleMic(){
   const btn=document.getElementById('mic-btn');
   const ico=document.getElementById('mic-icon');
   const st=document.getElementById('mic-status');
+  const curLang = document.getElementById('conv-lang')?.textContent || 'English';
 
   if(!micOn){
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       audioChunks = [];
+      liveSpeechTranscript = "";
       mediaRecorder = new MediaRecorder(stream);
+
+      // Start browser native SpeechRecognition alongside MediaRecorder
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        try {
+          speechRecognizer = new SpeechRecognition();
+          speechRecognizer.continuous = true;
+          speechRecognizer.interimResults = true;
+          const langCodeMap = {
+            'English': 'en-US',
+            'French': 'fr-FR',
+            'Spanish': 'es-ES',
+            'German': 'de-DE',
+            'Japanese': 'ja-JP',
+            'Chinese': 'zh-CN',
+            'Korean': 'ko-KR',
+            'Vietnamese': 'vi-VN'
+          };
+          speechRecognizer.lang = langCodeMap[curLang] || 'en-US';
+          speechRecognizer.onresult = (event) => {
+            let finalStr = '';
+            let interimStr = '';
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+              if (event.results[i].isFinal) {
+                finalStr += event.results[i][0].transcript + ' ';
+              } else {
+                interimStr += event.results[i][0].transcript;
+              }
+            }
+            if(finalStr) liveSpeechTranscript += finalStr;
+            const liveDisplay = (liveSpeechTranscript + interimStr).trim();
+            if (st && liveDisplay) {
+              st.textContent = `🎙️ "${liveDisplay}"`;
+            }
+          };
+          speechRecognizer.start();
+        } catch(re) {
+          console.warn("SpeechRecognition init warning:", re);
+        }
+      }
 
       mediaRecorder.ondataavailable = e => {
         if(e.data.size > 0) audioChunks.push(e.data);
@@ -1106,8 +1174,11 @@ async function toggleMic(){
 
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach(track => track.stop());
+        if (speechRecognizer) {
+          try { speechRecognizer.stop(); } catch(e){}
+        }
         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        await sendAudioResponse(audioBlob);
+        await sendAudioResponse(audioBlob, liveSpeechTranscript.trim());
       };
 
       mediaRecorder.start();
@@ -1128,13 +1199,16 @@ async function toggleMic(){
     ico.className = 'bi bi-mic-fill';
     st.textContent = 'Processing audio & generating real-time response…';
     st.style.color = '';
+    if(speechRecognizer){
+      try { speechRecognizer.stop(); } catch(e){}
+    }
     if(mediaRecorder && mediaRecorder.state !== 'inactive'){
       mediaRecorder.stop();
     }
   }
 }
 
-async function sendAudioResponse(audioBlob){
+async function sendAudioResponse(audioBlob, liveTranscript){
   const sessId = await ensureActiveSession();
   if(!sessId) return;
 
@@ -1148,6 +1222,9 @@ async function sendAudioResponse(audioBlob){
 
   const formData = new FormData();
   formData.append('audio', audioBlob, 'recording.webm');
+  if(liveTranscript){
+    formData.append('user_transcript', liveTranscript);
+  }
 
   try {
     const res = await fetch(`/api/sessions/${sessId}/respond-audio/`, {
@@ -1169,7 +1246,7 @@ async function sendAudioResponse(audioBlob){
       // Show user transcribed message in real-time
       const userMsg=document.createElement('div');
       userMsg.className='msg-wrap msg-user-wrap';
-      userMsg.innerHTML=`<div class="msg-lbl">🧑 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || "Spoken Audio"}</div>`;
+      userMsg.innerHTML=`<div class="msg-lbl">🧑 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || liveTranscript || "Spoken Audio"}</div>`;
       ml.appendChild(userMsg);
 
       // Show AI response & auto-play synthesized voice
@@ -1179,6 +1256,12 @@ async function sendAudioResponse(audioBlob){
       aiMsg.innerHTML=`<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response} ${audioTag}</div>`;
       ml.appendChild(aiMsg);
       ml.scrollTop=ml.scrollHeight;
+
+      // If no ElevenLabs audio URL, play via native browser speech synthesis
+      if(!data.ai_audio_url){
+        const curLang = document.getElementById('conv-lang')?.textContent || 'English';
+        speakAiResponse(data.ai_response, curLang);
+      }
 
       // Update Live Feedback Panel in Real-Time
       if(data.feedback){

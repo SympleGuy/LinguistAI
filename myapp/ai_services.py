@@ -13,6 +13,7 @@ GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
 GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-1.5-flash")
 
 ASSEMBLYAI_API_KEY = config("ASSEMBLYAI_API_KEY", default="")
+GROQ_API_KEY = config("GROQ_API_KEY", default="")
 
 OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
 ELEVENLABS_API_KEY = config("ELEVENLABS_API_KEY", default="")
@@ -147,8 +148,49 @@ def _transcribe_assemblyai(audio_bytes):
                     elif status == "error":
                         print(f"[AssemblyAI] Transcription error: {poll_res.get('error')}")
                         break
+    except urllib.error.HTTPError as e:
+        print(f"[AssemblyAI] HTTP {e.code} error: {e.reason}")
     except Exception as e:
         print(f"[AssemblyAI] Transcription exception: {e}")
+    return ""
+
+
+def _transcribe_groq(audio_bytes, filename="speech.webm"):
+    """
+    Transcribe audio using Groq Whisper-large-v3 REST API (Free tier, ultra-fast 0.3s).
+    """
+    if not GROQ_API_KEY:
+        return ""
+    try:
+        boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
+        body = []
+        body.append(f"--{boundary}\r\n".encode("utf-8"))
+        body.append(b'Content-Disposition: form-data; name="model"\r\n\r\nwhisper-large-v3\r\n')
+        body.append(f"--{boundary}\r\n".encode("utf-8"))
+        body.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'.encode("utf-8"))
+        body.append(b"Content-Type: audio/webm\r\n\r\n")
+        body.append(audio_bytes)
+        body.append(b"\r\n")
+        body.append(f"--{boundary}--\r\n".encode("utf-8"))
+
+        payload_bytes = b"".join(body)
+        req = urllib.request.Request(
+            "https://api.groq.com/openai/v1/audio/transcriptions",
+            data=payload_bytes,
+            headers={
+                "Content-Type": f"multipart/form-data; boundary={boundary}",
+                "Authorization": f"Bearer {GROQ_API_KEY}"
+            },
+            method="POST"
+        )
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            if resp.status == 200:
+                res_json = json.loads(resp.read().decode("utf-8"))
+                return res_json.get("text", "")
+    except urllib.error.HTTPError as e:
+        print(f"[Groq STT] HTTP {e.code} error: {e.reason}")
+    except Exception as e:
+        print(f"[Groq STT] Whisper transcription exception: {e}")
     return ""
 
 
@@ -310,15 +352,21 @@ def generate_grammar_and_feedback(user_transcript, target_language="English", us
 
 def transcribe_audio_whisper(audio_bytes, filename="speech.webm"):
     """
-    Transcribe recorded user audio using AssemblyAI (Free) or OpenAI Whisper (UC4/UC5).
+    Multi-provider Speech-to-Text: Groq Whisper (Fastest) -> AssemblyAI -> OpenAI Whisper.
     """
-    # 1. Try AssemblyAI (Free tier)
+    # 1. Try Groq Whisper (Free tier, ultra-fast)
+    if GROQ_API_KEY:
+        groq_text = _transcribe_groq(audio_bytes, filename=filename)
+        if groq_text:
+            return groq_text
+
+    # 2. Try AssemblyAI (Free tier)
     if ASSEMBLYAI_API_KEY:
         assembly_text = _transcribe_assemblyai(audio_bytes)
         if assembly_text:
             return assembly_text
 
-    # 2. Try OpenAI Whisper
+    # 3. Try OpenAI Whisper
     if OPENAI_API_KEY:
         try:
             boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
