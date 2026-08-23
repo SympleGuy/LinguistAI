@@ -937,20 +937,34 @@ function setFilter(btn,cat){
 }
 
 // ── CONVERSATION ──────────────────────────────────────────────
+let currentScenarioId = 1;
+
 async function startConv(id){
+  currentScenarioId = id;
+  currentSessionId = null;
+
   const s=SCENARIOS.find(x=>String(x.id)===String(id))||SCENARIOS[0];
   document.getElementById('conv-title').textContent=s.title;
   document.getElementById('conv-lang').textContent=s.lang;
   document.getElementById('conv-banner').textContent=s.emoji;
+  
+  // Show clean initial AI greeting for this scenario
+  const initialGreeting = (s.msgs && s.msgs.length > 0) ? s.msgs[0].t : `Hello! Welcome to our ${s.title} practice. How can I help you today?`;
   const ml=document.getElementById('msg-list');
-  ml.innerHTML=s.msgs.map(m=>`
-    <div class="msg-wrap ${m.r==='user'?'msg-user-wrap':''}">
-      <div class="msg-lbl">${m.r==='ai'?'🤖 LinguistAI':'🧑 You'}</div>
-      <div class="msg-bubble ${m.r==='ai'?'msg-ai':'msg-user'}">${m.t}</div>
-    </div>`).join('');
+  ml.innerHTML=`
+    <div class="msg-wrap">
+      <div class="msg-lbl">🤖 LinguistAI</div>
+      <div class="msg-bubble msg-ai">${initialGreeting}</div>
+    </div>`;
   ml.scrollTop=ml.scrollHeight;
-  document.getElementById('fb-list').innerHTML=(s.fb||[]).map(f=>`
-    <div class="fb-item"><span style="flex-shrink:0">${f.i}</span><span>${f.t}</span></div>`).join('');
+
+  // Set fresh waiting state for Live Feedback
+  const fbList = document.getElementById('fb-list');
+  if(fbList){
+    fbList.innerHTML=`
+      <div class="fb-item" style="color:var(--muted-fg)"><span style="flex-shrink:0">🎙️</span><span>Speak into the microphone or type below. Real-time feedback, corrections, and scores will appear here!</span></div>`;
+  }
+
   document.getElementById('vocab-list').innerHTML=(s.vocab||[]).map(v=>`
     <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
       <span style="font-weight:600;color:var(--primary)">${v.w}</span>
@@ -958,7 +972,7 @@ async function startConv(id){
     </div>`).join('');
   showPage('conversation');
 
-  // Call API to start real session
+  // Start real backend session
   try {
     const res = await fetch('/api/sessions/start/', {
       method: 'POST',
@@ -996,11 +1010,30 @@ function updateFeedbackUI(feedback){
   }
 
   fbList.innerHTML = `
-    <div class="fb-item"><span style="flex-shrink:0">📊</span><span>Grammar: <b>${feedback.grammar_score}%</b> | Pron: <b>${feedback.pronunciation_score}%</b> | Vocab: <b>${feedback.vocabulary_score || 80}%</b></span></div>
+    <div class="fb-item"><span style="flex-shrink:0">📊</span><span>Grammar: <b>${feedback.grammar_score}%</b> | Pronunciation: <b>${feedback.pronunciation_score}%</b> | Vocab: <b>${feedback.vocabulary_score || 80}%</b></span></div>
     <div class="fb-item"><span style="flex-shrink:0">📝</span><span>${feedback.comments}</span></div>
     ${correctionsHTML}
     ${suggestionsHTML}
   `;
+}
+
+async function ensureActiveSession(){
+  if(currentSessionId) return currentSessionId;
+  try {
+    const res = await fetch('/api/sessions/start/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: currentUserId, scenario_id: currentScenarioId || 1 })
+    });
+    if(res.ok){
+      const data = await res.json();
+      currentSessionId = data.session_id;
+      return currentSessionId;
+    }
+  } catch(e){
+    console.warn("Error ensuring session:", e);
+  }
+  return null;
 }
 
 async function submitUserMessage(userText){
@@ -1012,17 +1045,18 @@ async function submitUserMessage(userText){
   ml.appendChild(d);
   ml.scrollTop=ml.scrollHeight;
 
-  if(!currentSessionId) return;
+  const sessId = await ensureActiveSession();
+  if(!sessId) return;
 
   const typing=document.createElement('div');
   typing.className='msg-wrap';
   typing.id='ai-typing';
-  typing.innerHTML='<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai"><em>Typing...</em></div>';
+  typing.innerHTML='<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai"><em>Thinking & evaluating...</em></div>';
   ml.appendChild(typing);
   ml.scrollTop=ml.scrollHeight;
 
   try {
-    const res = await fetch(`/api/sessions/${currentSessionId}/respond/`, {
+    const res = await fetch(`/api/sessions/${sessId}/respond/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ user_transcript: userText })
@@ -1092,7 +1126,7 @@ async function toggleMic(){
     micOn = false;
     btn.classList.remove('recording');
     ico.className = 'bi bi-mic-fill';
-    st.textContent = 'Processing audio & generating response…';
+    st.textContent = 'Processing audio & generating real-time response…';
     st.style.color = '';
     if(mediaRecorder && mediaRecorder.state !== 'inactive'){
       mediaRecorder.stop();
@@ -1101,13 +1135,14 @@ async function toggleMic(){
 }
 
 async function sendAudioResponse(audioBlob){
-  if(!currentSessionId) return;
+  const sessId = await ensureActiveSession();
+  if(!sessId) return;
 
   const ml=document.getElementById('msg-list');
   const typing=document.createElement('div');
   typing.className='msg-wrap';
   typing.id='ai-typing';
-  typing.innerHTML='<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai"><em>Transcribing audio & generating response...</em></div>';
+  typing.innerHTML='<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai"><em>Transcribing audio & evaluating grammar...</em></div>';
   ml.appendChild(typing);
   ml.scrollTop=ml.scrollHeight;
 
@@ -1115,7 +1150,7 @@ async function sendAudioResponse(audioBlob){
   formData.append('audio', audioBlob, 'recording.webm');
 
   try {
-    const res = await fetch(`/api/sessions/${currentSessionId}/respond-audio/`, {
+    const res = await fetch(`/api/sessions/${sessId}/respond-audio/`, {
       method: 'POST',
       body: formData
     });
@@ -1131,13 +1166,13 @@ async function sendAudioResponse(audioBlob){
     if(res.ok){
       const data = await res.json();
 
-      // Show user transcribed message
+      // Show user transcribed message in real-time
       const userMsg=document.createElement('div');
       userMsg.className='msg-wrap msg-user-wrap';
       userMsg.innerHTML=`<div class="msg-lbl">🧑 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || "Spoken Audio"}</div>`;
       ml.appendChild(userMsg);
 
-      // Show AI response & play audio
+      // Show AI response & auto-play synthesized voice
       const aiMsg=document.createElement('div');
       aiMsg.className='msg-wrap';
       let audioTag = data.ai_audio_url ? `<audio controls autoplay src="${data.ai_audio_url}" style="margin-top:8px;width:100%;height:32px;"></audio>` : '';
@@ -1145,6 +1180,7 @@ async function sendAudioResponse(audioBlob){
       ml.appendChild(aiMsg);
       ml.scrollTop=ml.scrollHeight;
 
+      // Update Live Feedback Panel in Real-Time
       if(data.feedback){
         updateFeedbackUI(data.feedback);
       }
