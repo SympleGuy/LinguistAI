@@ -80,9 +80,12 @@ cd LinguistAI
 
 ### Step 2: Create and Activate Python Virtual Environment
 ```bash
-# On Linux / macOS:
+# On Linux / macOS (Bash / Zsh):
 python3 -m venv venv
 source venv/bin/activate
+
+# On Linux (Fish shell):
+source venv/bin/activate.fish
 
 # On Windows (PowerShell):
 python -m venv venv
