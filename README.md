@@ -74,7 +74,7 @@ The platform is engineered with an intelligent **Smart Fallback Simulation Engin
 
 ### Step 1: Clone the Repository
 ```bash
-git clone <repository_url>
+git clone https://github.com/SympleGuy/LinguistAI.git
 cd LinguistAI
 ```
 
