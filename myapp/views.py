@@ -14,12 +14,56 @@ from .models import User as AppUser, Scenario, LearningSession, InteractionLog
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.utils import timezone
+from datetime import timedelta
 from .ai_services import (
     generate_ai_conversation_response,
     generate_grammar_and_feedback,
     transcribe_audio_whisper,
     generate_tts_elevenlabs
 )
+
+
+def calculate_user_streak(user_id):
+    """
+    Calculate consecutive active learning days (streak).
+    Counts distinct days where the user completed a session or interaction.
+    """
+    try:
+        user_sessions = LearningSession.objects.filter(user_id=user_id).values_list('id', flat=True)
+
+        session_dates = set(
+            LearningSession.objects.filter(user_id=user_id, started_at__isnull=False)
+            .values_list('started_at__date', flat=True)
+        )
+
+        log_dates = set(
+            InteractionLog.objects.filter(session_id__in=user_sessions, created_at__isnull=False)
+            .values_list('created_at__date', flat=True)
+        )
+
+        active_dates = session_dates.union(log_dates)
+        if not active_dates:
+            return 0
+
+        today = timezone.now().date()
+        yesterday = today - timedelta(days=1)
+
+        # If user did not practice today and did not practice yesterday, streak is broken
+        if today not in active_dates and yesterday not in active_dates:
+            return 0
+
+        # Start from the most recent active day (today if practiced today, else yesterday)
+        current_check = today if today in active_dates else yesterday
+        streak = 0
+
+        while current_check in active_dates:
+            streak += 1
+            current_check -= timedelta(days=1)
+
+        return streak
+    except Exception as e:
+        print(f"[Streak Calculation] Error calculating streak: {e}")
+        return 0
 
 
 
@@ -721,7 +765,7 @@ class DashboardView(View):
                 "average_grammar_score": avg_grammar,
                 "average_pronunciation_score": avg_pronunciation,
                 "recent_sessions": recent_sessions,
-                "streak_days": min(total_sessions, 7) if total_sessions > 0 else 0
+                "streak_days": calculate_user_streak(user_id)
             }
 
             return JsonResponse(dashboard_data)
@@ -946,7 +990,7 @@ class UserAnalyticsView(View):
                 "total_sessions": total_sessions,
                 "total_turns": total_turns,
                 "estimated_practice_minutes": round(total_turns * 1.5),
-                "streak_days": min(total_sessions, 7) if total_sessions > 0 else 0,
+                "streak_days": calculate_user_streak(user_id),
                 "average_grammar": avg_grammar,
                 "average_pronunciation": avg_pron,
                 "average_vocabulary": avg_vocab,
