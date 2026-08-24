@@ -2069,6 +2069,7 @@
       if (name === 'scenarios') renderScenarios();
       if (name === 'dashboard') loadDashboardData();
       if (name === 'profile') loadProfileData();
+      if (name === 'login') resetAuthForm(true);
     }
 
     function handleBrandClick() {
@@ -2509,6 +2510,32 @@
 
 
     // ── AUTHENTICATION & DASHBOARD SYNC ────────────────────────────
+    function resetAuthForm(clearInputs = true) {
+      const errEl = document.getElementById('auth-error-msg');
+      if (errEl) {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+      }
+      const authErr = document.getElementById('auth-error');
+      if (authErr) {
+        authErr.textContent = '';
+        authErr.style.display = 'none';
+      }
+      const pwEl = document.getElementById('pw-input');
+      if (pwEl) pwEl.value = '';
+
+      if (clearInputs) {
+        const nameEl = document.getElementById('auth-name');
+        if (nameEl) nameEl.value = '';
+        const emailEl = document.getElementById('auth-email');
+        if (emailEl) emailEl.value = '';
+        const targetLangEl = document.getElementById('auth-target-lang');
+        if (targetLangEl) targetLangEl.value = 'French';
+        const cefrEl = document.getElementById('auth-cefr-level');
+        if (cefrEl) cefrEl.value = 'Beginner';
+      }
+    }
+
     function setAuthMode(m) {
       currentAuthMode = m;
       const isReg = m === 'register';
@@ -2523,8 +2550,7 @@
       document.getElementById('auth-heading').textContent = isReg ? 'Create your account' : 'Welcome back';
       document.getElementById('auth-sub').textContent = isReg ? 'Start your language journey today' : 'Sign in to continue your language journey';
       document.getElementById('auth-btn-lbl').textContent = isReg ? 'Create Account' : 'Sign In';
-      const errEl = document.getElementById('auth-error-msg');
-      if (errEl) errEl.style.display = 'none';
+      resetAuthForm(false);
     }
 
     function togglePw() {
@@ -2571,6 +2597,7 @@
           currentUserId = currentUser.id;
           localStorage.setItem('linguist_user', JSON.stringify(currentUser));
           localStorage.setItem('linguist_user_id', currentUserId);
+          resetAuthForm(true);
           updateUserNavUI(false, false);
           showPage('dashboard');
         } else {
@@ -2638,6 +2665,7 @@
                 currentUserId = currentUser.id;
                 localStorage.setItem('linguist_user', JSON.stringify(currentUser));
                 localStorage.setItem('linguist_user_id', currentUserId);
+                resetAuthForm(true);
                 updateUserNavUI(false, false);
                 showPage('dashboard');
               }
@@ -2668,6 +2696,7 @@
       currentUserId = '00000000-0000-0000-0000-000000000001';
       localStorage.removeItem('linguist_user');
       localStorage.removeItem('linguist_user_id');
+      resetAuthForm(true);
       updateUserNavUI(true, false);
       showPage('landing');
     }
