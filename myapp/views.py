@@ -53,7 +53,7 @@ def register_view(request):
             if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return JsonResponse({"error": "Email and password are required"}, status=400)
             messages.error(request, "Email and password are required.")
-            return render(request, "register.html")
+            return render(request, "linguistAi_web.html")
 
         # Check existing user by email or username
         existing = AppUser.objects.filter(email=email).first() or AppUser.objects.filter(username=display_username).first()
@@ -62,7 +62,7 @@ def register_view(request):
             if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return JsonResponse({"error": "User with this email or username already exists"}, status=400)
             messages.error(request, "User already exists.")
-            return render(request, "register.html")
+            return render(request, "linguistAi_web.html")
 
         # 1. Register user with Supabase Auth (if Supabase client is configured)
         supabase_uid = None
@@ -151,7 +151,7 @@ def register_view(request):
         messages.success(request, "Account created successfully!")
         return redirect("dashboard")
 
-    return render(request, "register.html")
+    return render(request, "linguistAi_web.html")
 
 
 @csrf_exempt
@@ -172,7 +172,7 @@ def login_view(request):
             if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return JsonResponse({"error": "Email/username and password are required"}, status=400)
             messages.error(request, "Email and password are required.")
-            return render(request, "login.html")
+            return render(request, "linguistAi_web.html")
 
         # Find in AppUser table by email or username
         app_user = AppUser.objects.filter(email=login_input).first() or AppUser.objects.filter(username=login_input).first()
@@ -202,7 +202,7 @@ def login_view(request):
             if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
                 return JsonResponse({"error": "Invalid email or password"}, status=401)
             messages.error(request, "Invalid email or password.")
-            return render(request, "login.html")
+            return render(request, "linguistAi_web.html")
 
         # Save session
         user_email = app_user.email or app_user.username
@@ -225,7 +225,7 @@ def login_view(request):
 
         return redirect("dashboard")
 
-    return render(request, "login.html")
+    return render(request, "linguistAi_web.html")
 
 
 @csrf_exempt
