@@ -2,6 +2,7 @@ import os
 import json
 import uuid
 import time
+import base64
 import urllib.request
 import urllib.parse
 from pathlib import Path
@@ -90,6 +91,64 @@ def _call_gemini_generate(system_prompt, user_prompt, response_json=False):
             continue
 
     return None
+
+
+def _transcribe_gemini_audio(audio_bytes, mime_type="audio/webm"):
+    """
+    Transcribe spoken audio directly using Gemini Multimodal capability.
+    Uses the active GEMINI_API_KEY with 0 external dependencies.
+    """
+    if not GEMINI_API_KEY or not audio_bytes:
+        return ""
+    try:
+        audio_b64 = base64.b64encode(audio_bytes).decode("utf-8")
+        payload = {
+            "contents": [
+                {
+                    "parts": [
+                        {
+                            "text": (
+                                "Listen carefully to this audio recording of a language learner. "
+                                "Transcribe the exact spoken words in their original language. "
+                                "Output ONLY the clean transcribed text without any timestamps, notes, quotes, or commentary. "
+                                "If the audio is silent or unintelligible, output nothing."
+                            )
+                        },
+                        {
+                            "inlineData": {
+                                "mimeType": mime_type,
+                                "data": audio_b64
+                            }
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "temperature": 0.1,
+                "maxOutputTokens": 300
+            }
+        }
+        headers = {"Content-Type": "application/json"}
+        models_to_try = [GEMINI_MODEL, "gemini-3.6-flash", "gemini-2.5-flash"]
+        seen = set()
+        models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
+
+        for model_name in models_to_try:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                resp = _http_post_json(url, payload, headers, retries=1, timeout=15)
+                if resp and "candidates" in resp and len(resp["candidates"]) > 0:
+                    parts = resp["candidates"][0].get("content", {}).get("parts", [])
+                    if parts and "text" in parts[0]:
+                        transcript = parts[0]["text"].strip()
+                        if transcript and not transcript.lower().startswith("silent") and not transcript.lower().startswith("you go first"):
+                            return transcript
+            except Exception as e:
+                print(f"[AI Services] Gemini Audio Transcription ({model_name}) attempt note: {e}")
+                continue
+    except Exception as e:
+        print(f"[AI Services] Gemini Audio STT failed: {e}")
+    return ""
 
 
 def _transcribe_assemblyai(audio_bytes):
@@ -361,21 +420,41 @@ def generate_grammar_and_feedback(user_transcript, target_language="English", us
 
 def transcribe_audio_whisper(audio_bytes, filename="speech.webm"):
     """
-    Multi-provider Speech-to-Text: Groq Whisper (Fastest) -> AssemblyAI -> OpenAI Whisper.
+    Multi-provider Speech-to-Text:
+    1. Gemini Multimodal Audio Transcription (Fast, Free, Multilingual)
+    2. Groq Whisper (if GROQ_API_KEY is configured)
+    3. AssemblyAI (if ASSEMBLYAI_API_KEY is configured)
+    4. OpenAI Whisper (if OPENAI_API_KEY is configured)
     """
-    # 1. Try Groq Whisper (Free tier, ultra-fast)
+    mime_type = "audio/webm"
+    if filename.endswith(".mp3"):
+        mime_type = "audio/mp3"
+    elif filename.endswith(".wav"):
+        mime_type = "audio/wav"
+    elif filename.endswith(".ogg"):
+        mime_type = "audio/ogg"
+    elif filename.endswith(".m4a"):
+        mime_type = "audio/m4a"
+
+    # 1. Try Gemini Multimodal Audio STT (Native, Instant, Multi-language)
+    if GEMINI_API_KEY:
+        gemini_text = _transcribe_gemini_audio(audio_bytes, mime_type=mime_type)
+        if gemini_text:
+            return gemini_text
+
+    # 2. Try Groq Whisper (Free tier, ultra-fast)
     if GROQ_API_KEY:
         groq_text = _transcribe_groq(audio_bytes, filename=filename)
         if groq_text:
             return groq_text
 
-    # 2. Try AssemblyAI (Free tier)
+    # 3. Try AssemblyAI (Free tier)
     if ASSEMBLYAI_API_KEY:
         assembly_text = _transcribe_assemblyai(audio_bytes)
         if assembly_text:
             return assembly_text
 
-    # 3. Try OpenAI Whisper
+    # 4. Try OpenAI Whisper
     if OPENAI_API_KEY:
         try:
             boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
