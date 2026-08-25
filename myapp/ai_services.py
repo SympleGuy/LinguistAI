@@ -10,14 +10,14 @@ from decouple import config
 
 # Multi-Provider Configuration
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
-GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-1.5-flash")
+GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.6-flash")
 
 ASSEMBLYAI_API_KEY = config("ASSEMBLYAI_API_KEY", default="")
 GROQ_API_KEY = config("GROQ_API_KEY", default="")
 
 OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
 ELEVENLABS_API_KEY = config("ELEVENLABS_API_KEY", default="")
-ELEVENLABS_VOICE_ID = config("ELEVENLABS_VOICE_ID", default="21m00Tcm4TlvDq8ikWAM")  # Default voice (Rachel)
+ELEVENLABS_VOICE_ID = config("ELEVENLABS_VOICE_ID", default="JBFqnCBsd6RMkjVDRZzb")  # George (Free Tier Multilingual v2)
 
 
 def _http_post_json(url, payload, headers, retries=1, timeout=6):
@@ -47,39 +47,48 @@ def _http_post_json(url, payload, headers, retries=1, timeout=6):
 
 def _call_gemini_generate(system_prompt, user_prompt, response_json=False):
     """
-    Call Google Gemini 1.5/2.0 Flash REST API (Free Tier available).
+    Call Google Gemini Flash REST API (Free Tier available).
     """
     if not GEMINI_API_KEY:
         return None
-    try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{GEMINI_MODEL}:generateContent?key={GEMINI_API_KEY}"
-        
-        contents = []
-        if user_prompt:
-            contents.append({"role": "user", "parts": [{"text": user_prompt}]})
 
-        payload = {
-            "contents": contents,
-            "generationConfig": {
-                "temperature": 0.3 if response_json else 0.7,
-                "maxOutputTokens": 800
-            }
+    models_to_try = [GEMINI_MODEL, "gemini-3.6-flash", "gemini-2.5-flash"]
+    # De-duplicate while preserving order
+    seen = set()
+    models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
+
+    contents = []
+    if user_prompt:
+        contents.append({"role": "user", "parts": [{"text": user_prompt}]})
+
+    payload = {
+        "contents": contents,
+        "generationConfig": {
+            "temperature": 0.3 if response_json else 0.7,
+            "maxOutputTokens": 800
         }
-        if system_prompt:
-            payload["systemInstruction"] = {
-                "parts": [{"text": system_prompt}]
-            }
-        if response_json:
-            payload["generationConfig"]["responseMimeType"] = "application/json"
+    }
+    if system_prompt:
+        payload["systemInstruction"] = {
+            "parts": [{"text": system_prompt}]
+        }
+    if response_json:
+        payload["generationConfig"]["responseMimeType"] = "application/json"
 
-        headers = {"Content-Type": "application/json"}
-        resp = _http_post_json(url, payload, headers, retries=2, timeout=12)
-        if resp and "candidates" in resp and len(resp["candidates"]) > 0:
-            parts = resp["candidates"][0].get("content", {}).get("parts", [])
-            if parts and "text" in parts[0]:
-                return parts[0]["text"].strip()
-    except Exception as e:
-        print(f"[AI Services] Google Gemini API call failed: {e}")
+    headers = {"Content-Type": "application/json"}
+
+    for model_name in models_to_try:
+        try:
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+            resp = _http_post_json(url, payload, headers, retries=2, timeout=15)
+            if resp and "candidates" in resp and len(resp["candidates"]) > 0:
+                parts = resp["candidates"][0].get("content", {}).get("parts", [])
+                if parts and "text" in parts[0]:
+                    return parts[0]["text"].strip()
+        except Exception as e:
+            print(f"[AI Services] Google Gemini model {model_name} failed: {e}")
+            continue
+
     return None
 
 
@@ -403,14 +412,14 @@ def transcribe_audio_whisper(audio_bytes, filename="speech.webm"):
 
 
 LANGUAGE_VOICE_MAP = {
-    "English": config("ELEVENLABS_VOICE_EN", default=ELEVENLABS_VOICE_ID or "21m00Tcm4TlvDq8ikWAM"),
-    "French": config("ELEVENLABS_VOICE_FR", default="ThT5KcBeYPX3keUQqHPh"),
-    "Spanish": config("ELEVENLABS_VOICE_ES", default="FGY2WhTYpPnrIDTdsKH5"),
+    "English": config("ELEVENLABS_VOICE_EN", default=ELEVENLABS_VOICE_ID or "JBFqnCBsd6RMkjVDRZzb"),
+    "French": config("ELEVENLABS_VOICE_FR", default="EXAVITQu4vr4xnSDxMaL"),
+    "Spanish": config("ELEVENLABS_VOICE_ES", default="EXAVITQu4vr4xnSDxMaL"),
     "German": config("ELEVENLABS_VOICE_DE", default="pNInz6obpgDQGcFmaJgB"),
-    "Japanese": config("ELEVENLABS_VOICE_JA", default="pFZP5JQG7iQjIQuC4Bku"),
-    "Chinese": config("ELEVENLABS_VOICE_ZH", default="21m00Tcm4TlvDq8ikWAM"),
-    "Korean": config("ELEVENLABS_VOICE_KO", default="21m00Tcm4TlvDq8ikWAM"),
-    "Vietnamese": config("ELEVENLABS_VOICE_VI", default="21m00Tcm4TlvDq8ikWAM"),
+    "Japanese": config("ELEVENLABS_VOICE_JA", default="JBFqnCBsd6RMkjVDRZzb"),
+    "Chinese": config("ELEVENLABS_VOICE_ZH", default="JBFqnCBsd6RMkjVDRZzb"),
+    "Korean": config("ELEVENLABS_VOICE_KO", default="JBFqnCBsd6RMkjVDRZzb"),
+    "Vietnamese": config("ELEVENLABS_VOICE_VI", default="JBFqnCBsd6RMkjVDRZzb"),
 }
 
 
@@ -421,7 +430,7 @@ def generate_tts_elevenlabs(text, voice_id=None, target_language="English"):
     Saves audio file to MEDIA_ROOT/tts/ and returns public URL string.
     """
     if not voice_id:
-        voice_id = LANGUAGE_VOICE_MAP.get(target_language, ELEVENLABS_VOICE_ID or "21m00Tcm4TlvDq8ikWAM")
+        voice_id = LANGUAGE_VOICE_MAP.get(target_language, ELEVENLABS_VOICE_ID or "JBFqnCBsd6RMkjVDRZzb")
 
     if ELEVENLABS_API_KEY and voice_id:
         try:
