@@ -338,18 +338,25 @@ def dashboard_view(request):
 def scenarios_list(request):
     """
     API endpoint to list scenarios matching learner's target language and CEFR level.
-    Supports ?user_id=..., ?lang=..., ?cefr=..., or ?all=true.
+    Supports:
+      - ?user_id=...
+      - ?lang=... (filters by language)
+      - ?cefr=... (filters by level)
+      - ?all_levels=true (keeps target language, shows all levels for that language)
+      - ?all=true (bypasses all filters)
     """
     user_id = request.GET.get('user_id') or request.session.get('user_id') or request.session.get('supabase_user_id')
     req_lang = (request.GET.get('lang') or '').strip()
     req_cefr = (request.GET.get('cefr') or '').strip()
+    all_levels = request.GET.get('all_levels', '').lower() in ('true', '1')
     show_all = request.GET.get('all', '').lower() in ('true', '1')
 
-    if user_id and not req_lang and not req_cefr:
+    if user_id and not req_lang:
         app_user = AppUser.objects.filter(id=user_id).first()
         if app_user:
             req_lang = app_user.target_language or ''
-            req_cefr = app_user.proficiency_level or ''
+            if not req_cefr and not all_levels:
+                req_cefr = app_user.proficiency_level or ''
 
     scenarios = Scenario.objects.all().order_by('id')
     scenario_list = []
@@ -383,7 +390,7 @@ def scenarios_list(request):
         filtered_list = []
         for s in scenario_list:
             match_lang = not req_lang or s["lang"].lower() == req_lang.lower()
-            match_cefr = not req_cefr or s["cefr"].lower() == req_cefr.lower()
+            match_cefr = all_levels or not req_cefr or s["cefr"].lower() == req_cefr.lower()
             if match_lang and match_cefr:
                 filtered_list.append(s)
 
@@ -393,12 +400,12 @@ def scenarios_list(request):
                 if s["lang"].lower() == req_lang.lower():
                     filtered_list.append(s)
 
-        # Fallback 2: adapt scenarios for this language and level if none seeded
+        # Fallback 2: adapt scenarios for this language if none seeded
         if not filtered_list and req_lang:
             for s in scenario_list[:6]:
                 adapted = dict(s)
                 adapted["lang"] = req_lang
-                adapted["cefr"] = req_cefr or "Beginner"
+                adapted["cefr"] = req_cefr or s["cefr"]
                 filtered_list.append(adapted)
 
         if filtered_list:
