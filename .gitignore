@@ -60,3 +60,6 @@ docs/PROJECT_TASKS.md
 docs/backend_tasks.md
 docs/*tasks*.md
 docs/*TASKS*.md
+
+# Agents
+.agents/

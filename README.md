@@ -3,7 +3,6 @@
 [![Django](https://img.shields.io/badge/Django-4.2%20LTS-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
 [![Google Gemini](https://img.shields.io/badge/Google%20Gemini-1.5%20%2F%202.0%20Flash-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)](https://aistudio.google.com/)
-[![AssemblyAI](https://img.shields.io/badge/AssemblyAI-Speech%20to%20Text-0052FF?style=for-the-badge)](https://www.assemblyai.com/)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%20%26%20Auth-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![Chart.js](https://img.shields.io/badge/Chart.js-v4.4-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white)](https://www.chartjs.org/)
 
@@ -26,8 +25,8 @@
 
 ## Key Features
 
-- **Multi-Provider Speech and AI Pipeline**: Flexible integration supporting **Google Gemini 1.5/2.0 Flash** (conversational persona and structured evaluation), **AssemblyAI** and **OpenAI Whisper** (speech-to-text transcription), and **ElevenLabs** (natural voice text-to-speech).
-- **Real-time Audio Conversation**: Speech capture using the browser Web Audio API (`MediaRecorder`), transcribed via AssemblyAI or Whisper and synthesized with natural AI voice via ElevenLabs.
+- **Multi-Provider Speech and AI Pipeline**: Flexible integration supporting **Google Gemini 1.5/2.0 Flash** (conversational persona and structured evaluation), **Google Gemini Audio** (speech-to-text transcription), and **ElevenLabs** (natural voice text-to-speech).
+- **Real-time Audio Conversation**: Speech capture using the browser Web Audio API (`MediaRecorder`), transcribed via Gemini Audio and synthesized with natural AI voice via ElevenLabs.
 - **Adaptive Persona Engine**: Scenario-aware roleplay dynamically adjusting vocabulary to the learner's **CEFR level (A1-C2)**.
 - **Multi-Dimensional Feedback**: Structured evaluation per turn delivering **Grammar Score**, **Pronunciation Score**, **Vocabulary Score**, sentence-by-sentence corrections, and natural phrasing suggestions.
 - **Interactive Analytics Dashboard**: Dynamic **Chart.js** line/area charts visualizing weekly learning curves, fluency progression, session counts, speaking streaks, and top common grammatical mistakes.
@@ -47,16 +46,16 @@ LinguistAI features a plug-and-play multi-provider architecture designed to supp
 
 | Function | Primary Provider (Free Tier Available) | Secondary / Premium Provider | Offline Fallback |
 | :--- | :--- | :--- | :--- |
-| **Conversational LLM** | **Google Gemini 1.5/2.0 Flash** (`GEMINI_API_KEY`) | **OpenAI GPT-4o-mini** (`OPENAI_API_KEY`) | Dynamic Scenario-aware Engine |
-| **Grammar Evaluation** | **Google Gemini JSON Schema Mode** (`GEMINI_API_KEY`) | **OpenAI Structured JSON** (`OPENAI_API_KEY`) | Rule-based Heuristic Analyzer |
-| **Speech-to-Text (STT)** | **AssemblyAI API** (`ASSEMBLYAI_API_KEY`) | **OpenAI Whisper** (`OPENAI_API_KEY`) | Audio Blob Preservation |
-| **Text-to-Speech (TTS)** | **ElevenLabs Free Tier** (`ELEVENLABS_API_KEY`) | **ElevenLabs Multilingual** | Client Audio Response |
+| **Conversational LLM** | **Google Gemini 1.5/3.5 Flash** (`GEMINI_API_KEY`) | Dynamic Scenario-aware Engine |
+| **Grammar Evaluation** | **Google Gemini JSON Schema Mode** (`GEMINI_API_KEY`) | Rule-based Heuristic Analyzer |
+| **Speech-to-Text (STT)** | **Google Gemini Multimodal** (`GEMINI_API_KEY`) | Audio Blob Preservation |
+| **Text-to-Speech (TTS)** | **ElevenLabs Free Tier** (`ELEVENLABS_API_KEY`) | Client Audio Response |
 
 ---
 
 ## Smart Fallback Simulation Engine
 
-The platform is engineered with an intelligent **Smart Fallback Simulation Engine** in `myapp/ai_services.py`. If external API keys (`GEMINI_API_KEY`, `ASSEMBLYAI_API_KEY`, `OPENAI_API_KEY`, `ELEVENLABS_API_KEY`) are missing or inactive:
+The platform is engineered with an intelligent **Smart Fallback Simulation Engine** in `myapp/ai_services.py`. If external API keys (`GEMINI_API_KEY`, `ELEVENLABS_API_KEY`) are missing or inactive:
 - **LLM Roleplay**: Generates contextual, grammatically sound scenario responses.
 - **Feedback Engine**: Computes realistic grammar/pronunciation scores and generates precise corrections.
 - **Audio Engine**: Synthesizes speech or falls back seamlessly to text-based audio payloads.
@@ -109,11 +108,9 @@ SECRET_KEY=your_django_secret_key_here
 DEBUG=True
 DATABASE_URL=sqlite:///db.sqlite3
 
-# Multi-Provider AI (Choose Gemini + AssemblyAI, or OpenAI)
+# Multi-Provider AI Configuration
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-1.5-flash
-ASSEMBLYAI_API_KEY=your_assemblyai_api_key_here
-OPENAI_API_KEY=your_openai_api_key_here
+GEMINI_MODEL=gemini-3.5-flash
 ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
 
 SUPABASE_URL=your_supabase_project_url_here
@@ -202,7 +199,7 @@ LinguistAI/
     ├── views.py                    # REST API View Controllers & SPA View
     ├── urls.py                     # App-level API URL routes
     ├── middleware.py               # Auth & Global Exception Handler Middlewares
-    ├── ai_services.py              # Multi-Provider AI (Gemini, AssemblyAI, OpenAI, ElevenLabs)
+    ├── ai_services.py              # AI Services (Gemini, ElevenLabs)
     ├── tests.py                    # Automated unit test suite
     └── management/commands/
         ├── seed_scenarios.py       # Pre-populates conversation scenarios

@@ -13,10 +13,7 @@ from decouple import config
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
 GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.5-flash")
 
-ASSEMBLYAI_API_KEY = config("ASSEMBLYAI_API_KEY", default="")
-GROQ_API_KEY = config("GROQ_API_KEY", default="")
 
-OPENAI_API_KEY = config("OPENAI_API_KEY", default="")
 ELEVENLABS_API_KEY = config("ELEVENLABS_API_KEY", default="")
 ELEVENLABS_VOICE_ID = config("ELEVENLABS_VOICE_ID", default="JBFqnCBsd6RMkjVDRZzb")  # George (Free Tier Multilingual v2)
 
@@ -151,115 +148,6 @@ def _transcribe_gemini_audio(audio_bytes, mime_type="audio/webm"):
     return ""
 
 
-def _transcribe_assemblyai(audio_bytes):
-    """
-    Transcribe recorded user audio using AssemblyAI REST API (Free Tier available).
-    """
-    if not ASSEMBLYAI_API_KEY:
-        return ""
-    try:
-        # Step 1: Upload audio file to AssemblyAI
-        upload_url = "https://api.assemblyai.com/v2/upload"
-        req = urllib.request.Request(
-            upload_url,
-            data=audio_bytes,
-            headers={
-                "authorization": ASSEMBLYAI_API_KEY,
-                "content-type": "application/octet-stream"
-            },
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            if resp.status not in (200, 201):
-                return ""
-            upload_res = json.loads(resp.read().decode("utf-8"))
-            uploaded_audio_url = upload_res.get("upload_url")
-
-        if not uploaded_audio_url:
-            return ""
-
-        # Step 2: Request transcription with language detection
-        transcript_url = "https://api.assemblyai.com/v2/transcript"
-        payload = {
-            "audio_url": uploaded_audio_url,
-            "language_detection": True
-        }
-        t_req = urllib.request.Request(
-            transcript_url,
-            data=json.dumps(payload).encode("utf-8"),
-            headers={
-                "authorization": ASSEMBLYAI_API_KEY,
-                "content-type": "application/json"
-            },
-            method="POST"
-        )
-        with urllib.request.urlopen(t_req, timeout=15) as resp:
-            if resp.status not in (200, 201):
-                return ""
-            t_res = json.loads(resp.read().decode("utf-8"))
-            transcript_id = t_res.get("id")
-
-        if not transcript_id:
-            return ""
-
-        # Step 3: Poll status (max 10 attempts, 1.2s interval)
-        poll_url = f"https://api.assemblyai.com/v2/transcript/{transcript_id}"
-        for _ in range(10):
-            time.sleep(1.2)
-            p_req = urllib.request.Request(poll_url, headers={"authorization": ASSEMBLYAI_API_KEY})
-            with urllib.request.urlopen(p_req, timeout=10) as resp:
-                if resp.status == 200:
-                    poll_res = json.loads(resp.read().decode("utf-8"))
-                    status = poll_res.get("status")
-                    if status == "completed":
-                        return poll_res.get("text", "")
-                    elif status == "error":
-                        print(f"[AssemblyAI] Transcription error: {poll_res.get('error')}")
-                        break
-    except urllib.error.HTTPError as e:
-        print(f"[AssemblyAI] HTTP {e.code} error: {e.reason}")
-    except Exception as e:
-        print(f"[AssemblyAI] Transcription exception: {e}")
-    return ""
-
-
-def _transcribe_groq(audio_bytes, filename="speech.webm"):
-    """
-    Transcribe audio using Groq Whisper-large-v3 REST API (Free tier, ultra-fast 0.3s).
-    """
-    if not GROQ_API_KEY:
-        return ""
-    try:
-        boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
-        body = []
-        body.append(f"--{boundary}\r\n".encode("utf-8"))
-        body.append(b'Content-Disposition: form-data; name="model"\r\n\r\nwhisper-large-v3\r\n')
-        body.append(f"--{boundary}\r\n".encode("utf-8"))
-        body.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'.encode("utf-8"))
-        body.append(b"Content-Type: audio/webm\r\n\r\n")
-        body.append(audio_bytes)
-        body.append(b"\r\n")
-        body.append(f"--{boundary}--\r\n".encode("utf-8"))
-
-        payload_bytes = b"".join(body)
-        req = urllib.request.Request(
-            "https://api.groq.com/openai/v1/audio/transcriptions",
-            data=payload_bytes,
-            headers={
-                "Content-Type": f"multipart/form-data; boundary={boundary}",
-                "Authorization": f"Bearer {GROQ_API_KEY}"
-            },
-            method="POST"
-        )
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            if resp.status == 200:
-                res_json = json.loads(resp.read().decode("utf-8"))
-                return res_json.get("text", "")
-    except urllib.error.HTTPError as e:
-        print(f"[Groq STT] HTTP {e.code} error: {e.reason}")
-    except Exception as e:
-        print(f"[Groq STT] Whisper transcription exception: {e}")
-    return ""
 
 
 def generate_ai_conversation_response(scenario_prompt, user_level="Beginner", target_language="English", context_history=None, user_transcript=""):
@@ -418,13 +306,9 @@ def generate_grammar_and_feedback(user_transcript, target_language="English", us
     }
 
 
-def transcribe_audio_whisper(audio_bytes, filename="speech.webm"):
+def transcribe_audio_whisper(audio_bytes, filename="audio.webm"):
     """
-    Multi-provider Speech-to-Text:
-    1. Gemini Multimodal Audio Transcription (Fast, Free, Multilingual)
-    2. Groq Whisper (if GROQ_API_KEY is configured)
-    3. AssemblyAI (if ASSEMBLYAI_API_KEY is configured)
-    4. OpenAI Whisper (if OPENAI_API_KEY is configured)
+    Transcribe audio using Google Gemini Multimodal.
     """
     mime_type = "audio/webm"
     if filename.endswith(".mp3"):
@@ -436,60 +320,12 @@ def transcribe_audio_whisper(audio_bytes, filename="speech.webm"):
     elif filename.endswith(".m4a"):
         mime_type = "audio/m4a"
 
-    # 1. Try Gemini Multimodal Audio STT (Native, Instant, Multi-language)
     if GEMINI_API_KEY:
         gemini_text = _transcribe_gemini_audio(audio_bytes, mime_type=mime_type)
         if gemini_text:
             return gemini_text
 
-    # 2. Try Groq Whisper (Free tier, ultra-fast)
-    if GROQ_API_KEY:
-        groq_text = _transcribe_groq(audio_bytes, filename=filename)
-        if groq_text:
-            return groq_text
-
-    # 3. Try AssemblyAI (Free tier)
-    if ASSEMBLYAI_API_KEY:
-        assembly_text = _transcribe_assemblyai(audio_bytes)
-        if assembly_text:
-            return assembly_text
-
-    # 4. Try OpenAI Whisper
-    if OPENAI_API_KEY:
-        try:
-            boundary = f"----WebKitFormBoundary{uuid.uuid4().hex}"
-            body = []
-
-            body.append(f"--{boundary}\r\n".encode("utf-8"))
-            body.append(b'Content-Disposition: form-data; name="model"\r\n\r\nwhisper-1\r\n')
-
-            body.append(f"--{boundary}\r\n".encode("utf-8"))
-            body.append(f'Content-Disposition: form-data; name="file"; filename="{filename}"\r\n'.encode("utf-8"))
-            body.append(b"Content-Type: audio/webm\r\n\r\n")
-            body.append(audio_bytes)
-            body.append(b"\r\n")
-            body.append(f"--{boundary}--\r\n".encode("utf-8"))
-
-            payload_bytes = b"".join(body)
-            req = urllib.request.Request(
-                "https://api.openai.com/v1/audio/transcriptions",
-                data=payload_bytes,
-                headers={
-                    "Content-Type": f"multipart/form-data; boundary={boundary}",
-                    "Authorization": f"Bearer {OPENAI_API_KEY}"
-                },
-                method="POST"
-            )
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                if resp.status == 200:
-                    res_json = json.loads(resp.read().decode("utf-8"))
-                    return res_json.get("text", "")
-        except Exception as e:
-            print(f"[AI Services] Whisper STT transcription failed: {e}")
-
     return ""
-
-
 LANGUAGE_VOICE_MAP = {
     "English": config("ELEVENLABS_VOICE_EN", default=ELEVENLABS_VOICE_ID or "JBFqnCBsd6RMkjVDRZzb"),
     "French": config("ELEVENLABS_VOICE_FR", default="EXAVITQu4vr4xnSDxMaL"),
