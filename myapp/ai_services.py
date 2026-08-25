@@ -11,7 +11,7 @@ from decouple import config
 
 # Multi-Provider Configuration
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
-GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.6-flash")
+GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.5-flash")
 
 ASSEMBLYAI_API_KEY = config("ASSEMBLYAI_API_KEY", default="")
 GROQ_API_KEY = config("GROQ_API_KEY", default="")
@@ -53,7 +53,7 @@ def _call_gemini_generate(system_prompt, user_prompt, response_json=False):
     if not GEMINI_API_KEY:
         return None
 
-    models_to_try = [GEMINI_MODEL, "gemini-3.6-flash", "gemini-2.5-flash"]
+    models_to_try = [GEMINI_MODEL, "gemini-3.5-flash", "gemini-2.5-flash", "gemini-flash-latest"]
     # De-duplicate while preserving order
     seen = set()
     models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
@@ -129,7 +129,7 @@ def _transcribe_gemini_audio(audio_bytes, mime_type="audio/webm"):
             }
         }
         headers = {"Content-Type": "application/json"}
-        models_to_try = [GEMINI_MODEL, "gemini-3.6-flash", "gemini-2.5-flash"]
+        models_to_try = [GEMINI_MODEL, "gemini-3.5-flash", "gemini-2.5-flash", "gemini-flash-latest"]
         seen = set()
         models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
