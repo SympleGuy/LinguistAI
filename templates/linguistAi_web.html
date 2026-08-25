@@ -1601,7 +1601,14 @@
           style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px">
           <div>
             <h1 class="page-title">Scenario Library</h1>
-            <p style="color:var(--muted-fg);font-size:.88rem;margin-top:4px">Choose a scenario to start practising</p>
+            <p style="color:var(--muted-fg);font-size:.88rem;margin-top:4px" id="scen-subtitle">Choose a scenario to start practising</p>
+            <div id="scen-custom-badge" style="display:none;margin-top:8px">
+              <span style="background:var(--secondary-bg);color:var(--primary);font-size:.8rem;font-weight:700;border-radius:8px;padding:4px 10px;display:inline-flex;align-items:center;gap:6px">
+                <i class="bi bi-person-check-fill"></i>
+                <span id="scen-badge-text">Personalized for you</span>
+              </span>
+              <button onclick="toggleShowAllScenarios()" id="btn-toggle-all-scen" style="background:none;border:none;color:var(--muted-fg);font-size:.78rem;text-decoration:underline;cursor:pointer;margin-left:8px;font-family:'DM Sans',sans-serif">Show all languages & levels</button>
+            </div>
           </div>
           <div style="position:relative">
             <i class="bi bi-search"
@@ -2102,12 +2109,32 @@
     // ── SCENARIOS & SESSION STATE ──────────────────────────────────
     let currentSessionId = null;
 
+    let showAllScenarios = false;
+
+    function toggleShowAllScenarios() {
+      showAllScenarios = !showAllScenarios;
+      const btn = document.getElementById('btn-toggle-all-scen');
+      if (btn) {
+        btn.textContent = showAllScenarios ? "Show only my language & level" : "Show all languages & levels";
+      }
+      renderScenarios();
+    }
+
     async function loadScenariosFromAPI() {
       try {
-        const res = await fetch('/api/scenarios/');
+        let url = '/api/scenarios/';
+        if (currentUser && !showAllScenarios) {
+          const userLang = currentUser.target_language || 'English';
+          const userCefr = currentUser.proficiency_level || 'Beginner';
+          url = `/api/scenarios/?lang=${encodeURIComponent(userLang)}&cefr=${encodeURIComponent(userCefr)}&user_id=${currentUserId}`;
+        } else if (showAllScenarios) {
+          url = '/api/scenarios/?all=true';
+        }
+
+        const res = await fetch(url);
         if (res.ok) {
           const data = await res.json();
-          if (Array.isArray(data) && data.length > 0) {
+          if (Array.isArray(data)) {
             SCENARIOS = data.map(s => ({
               id: String(s.id),
               title: s.title || 'Untitled Scenario',
@@ -2130,6 +2157,29 @@
     }
 
     async function renderScenarios() {
+      // Update badge if user is logged in
+      const badgeDiv = document.getElementById('scen-custom-badge');
+      const badgeText = document.getElementById('scen-badge-text');
+      if (currentUser && badgeDiv && badgeText) {
+        badgeDiv.style.display = 'block';
+        const langEmojis = {
+          'English': '🇬🇧',
+          'French': '🇫🇷',
+          'Spanish': '🇪🇸',
+          'German': '🇩🇪',
+          'Japanese': '🇯🇵',
+          'Chinese': '🇨🇳',
+          'Korean': '🇰🇷',
+          'Vietnamese': '🇻🇳'
+        };
+        const uLang = currentUser.target_language || 'English';
+        const uCefr = currentUser.proficiency_level || 'Beginner';
+        const flag = langEmojis[uLang] || '🌐';
+        badgeText.textContent = `Personalized for: ${flag} ${uLang} • ${uCefr}`;
+      } else if (badgeDiv) {
+        badgeDiv.style.display = 'none';
+      }
+
       await loadScenariosFromAPI();
       const q = (document.getElementById('scen-search')?.value || '').toLowerCase();
       const grid = document.getElementById('scenarios-grid');
@@ -2138,23 +2188,35 @@
         const mq = !q || s.title.toLowerCase().includes(q) || s.desc.toLowerCase().includes(q);
         return mc && mq;
       });
+
+      if (list.length === 0) {
+        grid.innerHTML = `
+          <div style="grid-column:1/-1;text-align:center;padding:48px 20px;background:#fff;border-radius:16px;border:1px dashed var(--border)">
+            <div style="font-size:2.5rem;margin-bottom:12px">📚</div>
+            <div style="font-weight:700;font-size:1.1rem;margin-bottom:6px">No scenarios found for this filter</div>
+            <p style="color:var(--muted-fg);font-size:.875rem;margin-bottom:16px">Try switching categories or view all available scenarios.</p>
+            <button onclick="setFilter(document.querySelector('.filter-pill'), 'All')" class="btn-cta-outline" style="padding:7px 16px;font-size:.85rem">View All Categories</button>
+          </div>`;
+        return;
+      }
+
       grid.innerHTML = list.map(s => `
-    <div class="scen-card" onclick="startConv('${s.id}')">
-      <div class="scen-emoji">${s.emoji}</div>
-      <div class="scen-body">
-        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
-          <span class="cefr-badge cefr-${s.cefr}">${s.cefr}</span>
-          ${s.popular ? '<span style="background:#fff7ed;color:#c2410c;font-size:.67rem;font-weight:700;border-radius:999px;padding:1px 7px">🔥 Popular</span>' : ''}
-          <span style="margin-left:auto;font-size:.72rem;color:var(--muted-fg)">⏱ ${s.duration}</span>
-        </div>
-        <div style="font-weight:700;font-size:.9rem">${s.title}</div>
-        <div style="font-size:.8rem;color:var(--muted-fg);margin-top:3px;line-height:1.45">${s.desc}</div>
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-          <span style="background:var(--secondary-bg);color:var(--primary);font-size:.7rem;font-weight:600;border-radius:8px;padding:2px 8px">${s.lang}</span>
-          <span style="color:var(--primary);font-size:.8rem;font-weight:600">${s.category}</span>
-        </div>
-      </div>
-    </div>`).join('');
+        <div class="scen-card" onclick="startConv('${s.id}')">
+          <div class="scen-emoji">${s.emoji}</div>
+          <div class="scen-body">
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+              <span class="cefr-badge cefr-${s.cefr}">${s.cefr}</span>
+              ${s.popular ? '<span style="background:#fff7ed;color:#c2410c;font-size:.67rem;font-weight:700;border-radius:999px;padding:1px 7px">🔥 Popular</span>' : ''}
+              <span style="margin-left:auto;font-size:.72rem;color:var(--muted-fg)">⏱ ${s.duration}</span>
+            </div>
+            <div style="font-weight:700;font-size:.9rem">${s.title}</div>
+            <div style="font-size:.8rem;color:var(--muted-fg);margin-top:3px;line-height:1.45">${s.desc}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+              <span style="background:var(--secondary-bg);color:var(--primary);font-size:.7rem;font-weight:600;border-radius:8px;padding:2px 8px">${s.lang}</span>
+              <span style="color:var(--primary);font-size:.8rem;font-weight:600">${s.category}</span>
+            </div>
+          </div>
+        </div>`).join('');
     }
 
     function setFilter(btn, cat) {

@@ -337,9 +337,20 @@ def dashboard_view(request):
 
 def scenarios_list(request):
     """
-    API endpoint to list all scenarios.
-    Returns JSON array of scenario objects with metadata fields.
+    API endpoint to list scenarios matching learner's target language and CEFR level.
+    Supports ?user_id=..., ?lang=..., ?cefr=..., or ?all=true.
     """
+    user_id = request.GET.get('user_id') or request.session.get('user_id') or request.session.get('supabase_user_id')
+    req_lang = (request.GET.get('lang') or '').strip()
+    req_cefr = (request.GET.get('cefr') or '').strip()
+    show_all = request.GET.get('all', '').lower() in ('true', '1')
+
+    if user_id and not req_lang and not req_cefr:
+        app_user = AppUser.objects.filter(id=user_id).first()
+        if app_user:
+            req_lang = app_user.target_language or ''
+            req_cefr = app_user.proficiency_level or ''
+
     scenarios = Scenario.objects.all().order_by('id')
     scenario_list = []
     for scenario in scenarios:
@@ -367,6 +378,31 @@ def scenarios_list(request):
             except Exception:
                 pass
         scenario_list.append(scenario_data)
+
+    if not show_all and (req_lang or req_cefr):
+        filtered_list = []
+        for s in scenario_list:
+            match_lang = not req_lang or s["lang"].lower() == req_lang.lower()
+            match_cefr = not req_cefr or s["cefr"].lower() == req_cefr.lower()
+            if match_lang and match_cefr:
+                filtered_list.append(s)
+
+        # Fallback 1: match language if level has no exact match
+        if not filtered_list and req_lang:
+            for s in scenario_list:
+                if s["lang"].lower() == req_lang.lower():
+                    filtered_list.append(s)
+
+        # Fallback 2: adapt scenarios for this language and level if none seeded
+        if not filtered_list and req_lang:
+            for s in scenario_list[:6]:
+                adapted = dict(s)
+                adapted["lang"] = req_lang
+                adapted["cefr"] = req_cefr or "Beginner"
+                filtered_list.append(adapted)
+
+        if filtered_list:
+            return JsonResponse(filtered_list, safe=False)
 
     return JsonResponse(scenario_list, safe=False)
 
