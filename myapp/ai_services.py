@@ -11,7 +11,7 @@ from decouple import config
 
 # Multi-Provider Configuration
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
-GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.5-flash")
+GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-1.5-flash")
 
 
 ELEVENLABS_API_KEY = config("ELEVENLABS_API_KEY", default="")
@@ -19,7 +19,12 @@ ELEVENLABS_VOICE_ID = config("ELEVENLABS_VOICE_ID", default="JBFqnCBsd6RMkjVDRZz
 
 
 def _http_post_json(url, payload, headers, retries=1, timeout=6):
-    """Helper to perform HTTP POST with JSON data."""
+    """Helper to perform HTTP POST with JSON data and exponential backoff for 429."""
+    import urllib.request
+    import urllib.error
+    import json
+    import time
+
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers=headers, method="POST")
 
@@ -30,7 +35,14 @@ def _http_post_json(url, payload, headers, retries=1, timeout=6):
                     body = response.read().decode("utf-8")
                     return json.loads(body)
         except urllib.error.HTTPError as e:
-            if e.code in (400, 401, 402, 403, 404, 429):
+            if e.code == 429:
+                print(f"[AI Services] Rate limit (429) hit. Waiting before retry...")
+                time.sleep(5)
+                # Let it loop to retry if attempts left
+                if attempt == retries - 1:
+                    raise e
+                continue
+            if e.code in (400, 401, 402, 403, 404):
                 print(f"[AI Services] HTTP {e.code} client error from {url}: {e.reason}")
                 raise e
             if attempt == retries - 1:
@@ -50,7 +62,7 @@ def _call_gemini_generate(system_prompt, user_prompt, response_json=False):
     if not GEMINI_API_KEY:
         return None
 
-    models_to_try = [GEMINI_MODEL, "gemini-3.5-flash", "gemini-2.5-flash", "gemini-flash-latest"]
+    models_to_try = [GEMINI_MODEL, "gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-flash-latest"]
     # De-duplicate while preserving order
     seen = set()
     models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
@@ -78,7 +90,7 @@ def _call_gemini_generate(system_prompt, user_prompt, response_json=False):
     for model_name in models_to_try:
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
-            resp = _http_post_json(url, payload, headers, retries=2, timeout=15)
+            resp = _http_post_json(url, payload, headers, retries=3, timeout=15)
             if resp and "candidates" in resp and len(resp["candidates"]) > 0:
                 parts = resp["candidates"][0].get("content", {}).get("parts", [])
                 if parts and "text" in parts[0]:
@@ -126,14 +138,14 @@ def _transcribe_gemini_audio(audio_bytes, mime_type="audio/webm"):
             }
         }
         headers = {"Content-Type": "application/json"}
-        models_to_try = [GEMINI_MODEL, "gemini-3.5-flash", "gemini-2.5-flash", "gemini-flash-latest"]
+        models_to_try = [GEMINI_MODEL, "gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-flash-latest"]
         seen = set()
         models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
         for model_name in models_to_try:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
-                resp = _http_post_json(url, payload, headers, retries=1, timeout=15)
+                resp = _http_post_json(url, payload, headers, retries=3, timeout=15)
                 if resp and "candidates" in resp and len(resp["candidates"]) > 0:
                     parts = resp["candidates"][0].get("content", {}).get("parts", [])
                     if parts and "text" in parts[0]:
