@@ -11,7 +11,7 @@ from decouple import config
 
 # Multi-Provider Configuration
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
-GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-1.5-flash")
+GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.5-flash-lite")
 
 
 ELEVENLABS_API_KEY = config("ELEVENLABS_API_KEY", default="")
@@ -62,7 +62,7 @@ def _call_gemini_generate(system_prompt, user_prompt, response_json=False):
     if not GEMINI_API_KEY:
         return None
 
-    models_to_try = [GEMINI_MODEL, "gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-flash-latest"]
+    models_to_try = [GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-flash-lite-latest"]
     # De-duplicate while preserving order
     seen = set()
     models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
@@ -138,7 +138,7 @@ def _transcribe_gemini_audio(audio_bytes, mime_type="audio/webm"):
             }
         }
         headers = {"Content-Type": "application/json"}
-        models_to_try = [GEMINI_MODEL, "gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-flash-latest"]
+        models_to_try = [GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-flash-lite-latest"]
         seen = set()
         models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
