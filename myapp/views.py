@@ -209,17 +209,17 @@ def login_view(request):
         else:
             data = request.POST
 
-        login_input = (data.get("email") or data.get("username") or "").strip()
+        login_input = data.get("email", "").strip()
         password = data.get("password")
 
         if not login_input or not password:
             if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
-                return JsonResponse({"error": "Email/username and password are required"}, status=400)
+                return JsonResponse({"error": "Email and password are required"}, status=400)
             messages.error(request, "Email and password are required.")
             return render(request, "linguistAi_web.html")
 
-        # Find in AppUser table by email or username
-        app_user = AppUser.objects.filter(email=login_input).first() or AppUser.objects.filter(username=login_input).first()
+        # Find in AppUser table by email
+        app_user = AppUser.objects.filter(email=login_input).first()
         authenticated = False
 
         if app_user and app_user.password_hash:
