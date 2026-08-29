@@ -2364,6 +2364,7 @@
         </div>
 
         <div id="flashcard-active" style="display:none; width:100%;">
+          <div id="fc-progress-text" style="font-size: 0.85rem; font-weight: 700; color: var(--muted-fg); margin-bottom: 14px;">Card 1 of 5</div>
           <div class="flashcard-container" onclick="flipCard()">
             <div class="flashcard" id="fc-inner">
               <div class="flashcard-face">
@@ -4171,10 +4172,13 @@
       loadFlashcards(targetLang);
     }
 
+    let isReviewAllMode = false;
+
     async function loadFlashcards(lang, includeAll = false) {
       if (lang !== undefined) {
         selectedFlashcardLang = lang;
       }
+      isReviewAllMode = includeAll;
       try {
         const uid = currentUserId || (currentUser ? currentUser.id : '');
         const langParam = selectedFlashcardLang ? encodeURIComponent(selectedFlashcardLang) : 'All';
@@ -4235,19 +4239,21 @@
 
       // If no languages have cards yet, show standard languages
       const displayLangs = activeLangs.length > 0 ? activeLangs : SUPPORTED_LANGUAGES.map(name => ({ name, due_count: 0, total_count: 0 }));
+      const remainingActive = Math.max(0, dueCards.length - currentCardIndex);
 
       let html = `
         <button class="fc-lang-tab ${selectedFlashcardLang === 'All' ? 'active' : ''}" onclick="loadFlashcards('All')">
-          <span>🌐</span> All Languages <span class="tab-badge">${totalDue > 0 ? totalDue : '0'}</span>
+          <span>🌐</span> All Languages <span class="tab-badge">${selectedFlashcardLang === 'All' && isReviewAllMode ? remainingActive : totalDue}</span>
         </button>
       `;
 
       displayLangs.forEach(l => {
         const isSelected = selectedFlashcardLang.toLowerCase() === l.name.toLowerCase();
         const flag = LANG_EMOJIS[l.name] || '🌐';
+        const badgeVal = (isSelected && isReviewAllMode) ? remainingActive : (l.due_count || 0);
         html += `
           <button class="fc-lang-tab ${isSelected ? 'active' : ''}" onclick="loadFlashcards('${l.name}')">
-            <span>${flag}</span> ${l.name} <span class="tab-badge">${l.due_count || 0}</span>
+            <span>${flag}</span> ${l.name} <span class="tab-badge">${badgeVal}</span>
           </button>
         `;
       });
@@ -4272,6 +4278,11 @@
 
       activeDiv.style.display = 'block';
       emptyDiv.style.display = 'none';
+
+      const progEl = document.getElementById('fc-progress-text');
+      if (progEl) {
+        progEl.textContent = `Card ${currentCardIndex + 1} of ${dueCards.length} ${isReviewAllMode ? '· (Review All Mode)' : ''}`;
+      }
 
       const card = dueCards[currentCardIndex];
       const langFlag = LANG_EMOJIS[card.language] || '🌐';
@@ -4303,13 +4314,13 @@
 
       // Optimistically decrement due count in availableFlashcardLangs
       const langStat = (availableFlashcardLangs || []).find(l => l.language.toLowerCase() === (card.language || 'English').toLowerCase());
-      if (langStat && langStat.due_count > 0) {
+      if (langStat && langStat.due_count > 0 && !isReviewAllMode) {
         langStat.due_count--;
-        renderFlashcardLanguageTabs();
       }
 
       // Optimistically move to next card
       currentCardIndex++;
+      renderFlashcardLanguageTabs();
       renderCurrentCard();
 
       // Send review in background
