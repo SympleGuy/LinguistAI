@@ -2501,6 +2501,26 @@
     ${correctionsHTML}
     ${suggestionsHTML}
   `;
+
+      // Update Vocabulary List in real-time
+      if (Array.isArray(feedback.extracted_vocabulary) && feedback.extracted_vocabulary.length > 0) {
+        const vocabList = document.getElementById('vocab-list');
+        if (vocabList) {
+          const newVocabHTML = feedback.extracted_vocabulary.map(v => 
+            `<div style="margin-bottom:8px;">
+               <div style="font-weight:bold;color:var(--primary);">🌟 ${v.word}</div>
+               <div style="color:var(--muted-fg);font-size:0.8rem;">${v.translation}</div>
+             </div>`
+          ).join('');
+          
+          // Check if there's already content. If empty or hasn't started, replace. Otherwise append.
+          if (vocabList.innerHTML.trim() === '') {
+            vocabList.innerHTML = newVocabHTML;
+          } else {
+            vocabList.innerHTML += newVocabHTML;
+          }
+        }
+      }
     }
 
     async function ensureActiveSession() {
