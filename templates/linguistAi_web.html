@@ -1549,6 +1549,52 @@
       background: #3b82f6;
     }
 
+    .fc-lang-tab {
+      padding: 8px 18px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-family: 'DM Sans', sans-serif;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      border: 1px solid var(--border);
+      background: #fff;
+      color: #374151;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+    }
+
+    .fc-lang-tab:hover {
+      border-color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .fc-lang-tab.active {
+      background: var(--primary);
+      color: #fff;
+      border-color: var(--primary);
+      box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+    }
+
+    .fc-lang-tab .tab-badge {
+      padding: 2px 7px;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 800;
+    }
+
+    .fc-lang-tab.active .tab-badge {
+      background: rgba(255, 255, 255, 0.25);
+      color: #fff;
+    }
+
+    .fc-lang-tab:not(.active) .tab-badge {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
     .scrollable-panel {
       max-height: 250px;
       overflow-y: auto;
@@ -4139,30 +4185,61 @@
       }
     }
 
+    const SUPPORTED_LANGUAGES = ['English', 'French', 'Spanish', 'German', 'Japanese', 'Chinese', 'Korean', 'Vietnamese'];
+
     function renderFlashcardLanguageTabs() {
       const tabsContainer = document.getElementById('fc-lang-tabs');
       if (!tabsContainer) return;
 
-      if (!availableFlashcardLangs || availableFlashcardLangs.length === 0) {
-        tabsContainer.innerHTML = '';
-        return;
-      }
+      // Merge available stats with list of languages
+      const statsMap = {};
+      let totalDue = 0;
+      let totalAllCards = 0;
+      (availableFlashcardLangs || []).forEach(l => {
+        statsMap[l.language.toLowerCase()] = l;
+        totalDue += (l.due_count || 0);
+        totalAllCards += (l.total_count || 0);
+      });
 
-      // Calculate total due across all languages
-      const totalDue = availableFlashcardLangs.reduce((sum, item) => sum + (item.due_count || 0), 0);
+      // Collect active languages with cards
+      const activeLangs = [];
+      SUPPORTED_LANGUAGES.forEach(langName => {
+        const stat = statsMap[langName.toLowerCase()];
+        if (stat && stat.total_count > 0) {
+          activeLangs.push({
+            name: langName,
+            due_count: stat.due_count,
+            total_count: stat.total_count
+          });
+        }
+      });
+
+      // If user has other custom languages
+      (availableFlashcardLangs || []).forEach(l => {
+        if (!SUPPORTED_LANGUAGES.map(x => x.toLowerCase()).includes(l.language.toLowerCase())) {
+          activeLangs.push({
+            name: l.language,
+            due_count: l.due_count,
+            total_count: l.total_count
+          });
+        }
+      });
+
+      // If no languages have cards yet, show standard languages
+      const displayLangs = activeLangs.length > 0 ? activeLangs : SUPPORTED_LANGUAGES.map(name => ({ name, due_count: 0, total_count: 0 }));
 
       let html = `
-        <button onclick="loadFlashcards('All')" style="padding:6px 16px;border-radius:999px;font-size:0.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;transition:all 0.2s;${selectedFlashcardLang === 'All' ? 'background:var(--primary);color:#fff;border:none;' : 'background:#f1f5f9;color:var(--fg);border:1px solid var(--border);'}">
-          🌐 All Languages <span style="background:${selectedFlashcardLang === 'All' ? 'rgba(255,255,255,0.3)' : '#e2e8f0'};color:${selectedFlashcardLang === 'All' ? '#fff' : 'var(--fg)'};padding:1px 7px;border-radius:10px;font-size:0.75rem;">${totalDue}</span>
+        <button class="fc-lang-tab ${selectedFlashcardLang === 'All' ? 'active' : ''}" onclick="loadFlashcards('All')">
+          <span>🌐</span> All Languages <span class="tab-badge">${totalAllCards > 0 ? totalAllCards : 0}</span>
         </button>
       `;
 
-      availableFlashcardLangs.forEach(l => {
-        const isSelected = selectedFlashcardLang.toLowerCase() === l.language.toLowerCase();
-        const flag = LANG_EMOJIS[l.language] || '🌐';
+      displayLangs.forEach(l => {
+        const isSelected = selectedFlashcardLang.toLowerCase() === l.name.toLowerCase();
+        const flag = LANG_EMOJIS[l.name] || '🌐';
         html += `
-          <button onclick="loadFlashcards('${l.language}')" style="padding:6px 16px;border-radius:999px;font-size:0.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;transition:all 0.2s;${isSelected ? 'background:var(--primary);color:#fff;border:none;' : 'background:#f1f5f9;color:var(--fg);border:1px solid var(--border);'}">
-            ${flag} ${l.language} <span style="background:${isSelected ? 'rgba(255,255,255,0.3)' : '#e2e8f0'};color:${isSelected ? '#fff' : 'var(--fg)'};padding:1px 7px;border-radius:10px;font-size:0.75rem;">${l.due_count}</span>
+          <button class="fc-lang-tab ${isSelected ? 'active' : ''}" onclick="loadFlashcards('${l.name}')">
+            <span>${flag}</span> ${l.name} <span class="tab-badge">${l.total_count || l.due_count || 0}</span>
           </button>
         `;
       });
