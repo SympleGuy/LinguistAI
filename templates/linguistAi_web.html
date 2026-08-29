@@ -1417,6 +1417,65 @@
     .btn-send-text:hover {
       background: #6d28d9;
     }
+    /* Flashcards */
+    .flashcard-container {
+      perspective: 1000px;
+      width: 100%;
+      max-width: 500px;
+      margin: 0 auto 30px auto;
+      height: 300px;
+      cursor: pointer;
+    }
+    .flashcard {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transition: transform 0.6s;
+      transform-style: preserve-3d;
+    }
+    .flashcard.flipped {
+      transform: rotateY(180deg);
+    }
+    .flashcard-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      backface-visibility: hidden;
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 30px;
+      text-align: center;
+    }
+    .flashcard-back {
+      transform: rotateY(180deg);
+      background: #f8fafc;
+      border: 2px solid var(--primary);
+    }
+    .anki-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .anki-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 12px;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    .anki-btn:hover { opacity: 0.8; }
+    .anki-btn.again { background: #ef4444; }
+    .anki-btn.hard { background: #f59e0b; }
+    .anki-btn.good { background: #10b981; }
+    .anki-btn.easy { background: #3b82f6; }
   </style>
 </head>
 
@@ -1437,6 +1496,8 @@
               class="bi bi-grid-1x2"></i>Dashboard</button>
           <button class="nav-link-item" id="nl-profile" onclick="showPage('profile')"><i
               class="bi bi-person"></i>Profile</button>
+          <button class="nav-link-item" id="nl-flashcards" onclick="showPage('flashcards')"><i
+              class="bi bi-card-text"></i>Practice</button>
         </div>
         <button id="navbar-signin" class="btn-signin" style="display:none" onclick="showPage('login')">Sign in</button>
         <button id="navbar-logout" class="btn-signin" style="display:none" onclick="handleLogout()"><i
@@ -3332,6 +3393,85 @@
         }
       }
     };
+  
+    // --- Anki Flashcards ---
+    let dueCards = [];
+    let currentCardIndex = 0;
+
+    async function loadFlashcards() {
+      try {
+        const res = await fetch('/api/flashcards/due/');
+        if (res.ok) {
+          const data = await res.json();
+          dueCards = data.due_cards || [];
+          currentCardIndex = 0;
+          renderCurrentCard();
+        }
+      } catch (e) {
+        console.error("Failed to load flashcards", e);
+      }
+    }
+
+    function renderCurrentCard() {
+      const activeDiv = document.getElementById('flashcard-active');
+      const emptyDiv = document.getElementById('flashcard-empty');
+      
+      if (dueCards.length === 0 || currentCardIndex >= dueCards.length) {
+        activeDiv.style.display = 'none';
+        emptyDiv.style.display = 'block';
+        return;
+      }
+      
+      activeDiv.style.display = 'block';
+      emptyDiv.style.display = 'none';
+      
+      const card = dueCards[currentCardIndex];
+      document.getElementById('fc-word').textContent = card.word;
+      document.getElementById('fc-example').textContent = card.example ? `"${card.example}"` : '';
+      document.getElementById('fc-translation').textContent = card.translation;
+      
+      // Reset state
+      document.getElementById('fc-inner').classList.remove('flipped');
+      document.getElementById('fc-buttons').style.display = 'none';
+    }
+
+    function flipCard() {
+      const inner = document.getElementById('fc-inner');
+      if (!inner.classList.contains('flipped')) {
+        inner.classList.add('flipped');
+        document.getElementById('fc-buttons').style.display = 'flex';
+      }
+    }
+
+    async function reviewCard(quality) {
+      if (currentCardIndex >= dueCards.length) return;
+      const card = dueCards[currentCardIndex];
+      
+      // Optimistically move to next card
+      currentCardIndex++;
+      renderCurrentCard();
+      
+      // Send review in background
+      try {
+        await fetch(`/api/flashcards/${card.id}/review/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quality: quality })
+        });
+      } catch (e) {
+        console.error("Failed to review card", e);
+      }
+    }
+
+    // Hook into showPage to load cards when opening practice
+    const flashcardOriginalShowPage = showPage;
+    showPage = function(name, syncUrl = true) {
+      flashcardOriginalShowPage(name, syncUrl);
+      if (name === 'flashcards') {
+        loadFlashcards();
+      }
+    };
+
   </script>
   <!-- Upgrade Modal -->
   <div class="upgrade-modal-overlay" id="upgradeModal">

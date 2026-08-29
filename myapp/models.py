@@ -91,3 +91,34 @@ class InteractionLog(models.Model):
 
     def __str__(self):
         return f"Interaction {self.id} for Session {self.session_id}"
+
+from django.utils import timezone
+
+class VocabularyCard(models.Model):
+    """
+    VocabularyCard model for Anki spaced repetition
+    """
+    id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True)
+    user_id = models.UUIDField()
+    word = models.CharField(max_length=255)
+    translation = models.CharField(max_length=255, blank=True, null=True)
+    example = models.TextField(blank=True, null=True)
+    
+    # SuperMemo-2 Algorithm Fields
+    next_review = models.DateTimeField(default=timezone.now)
+    interval = models.IntegerField(default=0)  # in days
+    ease_factor = models.FloatField(default=2.5)
+    repetitions = models.IntegerField(default=0)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Vocabulary Card'
+        verbose_name_plural = 'Vocabulary Cards'
+        db_table = 'vocabulary_cards'
+        indexes = [
+            models.Index(fields=['user_id', 'next_review']),
+        ]
+
+    def __str__(self):
+        return f"{self.word} ({self.user_id})"

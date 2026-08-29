@@ -10,7 +10,7 @@ from pathlib import Path
 from django.conf import settings
 from .supabase_client import supabase_admin, supabase
 from django.contrib.auth.hashers import make_password, check_password
-from .models import User as AppUser, Scenario, LearningSession, InteractionLog
+from .models import User as AppUser, Scenario, LearningSession, InteractionLog, VocabularyCard
 from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.utils import timezone
@@ -619,6 +619,19 @@ class SubmitResponseView(View):
             session.overall_score = round((g_score + p_score) / 2)
             session.save()
 
+            extracted_vocab = detailed_feedback.get("extracted_vocabulary", [])
+            for vocab in extracted_vocab:
+                word = vocab.get("word")
+                if word:
+                    VocabularyCard.objects.get_or_create(
+                        user_id=session.user_id,
+                        word=word,
+                        defaults={
+                            'translation': vocab.get("translation", ""),
+                            'example': vocab.get("example", "")
+                        }
+                    )
+
             return JsonResponse({
                 "interaction_id": str(interaction.id),
                 "ai_response": ai_response,
@@ -724,6 +737,19 @@ class SubmitAudioResponseView(View):
             p_score = detailed_feedback.get("pronunciation_score", 80)
             session.overall_score = round((g_score + p_score) / 2)
             session.save()
+
+            extracted_vocab = detailed_feedback.get("extracted_vocabulary", [])
+            for vocab in extracted_vocab:
+                word = vocab.get("word")
+                if word:
+                    VocabularyCard.objects.get_or_create(
+                        user_id=session.user_id,
+                        word=word,
+                        defaults={
+                            'translation': vocab.get("translation", ""),
+                            'example': vocab.get("example", "")
+                        }
+                    )
 
             return JsonResponse({
                 "interaction_id": str(interaction.id),
@@ -1168,3 +1194,64 @@ class SessionLogsView(View):
             return JsonResponse({"session_id": str(session.id), "history": history}, status=200)
         except LearningSession.DoesNotExist:
             return JsonResponse({"error": "Session not found"}, status=404)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FlashcardDueView(View):
+    def get(self, request):
+        user_id = request.session.get("supabase_user_id")
+        if not user_id:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+        
+        # Fetch cards where next_review <= now
+        now = timezone.now()
+        due_cards = VocabularyCard.objects.filter(user_id=user_id, next_review__lte=now).order_by('next_review')[:50]
+        
+        cards = []
+        for c in due_cards:
+            cards.append({
+                "id": str(c.id),
+                "word": c.word,
+                "translation": c.translation,
+                "example": c.example
+            })
+            
+        return JsonResponse({"due_cards": cards}, status=200)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class FlashcardReviewView(View):
+    def post(self, request, card_id):
+        user_id = request.session.get("supabase_user_id")
+        if not user_id:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+            
+        try:
+            card = VocabularyCard.objects.get(id=card_id, user_id=user_id)
+            data = json.loads(request.body)
+            quality = int(data.get('quality', 3)) # 0-5 SM2 quality
+            
+            # SuperMemo-2 Algorithm
+            if quality < 3:
+                card.repetitions = 0
+                card.interval = 1
+            else:
+                card.repetitions += 1
+                if card.repetitions == 1:
+                    card.interval = 1
+                elif card.repetitions == 2:
+                    card.interval = 6
+                else:
+                    card.interval = round(card.interval * card.ease_factor)
+                    
+            card.ease_factor = card.ease_factor + (0.1 - (5 - quality) * (0.08 + (5 - quality) * 0.02))
+            if card.ease_factor < 1.3:
+                card.ease_factor = 1.3
+                
+            card.next_review = timezone.now() + timezone.timedelta(days=card.interval)
+            card.save()
+            
+            return JsonResponse({"message": "Reviewed"}, status=200)
+            
+        except VocabularyCard.DoesNotExist:
+            return JsonResponse({"error": "Card not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=400)

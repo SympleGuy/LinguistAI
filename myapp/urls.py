@@ -26,4 +26,6 @@ urlpatterns = [
     path("api/user/<uuid:user_id>/analytics/", views.UserAnalyticsView.as_view(), name="user_analytics"),
     path("api/auth/upgrade/", views.UpgradeToProView.as_view(), name="api_upgrade_pro"),
     path("api/sessions/<uuid:session_id>/logs/", views.SessionLogsView.as_view(), name="session_logs"),
+    path("api/flashcards/due/", views.FlashcardDueView.as_view(), name="api_flashcards_due"),
+    path("api/flashcards/<uuid:card_id>/review/", views.FlashcardReviewView.as_view(), name="api_flashcards_review"),
 ]

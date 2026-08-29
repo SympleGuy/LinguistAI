@@ -251,8 +251,10 @@ def generate_grammar_and_feedback(user_transcript, target_language="English", us
         f'  "vocabulary_score": integer 0-100,\n'
         f'  "comments": "Short encouraging evaluation summary.",\n'
         f'  "corrections": [ {{"original": "incorrect segment", "corrected": "fixed segment", "explanation": "why" }} ],\n'
-        f'  "suggestions": ["suggestion 1", "suggestion 2"]\n'
+        f'  "suggestions": ["suggestion 1", "suggestion 2"],\n'
+        f'  "extracted_vocabulary": [ {{"word": "word in target language", "translation": "translation in English", "example": "example sentence"}} ]\n'
         f"}}\n"
+        f"For extracted_vocabulary, extract 1-2 useful new words from the context that the user should learn.\n"
     )
 
     # 1. Try Google Gemini (Free Tier JSON Mode)
