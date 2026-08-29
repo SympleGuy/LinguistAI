@@ -1171,8 +1171,8 @@ class UpgradeToProView(View):
 @method_decorator(csrf_exempt, name='dispatch')
 class SessionLogsView(View):
     def get(self, request, session_id):
-        """Fetch chat history for a specific session to resume it"""
-        user_id = request.session.get("supabase_user_id")
+        """Fetch chat history and summary details for a specific session"""
+        user_id = request.session.get("supabase_user_id") or request.GET.get("user_id") or request.session.get("user_id")
         if not user_id:
             return JsonResponse({"error": "Unauthorized"}, status=401)
             
@@ -1181,6 +1181,22 @@ class SessionLogsView(View):
             if str(session.user_id) != str(user_id):
                 return JsonResponse({"error": "Forbidden"}, status=403)
                 
+            scenario_title = "Practice Session"
+            scenario_emoji = "💬"
+            scenario_lang = "English"
+            try:
+                scenario = Scenario.objects.get(id=session.scenario_id)
+                scenario_title = scenario.title or "Practice Session"
+                if scenario.system_prompt:
+                    try:
+                        parsed = json.loads(scenario.system_prompt)
+                        scenario_emoji = parsed.get("emoji", "💬")
+                        scenario_lang = parsed.get("lang", "English")
+                    except Exception:
+                        pass
+            except Scenario.DoesNotExist:
+                pass
+
             logs = InteractionLog.objects.filter(session_id=session.id).order_by('created_at')
             history = []
             for log in logs:
@@ -1193,7 +1209,16 @@ class SessionLogsView(View):
                     "created_at": log.created_at.isoformat() if log.created_at else None
                 })
             
-            return JsonResponse({"session_id": str(session.id), "history": history}, status=200)
+            return JsonResponse({
+                "session_id": str(session.id),
+                "scenario_id": session.scenario_id,
+                "scenario_title": scenario_title,
+                "scenario_emoji": scenario_emoji,
+                "scenario_lang": scenario_lang,
+                "overall_score": session.overall_score or 85,
+                "started_at": session.started_at.isoformat() if session.started_at else None,
+                "history": history
+            }, status=200)
         except LearningSession.DoesNotExist:
             return JsonResponse({"error": "Session not found"}, status=404)
 
