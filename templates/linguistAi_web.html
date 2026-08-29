@@ -1297,37 +1297,45 @@
     .divider-col {
       color: rgba(255, 255, 255, .25)
     }
+
     /* --- UX/UI Upgrades --- */
     /* Upgrade Modal */
     .upgrade-modal-overlay {
       position: fixed;
-      top: 0; left: 0; right: 0; bottom: 0;
-      background: rgba(0,0,0,0.6);
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.6);
       backdrop-filter: blur(5px);
       display: none;
       justify-content: center;
       align-items: center;
       z-index: 9999;
     }
+
     .upgrade-modal {
       background: white;
       padding: 2rem;
       border-radius: 20px;
       text-align: center;
       max-width: 400px;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
       animation: popIn 0.3s ease-out;
     }
+
     .upgrade-modal h2 {
       margin-top: 0;
       color: #7C3AED;
       font-size: 1.5rem;
       font-weight: 700;
     }
+
     .upgrade-modal p {
       color: #4b5563;
       margin-bottom: 1.5rem;
     }
+
     .btn-upgrade {
       background: linear-gradient(135deg, #7C3AED, #F59E0B);
       color: white;
@@ -1339,12 +1347,21 @@
       cursor: pointer;
       transition: transform 0.2s;
     }
+
     .btn-upgrade:hover {
       transform: scale(1.05);
     }
+
     @keyframes popIn {
-      0% { opacity: 0; transform: scale(0.9); }
-      100% { opacity: 1; transform: scale(1); }
+      0% {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
     }
 
     /* Typing Indicator */
@@ -1358,6 +1375,7 @@
       width: fit-content;
       margin-top: 10px;
     }
+
     .typing-dot {
       width: 6px;
       height: 6px;
@@ -1365,11 +1383,26 @@
       border-radius: 50%;
       animation: typing 1.4s infinite ease-in-out both;
     }
-    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
-    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
+    .typing-dot:nth-child(1) {
+      animation-delay: -0.32s;
+    }
+
+    .typing-dot:nth-child(2) {
+      animation-delay: -0.16s;
+    }
+
     @keyframes typing {
-      0%, 80%, 100% { transform: scale(0); }
-      40% { transform: scale(1); }
+
+      0%,
+      80%,
+      100% {
+        transform: scale(0);
+      }
+
+      40% {
+        transform: scale(1);
+      }
     }
 
     /* Pulsing Mic */
@@ -1377,10 +1410,22 @@
       animation: pulse 1.5s infinite;
       box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
     }
+
     @keyframes pulse {
-      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-      70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
-      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+      0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+      }
+
+      70% {
+        transform: scale(1.1);
+        box-shadow: 0 0 0 15px rgba(239, 68, 68, 0);
+      }
+
+      100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+      }
     }
 
     /* Text Fallback Input */
@@ -1390,6 +1435,7 @@
       margin-top: 15px;
       width: 100%;
     }
+
     .text-fallback-input {
       flex: 1;
       padding: 10px 15px;
@@ -1399,9 +1445,11 @@
       font-size: 0.9rem;
       transition: border-color 0.2s;
     }
+
     .text-fallback-input:focus {
       border-color: #7C3AED;
     }
+
     .btn-send-text {
       background: #7C3AED;
       color: white;
@@ -1415,9 +1463,11 @@
       justify-content: center;
       transition: background 0.2s;
     }
+
     .btn-send-text:hover {
       background: #6d28d9;
     }
+
     /* Flashcards */
     .flashcard-container {
       perspective: 1000px;
@@ -1427,6 +1477,7 @@
       height: 300px;
       cursor: pointer;
     }
+
     .flashcard {
       width: 100%;
       height: 100%;
@@ -1434,9 +1485,11 @@
       transition: transform 0.6s;
       transform-style: preserve-3d;
     }
+
     .flashcard.flipped {
       transform: rotateY(180deg);
     }
+
     .flashcard-face {
       position: absolute;
       width: 100%;
@@ -1444,7 +1497,7 @@
       backface-visibility: hidden;
       border-radius: 20px;
       background: #fff;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -1452,17 +1505,20 @@
       padding: 30px;
       text-align: center;
     }
+
     .flashcard-back {
       transform: rotateY(180deg);
       background: #f8fafc;
       border: 2px solid var(--primary);
     }
+
     .anki-buttons {
       display: flex;
       gap: 10px;
       justify-content: center;
       margin-top: 20px;
     }
+
     .anki-btn {
       padding: 10px 20px;
       border: none;
@@ -1472,27 +1528,47 @@
       cursor: pointer;
       transition: opacity 0.2s;
     }
-    .anki-btn:hover { opacity: 0.8; }
-    .anki-btn.again { background: #ef4444; }
-    .anki-btn.hard { background: #f59e0b; }
-    .anki-btn.good { background: #10b981; }
-    .anki-btn.easy { background: #3b82f6; }
+
+    .anki-btn:hover {
+      opacity: 0.8;
+    }
+
+    .anki-btn.again {
+      background: #ef4444;
+    }
+
+    .anki-btn.hard {
+      background: #f59e0b;
+    }
+
+    .anki-btn.good {
+      background: #10b981;
+    }
+
+    .anki-btn.easy {
+      background: #3b82f6;
+    }
+
     .scrollable-panel {
       max-height: 250px;
       overflow-y: auto;
       padding-right: 5px;
     }
+
     .scrollable-panel::-webkit-scrollbar {
       width: 6px;
     }
+
     .scrollable-panel::-webkit-scrollbar-track {
       background: #f1f5f9;
       border-radius: 10px;
     }
+
     .scrollable-panel::-webkit-scrollbar-thumb {
       background: #cbd5e1;
       border-radius: 10px;
     }
+
     .scrollable-panel::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
     }
@@ -1513,6 +1589,7 @@
       transition: all 0.2s ease;
       font-family: 'DM Sans', sans-serif;
     }
+
     .btn-end-lesson:hover {
       background: #ef4444;
       color: #fff;
@@ -1527,17 +1604,20 @@
       text-align: center;
       margin-bottom: 28px;
     }
+
     .summary-grid {
       display: grid;
       grid-template-columns: 1.3fr 1fr;
       gap: 24px;
       margin-bottom: 30px;
     }
+
     @media (max-width: 860px) {
       .summary-grid {
         grid-template-columns: 1fr;
       }
     }
+
     .summary-box {
       background: #fff;
       border: 1px solid var(--border);
@@ -1545,6 +1625,7 @@
       padding: 24px;
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
     }
+
     .summary-box-title {
       font-size: 1.05rem;
       font-weight: 700;
@@ -1554,6 +1635,7 @@
       gap: 8px;
       color: var(--fg);
     }
+
     .summary-score-item {
       background: #f8fafc;
       border: 1px solid var(--border);
@@ -1561,11 +1643,13 @@
       padding: 14px 18px;
       text-align: center;
     }
+
     .summary-score-val {
       font-size: 1.6rem;
       font-weight: 800;
       color: var(--primary);
     }
+
     .summary-score-lbl {
       font-size: 0.75rem;
       color: var(--muted-fg);
@@ -1574,6 +1658,7 @@
       letter-spacing: 0.5px;
       margin-top: 4px;
     }
+
     .summary-vocab-item {
       background: #faf5ff;
       border: 1px solid #f3e8ff;
@@ -1581,6 +1666,7 @@
       padding: 12px 16px;
       margin-bottom: 10px;
     }
+
     .summary-cta-box {
       background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
       border-radius: 20px;
@@ -1642,7 +1728,7 @@
         <div class="hero-trust">
           <span><i class="bi bi-check-circle-fill check-green"></i> No credit card</span>
           <span><i class="bi bi-check-circle-fill check-green"></i> 5 free conversations/month</span>
-          <span><i class="bi bi-check-circle-fill check-green"></i> 30+ languages</span>
+          <span><i class="bi bi-check-circle-fill check-green"></i> 8 languages</span>
         </div>
 
         <!-- Demo card -->
@@ -1748,13 +1834,13 @@
           <div class="feat-card">
             <div class="feat-icon-wrap"><i class="bi bi-lightning-fill"></i></div>
             <div class="feat-title">Instant AI Feedback</div>
-            <div class="feat-desc">GPT-4 powered corrections delivered in seconds, not days. Learn faster, retain
+            <div class="feat-desc">Gemini powered corrections delivered in seconds, not days. Learn faster, retain
               longer.</div>
           </div>
           <div class="feat-card">
             <div class="feat-icon-wrap"><i class="bi bi-globe2"></i></div>
             <div class="feat-title">Any Language, Any Level</div>
-            <div class="feat-desc">From A1 beginner to C2 mastery. Supports 30+ languages with native-sounding AI
+            <div class="feat-desc">From A1 beginner to C2 mastery. Supports 8 languages with native-sounding AI
               voices.</div>
           </div>
           <div class="feat-card">
@@ -1896,13 +1982,17 @@
           style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-bottom:24px">
           <div>
             <h1 class="page-title">Scenario Library</h1>
-            <p style="color:var(--muted-fg);font-size:.88rem;margin-top:4px" id="scen-subtitle">Choose a scenario to start practising</p>
+            <p style="color:var(--muted-fg);font-size:.88rem;margin-top:4px" id="scen-subtitle">Choose a scenario to
+              start practising</p>
             <div id="scen-custom-badge" style="display:none;margin-top:8px">
-              <span style="background:var(--secondary-bg);color:var(--primary);font-size:.8rem;font-weight:700;border-radius:8px;padding:4px 10px;display:inline-flex;align-items:center;gap:6px">
+              <span
+                style="background:var(--secondary-bg);color:var(--primary);font-size:.8rem;font-weight:700;border-radius:8px;padding:4px 10px;display:inline-flex;align-items:center;gap:6px">
                 <i class="bi bi-person-check-fill"></i>
                 <span id="scen-badge-text">Personalized for you</span>
               </span>
-              <button onclick="toggleShowAllLevels()" id="btn-toggle-all-scen" style="background:none;border:none;color:var(--primary);font-size:.8rem;font-weight:600;text-decoration:underline;cursor:pointer;margin-left:10px;font-family:'DM Sans',sans-serif">Explore all levels in this language</button>
+              <button onclick="toggleShowAllLevels()" id="btn-toggle-all-scen"
+                style="background:none;border:none;color:var(--primary);font-size:.8rem;font-weight:600;text-decoration:underline;cursor:pointer;margin-left:10px;font-family:'DM Sans',sans-serif">Explore
+                all levels in this language</button>
             </div>
           </div>
           <div style="position:relative">
@@ -1953,16 +2043,20 @@
               </button>
             </div>
             <div class="msg-list" id="msg-list"></div>
-            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+            <div
+              style="padding:14px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
               <div style="display:flex;align-items:center;gap:14px">
-                <button class="mic-btn" id="mic-btn" onclick="toggleMic()"><i class="bi bi-mic-fill" id="mic-icon"></i></button>
+                <button class="mic-btn" id="mic-btn" onclick="toggleMic()"><i class="bi bi-mic-fill"
+                    id="mic-icon"></i></button>
                 <div style="flex:1">
-                  <div style="font-size:.85rem;color:var(--muted-fg)" id="mic-status">Press the mic to start speaking</div>
-                  <div style="font-size:.7rem;color:var(--muted-fg)">Powered by OpenAI Whisper · ElevenLabs TTS</div>
+                  <div style="font-size:.85rem;color:var(--muted-fg)" id="mic-status">Press the mic to start speaking
+                  </div>
+                  <div style="font-size:.7rem;color:var(--muted-fg)">Powered by Gemini · ElevenLabs TTS</div>
                 </div>
               </div>
               <div class="text-fallback-container" id="text-fallback-container" style="display:none;">
-                <input type="text" id="text-fallback-input" class="text-fallback-input" placeholder="Type your message here..." onkeypress="handleTextSubmit(event)">
+                <input type="text" id="text-fallback-input" class="text-fallback-input"
+                  placeholder="Type your message here..." onkeypress="handleTextSubmit(event)">
                 <button class="btn-send-text" onclick="submitTextFallback()"><i class="bi bi-send-fill"></i></button>
               </div>
             </div>
@@ -1993,8 +2087,9 @@
         <div class="summary-hero-card">
           <div style="font-size:3.5rem;margin-bottom:8px" id="sum-emoji">🎉</div>
           <h1 class="page-title" style="font-size:2rem;margin-bottom:6px">Lesson Completed!</h1>
-          <p style="color:var(--muted-fg);font-size:0.95rem;" id="sum-subtitle">Great job practicing your conversational skills.</p>
-          
+          <p style="color:var(--muted-fg);font-size:0.95rem;" id="sum-subtitle">Great job practicing your conversational
+            skills.</p>
+
           <!-- Score Grid -->
           <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:24px" id="sum-scores-grid">
             <div class="summary-score-item">
@@ -2021,17 +2116,21 @@
           <!-- Left: Feedback, Corrections, Suggestions -->
           <div style="display:flex;flex-direction:column;gap:20px">
             <div class="summary-box">
-              <div class="summary-box-title"><i class="bi bi-chat-heart-fill" style="color:var(--primary)"></i> AI Evaluation & Feedback</div>
+              <div class="summary-box-title"><i class="bi bi-chat-heart-fill" style="color:var(--primary)"></i> AI
+                Evaluation & Feedback</div>
               <div class="scrollable-panel" style="max-height:440px;overflow-y:auto;padding-right:6px">
-                <div id="sum-ai-comments" style="color:#4b5563;font-size:0.9rem;line-height:1.6;margin-bottom:14px"></div>
-                
+                <div id="sum-ai-comments" style="color:#4b5563;font-size:0.9rem;line-height:1.6;margin-bottom:14px">
+                </div>
+
                 <div id="sum-corrections-wrap" style="display:none;margin-top:14px;">
-                  <div style="font-weight:700;font-size:0.85rem;color:#dc2626;margin-bottom:8px;"><i class="bi bi-exclamation-triangle-fill"></i> Key Corrections Made</div>
+                  <div style="font-weight:700;font-size:0.85rem;color:#dc2626;margin-bottom:8px;"><i
+                      class="bi bi-exclamation-triangle-fill"></i> Key Corrections Made</div>
                   <div id="sum-corrections-list"></div>
                 </div>
 
                 <div id="sum-suggestions-wrap" style="display:none;margin-top:14px;">
-                  <div style="font-weight:700;font-size:0.85rem;color:#d97706;margin-bottom:8px;"><i class="bi bi-lightbulb-fill"></i> Pro Tips & Suggestions</div>
+                  <div style="font-weight:700;font-size:0.85rem;color:#d97706;margin-bottom:8px;"><i
+                      class="bi bi-lightbulb-fill"></i> Pro Tips & Suggestions</div>
                   <div id="sum-suggestions-list"></div>
                 </div>
               </div>
@@ -2041,24 +2140,30 @@
           <!-- Right: Session Vocabulary & CTAs -->
           <div style="display:flex;flex-direction:column;gap:20px">
             <div class="summary-box">
-              <div class="summary-box-title"><i class="bi bi-bookmark-star-fill" style="color:#f59e0b"></i> New Vocabulary Learned</div>
-              <div id="sum-vocab-list" class="scrollable-panel" style="max-height:220px;overflow-y:auto;padding-right:4px;"></div>
+              <div class="summary-box-title"><i class="bi bi-bookmark-star-fill" style="color:#f59e0b"></i> New
+                Vocabulary Learned</div>
+              <div id="sum-vocab-list" class="scrollable-panel"
+                style="max-height:220px;overflow-y:auto;padding-right:4px;"></div>
             </div>
 
             <!-- Action CTAs -->
             <div class="summary-cta-box">
               <div style="font-size:1.6rem;margin-bottom:6px">🧠</div>
               <h3 style="font-size:1.15rem;font-weight:800;margin-bottom:8px">Ready to memorize?</h3>
-              <p style="font-size:0.82rem;opacity:0.9;margin-bottom:16px">Reinforce these new words now using Spaced Repetition (Anki)!</p>
-              <button onclick="showPage('flashcards')" style="background:#fff;color:var(--primary);border:none;border-radius:12px;padding:12px 22px;font-size:0.9rem;font-weight:800;cursor:pointer;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:'DM Sans',sans-serif">
+              <p style="font-size:0.82rem;opacity:0.9;margin-bottom:16px">Reinforce these new words now using Spaced
+                Repetition (Anki)!</p>
+              <button onclick="showPage('flashcards')"
+                style="background:#fff;color:var(--primary);border:none;border-radius:12px;padding:12px 22px;font-size:0.9rem;font-weight:800;cursor:pointer;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:'DM Sans',sans-serif">
                 <i class="bi bi-card-text"></i> Practice Flashcards Now
               </button>
-              
+
               <div style="display:flex;gap:8px;margin-top:12px">
-                <button onclick="showPage('scenarios')" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:10px;padding:8px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;flex:1;font-family:'DM Sans',sans-serif">
+                <button onclick="showPage('scenarios')"
+                  style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:10px;padding:8px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;flex:1;font-family:'DM Sans',sans-serif">
                   <i class="bi bi-arrow-repeat"></i> Another Scenario
                 </button>
-                <button onclick="showPage('dashboard')" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:10px;padding:8px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;flex:1;font-family:'DM Sans',sans-serif">
+                <button onclick="showPage('dashboard')"
+                  style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:10px;padding:8px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;flex:1;font-family:'DM Sans',sans-serif">
                   <i class="bi bi-grid-1x2"></i> Dashboard
                 </button>
               </div>
@@ -2168,7 +2273,8 @@
         <!-- Recent sessions -->
         <div style="background:#fff;border:1px solid var(--border);border-radius:16px;padding:24px">
           <div style="font-weight:700;font-size:.85rem;margin-bottom:16px">Recent Sessions</div>
-          <div style="display:flex;flex-direction:column;gap:10px;max-height:360px;overflow-y:auto;padding-right:6px;" id="dash-recent-list" class="scrollable-panel">
+          <div style="display:flex;flex-direction:column;gap:10px;max-height:360px;overflow-y:auto;padding-right:6px;"
+            id="dash-recent-list" class="scrollable-panel">
             <div class="sess-row">
               <div class="sess-icon">🍽️</div>
               <div style="flex:1">
@@ -2186,15 +2292,19 @@
   <!-- ═══ FLASHCARDS ════════════════════════════════════════════ -->
   <div id="page-flashcards" class="page">
     <div class="inner-page">
-      <div class="section-wrap" style="text-align:center; min-height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding-top:40px;">
+      <div class="section-wrap"
+        style="text-align:center; min-height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding-top:40px;">
         <h1 class="page-title">Vocabulary Practice</h1>
-        <p style="color:var(--muted-fg); margin-bottom:30px;">Review your newly learned words using spaced repetition.</p>
+        <p style="color:var(--muted-fg); margin-bottom:30px;">Review your newly learned words using spaced repetition.
+        </p>
 
         <div id="flashcard-empty" style="display:none;">
           <div style="font-size:3rem; margin-bottom:10px;">🎉</div>
           <h2>You're all caught up!</h2>
           <p style="color:var(--muted-fg);">Practice more scenarios to collect new words.</p>
-          <button onclick="showPage('scenarios')" style="margin-top:20px; padding:10px 24px; background:var(--primary); color:#fff; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-family:'DM Sans',sans-serif;">Start New Session</button>
+          <button onclick="showPage('scenarios')"
+            style="margin-top:20px; padding:10px 24px; background:var(--primary); color:#fff; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-family:'DM Sans',sans-serif;">Start
+            New Session</button>
         </div>
 
         <div id="flashcard-active" style="display:none; width:100%;">
@@ -2203,7 +2313,8 @@
               <div class="flashcard-face">
                 <div style="font-size:2.2rem; font-weight:bold; color:var(--primary);" id="fc-word">Word</div>
                 <div style="margin-top:15px; font-size:1rem; color:#4b5563; font-style:italic;" id="fc-example"></div>
-                <div style="margin-top:auto; font-size:0.8rem; color:var(--muted-fg); padding-top:20px;">👆 Tap card to flip</div>
+                <div style="margin-top:auto; font-size:0.8rem; color:var(--muted-fg); padding-top:20px;">👆 Tap card to
+                  flip</div>
               </div>
               <div class="flashcard-face flashcard-back">
                 <div style="font-size:0.85rem; color:var(--muted-fg); margin-bottom:8px;">Translation</div>
@@ -2457,17 +2568,14 @@
     let currentUserId = currentUser ? currentUser.id : (localStorage.getItem('linguist_user_id') || '00000000-0000-0000-0000-000000000001');
     localStorage.setItem('linguist_user_id', currentUserId);
 
-    const PROTECTED_PAGES = ['dashboard', 'profile', 'flashcards', 'summary'];
+    const PROTECTED_PAGES = ['scenarios', 'conversation', 'dashboard', 'profile', 'flashcards', 'summary'];
 
     function showPage(name, syncUrl = true) {
+      let authRedirectMsg = null;
       // Auth Guard: Redirect unauthenticated guest to login
       if (PROTECTED_PAGES.includes(name) && !currentUser) {
         name = 'login';
-        const errEl = document.getElementById('auth-error');
-        if (errEl) {
-          errEl.textContent = 'Please log in to access your dashboard or profile.';
-          errEl.style.display = 'block';
-        }
+        authRedirectMsg = 'Please sign in or create an account to start practicing!';
       }
 
       const pageEl = document.getElementById('page-' + name);
@@ -2504,6 +2612,14 @@
       if (name === 'profile') loadProfileData();
       if (name === 'login') resetAuthForm(true);
       if (name === 'flashcards') loadFlashcards();
+
+      if (authRedirectMsg) {
+        const errEl = document.getElementById('auth-error-msg');
+        if (errEl) {
+          errEl.textContent = authRedirectMsg;
+          errEl.style.display = 'block';
+        }
+      }
     }
 
     function handleBrandClick() {
@@ -2783,6 +2899,10 @@
     let currentSessionScores = { grammar: [], pronunciation: [], vocab: [], overall: [] };
 
     async function startConv(id) {
+      if (!currentUser) {
+        showPage('login');
+        return;
+      }
       currentScenarioId = id;
       currentSessionId = null;
       currentSessionFeedbackList = [];
@@ -2891,7 +3011,7 @@
                </div>`;
             }
           });
-          
+
           if (vocabList.innerHTML.trim() === '') {
             vocabList.innerHTML = newVocabHTML;
           } else {
@@ -3037,13 +3157,13 @@
       typing.className = 'typing-indicator';
       typing.id = 'ai-typing';
       typing.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
-      
+
       const typingWrap = document.createElement('div');
       typingWrap.className = 'msg-wrap';
       typingWrap.id = 'ai-typing-wrap';
       typingWrap.innerHTML = '<div class="msg-lbl">🤖 LinguistAI</div>';
       typingWrap.appendChild(typing);
-      
+
       ml.appendChild(typingWrap);
       ml.scrollTop = ml.scrollHeight;
 
@@ -3209,13 +3329,13 @@
       typing.className = 'typing-indicator';
       typing.id = 'ai-typing';
       typing.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
-      
+
       const typingWrap = document.createElement('div');
       typingWrap.className = 'msg-wrap';
       typingWrap.id = 'ai-typing-wrap';
       typingWrap.innerHTML = '<div class="msg-lbl">🤖 LinguistAI</div>';
       typingWrap.appendChild(typing);
-      
+
       ml.appendChild(typingWrap);
       ml.scrollTop = ml.scrollHeight;
 
@@ -3994,21 +4114,21 @@
     function renderCurrentCard() {
       const activeDiv = document.getElementById('flashcard-active');
       const emptyDiv = document.getElementById('flashcard-empty');
-      
+
       if (dueCards.length === 0 || currentCardIndex >= dueCards.length) {
         activeDiv.style.display = 'none';
         emptyDiv.style.display = 'block';
         return;
       }
-      
+
       activeDiv.style.display = 'block';
       emptyDiv.style.display = 'none';
-      
+
       const card = dueCards[currentCardIndex];
       document.getElementById('fc-word').textContent = card.word;
       document.getElementById('fc-example').textContent = card.example ? `"${card.example}"` : '';
       document.getElementById('fc-translation').textContent = card.translation;
-      
+
       // Reset state
       document.getElementById('fc-inner').classList.remove('flipped');
       document.getElementById('fc-buttons').style.display = 'none';
@@ -4025,11 +4145,11 @@
     async function reviewCard(quality) {
       if (currentCardIndex >= dueCards.length) return;
       const card = dueCards[currentCardIndex];
-      
+
       // Optimistically move to next card
       currentCardIndex++;
       renderCurrentCard();
-      
+
       // Send review in background
       try {
         await fetch(`/api/flashcards/${card.id}/review/`, {
@@ -4052,7 +4172,8 @@
       <p>You have used your 5 free turns for today.<br>Upgrade to VIP for unlimited practice!</p>
       <button class="btn-upgrade" onclick="mockUpgradeToVIP()">Upgrade to VIP</button>
       <br><br>
-      <button style="border:none; background:none; color:#9ca3af; cursor:pointer;" onclick="closeUpgradeModal()">Not Now</button>
+      <button style="border:none; background:none; color:#9ca3af; cursor:pointer;" onclick="closeUpgradeModal()">Not
+        Now</button>
     </div>
   </div>
 
