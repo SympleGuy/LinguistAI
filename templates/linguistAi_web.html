@@ -2349,11 +2349,18 @@
 
         <div id="flashcard-empty" style="display:none;">
           <div style="font-size:3rem; margin-bottom:10px;">🎉</div>
-          <h2>You're all caught up!</h2>
-          <p style="color:var(--muted-fg);">Practice more scenarios to collect new words.</p>
-          <button onclick="showPage('scenarios')"
-            style="margin-top:20px; padding:10px 24px; background:var(--primary); color:#fff; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-family:'DM Sans',sans-serif;">Start
-            New Session</button>
+          <h2 style="font-weight:800;margin-bottom:8px;">You're all caught up!</h2>
+          <p style="color:var(--muted-fg);" id="fc-empty-desc">You have completed all scheduled reviews for this deck.</p>
+          <div style="display:flex;gap:12px;justify-content:center;margin-top:20px;flex-wrap:wrap;">
+            <button onclick="showPage('scenarios')"
+              style="padding:10px 24px; background:var(--primary); color:#fff; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-family:'DM Sans',sans-serif;">
+              <i class="bi bi-play-fill"></i> Start New Scenario
+            </button>
+            <button onclick="loadFlashcards(selectedFlashcardLang, true)"
+              style="padding:10px 20px; background:var(--secondary-bg); color:var(--primary); border:1px solid rgba(124,58,237,0.2); border-radius:12px; font-weight:700; cursor:pointer; font-family:'DM Sans',sans-serif;">
+              <i class="bi bi-arrow-repeat"></i> Review All Cards Anyway
+            </button>
+          </div>
         </div>
 
         <div id="flashcard-active" style="display:none; width:100%;">
@@ -4164,14 +4171,15 @@
       loadFlashcards(targetLang);
     }
 
-    async function loadFlashcards(lang) {
+    async function loadFlashcards(lang, includeAll = false) {
       if (lang !== undefined) {
         selectedFlashcardLang = lang;
       }
       try {
         const uid = currentUserId || (currentUser ? currentUser.id : '');
         const langParam = selectedFlashcardLang ? encodeURIComponent(selectedFlashcardLang) : 'All';
-        const res = await fetch(`/api/flashcards/due/?lang=${langParam}&user_id=${encodeURIComponent(uid)}`);
+        const allParam = includeAll ? '&all=true' : '';
+        const res = await fetch(`/api/flashcards/due/?lang=${langParam}${allParam}&user_id=${encodeURIComponent(uid)}`);
         if (res.ok) {
           const data = await res.json();
           dueCards = data.due_cards || [];
@@ -4230,7 +4238,7 @@
 
       let html = `
         <button class="fc-lang-tab ${selectedFlashcardLang === 'All' ? 'active' : ''}" onclick="loadFlashcards('All')">
-          <span>🌐</span> All Languages <span class="tab-badge">${totalAllCards > 0 ? totalAllCards : 0}</span>
+          <span>🌐</span> All Languages <span class="tab-badge">${totalDue > 0 ? totalDue : '0'}</span>
         </button>
       `;
 
@@ -4239,7 +4247,7 @@
         const flag = LANG_EMOJIS[l.name] || '🌐';
         html += `
           <button class="fc-lang-tab ${isSelected ? 'active' : ''}" onclick="loadFlashcards('${l.name}')">
-            <span>${flag}</span> ${l.name} <span class="tab-badge">${l.total_count || l.due_count || 0}</span>
+            <span>${flag}</span> ${l.name} <span class="tab-badge">${l.due_count || 0}</span>
           </button>
         `;
       });
@@ -4254,6 +4262,11 @@
       if (dueCards.length === 0 || currentCardIndex >= dueCards.length) {
         activeDiv.style.display = 'none';
         emptyDiv.style.display = 'block';
+        const emptyDesc = document.getElementById('fc-empty-desc');
+        if (emptyDesc) {
+          const lText = selectedFlashcardLang === 'All' ? 'all languages' : selectedFlashcardLang;
+          emptyDesc.textContent = `You have completed all scheduled reviews for ${lText}! Come back later or start a new scenario.`;
+        }
         return;
       }
 
@@ -4287,6 +4300,13 @@
     async function reviewCard(quality) {
       if (currentCardIndex >= dueCards.length) return;
       const card = dueCards[currentCardIndex];
+
+      // Optimistically decrement due count in availableFlashcardLangs
+      const langStat = (availableFlashcardLangs || []).find(l => l.language.toLowerCase() === (card.language || 'English').toLowerCase());
+      if (langStat && langStat.due_count > 0) {
+        langStat.due_count--;
+        renderFlashcardLanguageTabs();
+      }
 
       // Optimistically move to next card
       currentCardIndex++;

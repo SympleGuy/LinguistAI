@@ -1256,18 +1256,16 @@ class FlashcardDueView(View):
             })
 
         # Base query for due cards
-        due_query = VocabularyCard.objects.filter(user_id=user_id, next_review__lte=now)
-        if req_lang and req_lang.lower() != 'all':
-            due_query = due_query.filter(language__iexact=req_lang)
+        include_all = request.GET.get("all") == "true"
+        if include_all:
+            cards_query = VocabularyCard.objects.filter(user_id=user_id)
+        else:
+            cards_query = VocabularyCard.objects.filter(user_id=user_id, next_review__lte=now)
             
-        due_cards = list(due_query.order_by('next_review')[:50])
-        
-        # If no cards are strictly due right now, fallback to all cards for this user / language so they can practice anytime
-        if not due_cards:
-            fallback_query = VocabularyCard.objects.filter(user_id=user_id)
-            if req_lang and req_lang.lower() != 'all':
-                fallback_query = fallback_query.filter(language__iexact=req_lang)
-            due_cards = list(fallback_query.order_by('next_review')[:50])
+        if req_lang and req_lang.lower() != 'all':
+            cards_query = cards_query.filter(language__iexact=req_lang)
+            
+        due_cards = list(cards_query.order_by('next_review')[:50])
         
         cards = []
         for c in due_cards:
