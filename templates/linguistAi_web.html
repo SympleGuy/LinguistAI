@@ -1715,7 +1715,7 @@
       <div class="hero-inner">
         <div class="hero-badge">
           <i class="bi bi-lightning-fill"></i>
-          Powered by GPT-4 + ElevenLabs Voice AI
+          Powered by Gemini + ElevenLabs Voice AI
         </div>
         <h1 class="hero-h1">Practice Real Conversations,<br><span>Not Flashcards.</span></h1>
         <p class="hero-p">LinguistAI puts you in real-life scenarios — ordering food, navigating airports, acing
@@ -2152,7 +2152,7 @@
               <h3 style="font-size:1.15rem;font-weight:800;margin-bottom:8px">Ready to memorize?</h3>
               <p style="font-size:0.82rem;opacity:0.9;margin-bottom:16px">Reinforce these new words now using Spaced
                 Repetition (Anki)!</p>
-              <button onclick="showPage('flashcards')"
+              <button onclick="startFlashcardPracticeForSession()"
                 style="background:#fff;color:var(--primary);border:none;border-radius:12px;padding:12px 22px;font-size:0.9rem;font-weight:800;cursor:pointer;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:'DM Sans',sans-serif">
                 <i class="bi bi-card-text"></i> Practice Flashcards Now
               </button>
@@ -2295,8 +2295,11 @@
       <div class="section-wrap"
         style="text-align:center; min-height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding-top:40px;">
         <h1 class="page-title">Vocabulary Practice</h1>
-        <p style="color:var(--muted-fg); margin-bottom:30px;">Review your newly learned words using spaced repetition.
+        <p style="color:var(--muted-fg); margin-bottom:20px;">Review your newly learned words using spaced repetition.
         </p>
+
+        <!-- Language Deck Selector -->
+        <div id="fc-lang-tabs" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-bottom:24px;"></div>
 
         <div id="flashcard-empty" style="display:none;">
           <div style="font-size:3rem; margin-bottom:10px;">🎉</div>
@@ -2311,6 +2314,7 @@
           <div class="flashcard-container" onclick="flipCard()">
             <div class="flashcard" id="fc-inner">
               <div class="flashcard-face">
+                <div style="display:inline-flex;align-items:center;gap:6px;background:rgba(124,58,237,0.08);color:var(--primary);font-size:0.78rem;font-weight:700;padding:4px 12px;border-radius:999px;margin-bottom:8px;" id="fc-lang-badge">🌐 English</div>
                 <div style="font-size:2.2rem; font-weight:bold; color:var(--primary);" id="fc-word">Word</div>
                 <div style="margin-top:15px; font-size:1rem; color:#4b5563; font-style:italic;" id="fc-example"></div>
                 <div style="margin-top:auto; font-size:0.8rem; color:var(--muted-fg); padding-top:20px;">👆 Tap card to
@@ -2433,7 +2437,7 @@
             style="background:rgba(255,255,255,.15);color:#fff;font-size:.75rem;font-weight:500;border-radius:8px;padding:4px 10px">50k+
             Learners</span>
           <span
-            style="background:rgba(255,255,255,.15);color:#fff;font-size:.75rem;font-weight:500;border-radius:8px;padding:4px 10px">30+
+            style="background:rgba(255,255,255,.15);color:#fff;font-size:.75rem;font-weight:500;border-radius:8px;padding:4px 10px">8
             Languages</span>
           <span
             style="background:rgba(255,255,255,.15);color:#fff;font-size:.75rem;font-weight:500;border-radius:8px;padding:4px 10px">1M+
@@ -2899,10 +2903,6 @@
     let currentSessionScores = { grammar: [], pronunciation: [], vocab: [], overall: [] };
 
     async function startConv(id) {
-      if (!currentUser) {
-        showPage('login');
-        return;
-      }
       currentScenarioId = id;
       currentSessionId = null;
       currentSessionFeedbackList = [];
@@ -4097,18 +4097,77 @@
     let dueCards = [];
     let currentCardIndex = 0;
 
-    async function loadFlashcards() {
+    const LANG_EMOJIS = {
+      'English': '🇬🇧',
+      'French': '🇫🇷',
+      'Spanish': '🇪🇸',
+      'German': '🇩🇪',
+      'Japanese': '🇯🇵',
+      'Chinese': '🇨🇳',
+      'Korean': '🇰🇷',
+      'Vietnamese': '🇻🇳'
+    };
+
+    let selectedFlashcardLang = 'All';
+    let availableFlashcardLangs = [];
+
+    function startFlashcardPracticeForSession() {
+      const currentScen = SCENARIOS.find(x => String(x.id) === String(currentScenarioId));
+      const targetLang = currentScen ? (currentScen.lang || 'English') : 'All';
+      showPage('flashcards');
+      loadFlashcards(targetLang);
+    }
+
+    async function loadFlashcards(lang) {
+      if (lang !== undefined) {
+        selectedFlashcardLang = lang;
+      }
       try {
-        const res = await fetch('/api/flashcards/due/');
+        const uid = currentUserId || (currentUser ? currentUser.id : '');
+        const langParam = selectedFlashcardLang ? encodeURIComponent(selectedFlashcardLang) : 'All';
+        const res = await fetch(`/api/flashcards/due/?lang=${langParam}&user_id=${encodeURIComponent(uid)}`);
         if (res.ok) {
           const data = await res.json();
           dueCards = data.due_cards || [];
+          availableFlashcardLangs = data.available_languages || [];
           currentCardIndex = 0;
+          renderFlashcardLanguageTabs();
           renderCurrentCard();
         }
       } catch (e) {
         console.error("Failed to load flashcards", e);
       }
+    }
+
+    function renderFlashcardLanguageTabs() {
+      const tabsContainer = document.getElementById('fc-lang-tabs');
+      if (!tabsContainer) return;
+
+      if (!availableFlashcardLangs || availableFlashcardLangs.length === 0) {
+        tabsContainer.innerHTML = '';
+        return;
+      }
+
+      // Calculate total due across all languages
+      const totalDue = availableFlashcardLangs.reduce((sum, item) => sum + (item.due_count || 0), 0);
+
+      let html = `
+        <button onclick="loadFlashcards('All')" style="padding:6px 16px;border-radius:999px;font-size:0.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;transition:all 0.2s;${selectedFlashcardLang === 'All' ? 'background:var(--primary);color:#fff;border:none;' : 'background:#f1f5f9;color:var(--fg);border:1px solid var(--border);'}">
+          🌐 All Languages <span style="background:${selectedFlashcardLang === 'All' ? 'rgba(255,255,255,0.3)' : '#e2e8f0'};color:${selectedFlashcardLang === 'All' ? '#fff' : 'var(--fg)'};padding:1px 7px;border-radius:10px;font-size:0.75rem;">${totalDue}</span>
+        </button>
+      `;
+
+      availableFlashcardLangs.forEach(l => {
+        const isSelected = selectedFlashcardLang.toLowerCase() === l.language.toLowerCase();
+        const flag = LANG_EMOJIS[l.language] || '🌐';
+        html += `
+          <button onclick="loadFlashcards('${l.language}')" style="padding:6px 16px;border-radius:999px;font-size:0.82rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-family:'DM Sans',sans-serif;transition:all 0.2s;${isSelected ? 'background:var(--primary);color:#fff;border:none;' : 'background:#f1f5f9;color:var(--fg);border:1px solid var(--border);'}">
+            ${flag} ${l.language} <span style="background:${isSelected ? 'rgba(255,255,255,0.3)' : '#e2e8f0'};color:${isSelected ? '#fff' : 'var(--fg)'};padding:1px 7px;border-radius:10px;font-size:0.75rem;">${l.due_count}</span>
+          </button>
+        `;
+      });
+
+      tabsContainer.innerHTML = html;
     }
 
     function renderCurrentCard() {
@@ -4125,6 +4184,12 @@
       emptyDiv.style.display = 'none';
 
       const card = dueCards[currentCardIndex];
+      const langFlag = LANG_EMOJIS[card.language] || '🌐';
+      const langText = `${langFlag} ${card.language || 'English'}`;
+
+      const langBadge = document.getElementById('fc-lang-badge');
+      if (langBadge) langBadge.textContent = langText;
+
       document.getElementById('fc-word').textContent = card.word;
       document.getElementById('fc-example').textContent = card.example ? `"${card.example}"` : '';
       document.getElementById('fc-translation').textContent = card.translation;
@@ -4152,7 +4217,8 @@
 
       // Send review in background
       try {
-        await fetch(`/api/flashcards/${card.id}/review/`, {
+        const uid = currentUserId || (currentUser ? currentUser.id : '');
+        await fetch(`/api/flashcards/${card.id}/review/?user_id=${encodeURIComponent(uid)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ quality: quality })

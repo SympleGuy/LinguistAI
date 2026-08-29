@@ -627,6 +627,7 @@ class SubmitResponseView(View):
                     VocabularyCard.objects.get_or_create(
                         user_id=session.user_id,
                         word=word,
+                        language=target_lang,
                         defaults={
                             'translation': vocab.get("translation", ""),
                             'example': vocab.get("example", "")
@@ -747,6 +748,7 @@ class SubmitAudioResponseView(View):
                     VocabularyCard.objects.get_or_create(
                         user_id=session.user_id,
                         word=word,
+                        language=target_lang,
                         defaults={
                             'translation': vocab.get("translation", ""),
                             'example': vocab.get("example", "")
@@ -1225,13 +1227,40 @@ class SessionLogsView(View):
 @method_decorator(csrf_exempt, name='dispatch')
 class FlashcardDueView(View):
     def get(self, request):
-        user_id = request.session.get("supabase_user_id")
+        user_id = request.session.get("supabase_user_id") or request.GET.get("user_id") or request.session.get("user_id")
         if not user_id:
             return JsonResponse({"error": "Unauthorized"}, status=401)
         
-        # Fetch cards where next_review <= now
         now = timezone.now()
-        due_cards = VocabularyCard.objects.filter(user_id=user_id, next_review__lte=now).order_by('next_review')[:50]
+        req_lang = request.GET.get("lang")
+
+        # Query all cards of this user to compute available languages & counts
+        from django.db.models import Count, Q
+        lang_stats = (
+            VocabularyCard.objects.filter(user_id=user_id)
+            .values('language')
+            .annotate(
+                due_count=Count('id', filter=Q(next_review__lte=now)),
+                total_count=Count('id')
+            )
+            .order_by('-due_count')
+        )
+        
+        available_languages = []
+        for ls in lang_stats:
+            l_name = ls.get('language') or 'English'
+            available_languages.append({
+                "language": l_name,
+                "due_count": ls.get('due_count', 0),
+                "total_count": ls.get('total_count', 0)
+            })
+
+        # Base query for due cards
+        due_query = VocabularyCard.objects.filter(user_id=user_id, next_review__lte=now)
+        if req_lang and req_lang.lower() != 'all':
+            due_query = due_query.filter(language__iexact=req_lang)
+            
+        due_cards = due_query.order_by('next_review')[:50]
         
         cards = []
         for c in due_cards:
@@ -1239,15 +1268,20 @@ class FlashcardDueView(View):
                 "id": str(c.id),
                 "word": c.word,
                 "translation": c.translation,
-                "example": c.example
+                "example": c.example,
+                "language": c.language or "English"
             })
             
-        return JsonResponse({"due_cards": cards}, status=200)
+        return JsonResponse({
+            "due_cards": cards,
+            "available_languages": available_languages,
+            "selected_language": req_lang or "All"
+        }, status=200)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class FlashcardReviewView(View):
     def post(self, request, card_id):
-        user_id = request.session.get("supabase_user_id")
+        user_id = request.session.get("supabase_user_id") or request.GET.get("user_id") or request.session.get("user_id")
         if not user_id:
             return JsonResponse({"error": "Unauthorized"}, status=401)
             
@@ -1276,7 +1310,7 @@ class FlashcardReviewView(View):
             card.next_review = timezone.now() + timezone.timedelta(days=card.interval)
             card.save()
             
-            return JsonResponse({"message": "Reviewed"}, status=200)
+            return JsonResponse({"message": "Reviewed", "next_review": card.next_review.isoformat(), "language": card.language}, status=200)
             
         except VocabularyCard.DoesNotExist:
             return JsonResponse({"error": "Card not found"}, status=404)

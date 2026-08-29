@@ -103,6 +103,7 @@ class VocabularyCard(models.Model):
     word = models.CharField(max_length=255)
     translation = models.CharField(max_length=255, blank=True, null=True)
     example = models.TextField(blank=True, null=True)
+    language = models.CharField(max_length=50, default='English')
     
     # SuperMemo-2 Algorithm Fields
     next_review = models.DateTimeField(default=timezone.now)
@@ -117,7 +118,7 @@ class VocabularyCard(models.Model):
         verbose_name_plural = 'Vocabulary Cards'
         db_table = 'vocabulary_cards'
         indexes = [
-            models.Index(fields=['user_id', 'next_review']),
+            models.Index(fields=['user_id', 'language', 'next_review']),
         ]
 
     def __str__(self):
