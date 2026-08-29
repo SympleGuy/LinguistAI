@@ -1072,7 +1072,8 @@
       background: #fff;
       border: 1px solid var(--border);
       border-radius: 18px;
-      padding: 20px
+      padding: 20px;
+      overflow: hidden;
     }
 
     .fb-item {
@@ -2000,6 +2001,46 @@
               </div><span class="score-tag">Score: 88%</span><button onclick="startConv('restaurant')"
                 style="background:var(--secondary-bg);color:var(--primary);border:none;border-radius:8px;padding:5px 12px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">Practice</button>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ FLASHCARDS ════════════════════════════════════════════ -->
+  <div id="page-flashcards" class="page">
+    <div class="inner-page">
+      <div class="section-wrap" style="text-align:center; min-height:60vh; display:flex; flex-direction:column; align-items:center; justify-content:center; padding-top:40px;">
+        <h1 class="page-title">Vocabulary Practice</h1>
+        <p style="color:var(--muted-fg); margin-bottom:30px;">Review your newly learned words using spaced repetition.</p>
+
+        <div id="flashcard-empty" style="display:none;">
+          <div style="font-size:3rem; margin-bottom:10px;">🎉</div>
+          <h2>You're all caught up!</h2>
+          <p style="color:var(--muted-fg);">Practice more scenarios to collect new words.</p>
+          <button onclick="showPage('scenarios')" style="margin-top:20px; padding:10px 24px; background:var(--primary); color:#fff; border:none; border-radius:12px; font-weight:bold; cursor:pointer; font-family:'DM Sans',sans-serif;">Start New Session</button>
+        </div>
+
+        <div id="flashcard-active" style="display:none; width:100%;">
+          <div class="flashcard-container" onclick="flipCard()">
+            <div class="flashcard" id="fc-inner">
+              <div class="flashcard-face">
+                <div style="font-size:2.2rem; font-weight:bold; color:var(--primary);" id="fc-word">Word</div>
+                <div style="margin-top:15px; font-size:1rem; color:#4b5563; font-style:italic;" id="fc-example"></div>
+                <div style="margin-top:auto; font-size:0.8rem; color:var(--muted-fg); padding-top:20px;">👆 Tap card to flip</div>
+              </div>
+              <div class="flashcard-face flashcard-back">
+                <div style="font-size:0.85rem; color:var(--muted-fg); margin-bottom:8px;">Translation</div>
+                <div style="font-size:1.6rem; font-weight:bold; color:#374151;" id="fc-translation">Translation</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="anki-buttons" id="fc-buttons" style="display:none;">
+            <button class="anki-btn again" onclick="reviewCard(1)">😓 Again</button>
+            <button class="anki-btn hard" onclick="reviewCard(2)">😰 Hard</button>
+            <button class="anki-btn good" onclick="reviewCard(4)">😊 Good</button>
+            <button class="anki-btn easy" onclick="reviewCard(5)">🚀 Easy</button>
           </div>
         </div>
       </div>
