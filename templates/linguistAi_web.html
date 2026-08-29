@@ -1496,6 +1496,99 @@
     .scrollable-panel::-webkit-scrollbar-thumb:hover {
       background: #94a3b8;
     }
+
+    /* End Lesson & Summary Page Styles */
+    .btn-end-lesson {
+      background: #fee2e2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+      border-radius: 10px;
+      padding: 6px 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .btn-end-lesson:hover {
+      background: #ef4444;
+      color: #fff;
+      border-color: #ef4444;
+    }
+
+    .summary-hero-card {
+      background: linear-gradient(135deg, rgba(124, 58, 237, 0.08) 0%, rgba(59, 130, 246, 0.08) 100%);
+      border: 1px solid rgba(124, 58, 237, 0.15);
+      border-radius: 24px;
+      padding: 32px 28px;
+      text-align: center;
+      margin-bottom: 28px;
+    }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 24px;
+      margin-bottom: 30px;
+    }
+    @media (max-width: 860px) {
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .summary-box {
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+    }
+    .summary-box-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--fg);
+    }
+    .summary-score-item {
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 14px 18px;
+      text-align: center;
+    }
+    .summary-score-val {
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .summary-score-lbl {
+      font-size: 0.75rem;
+      color: var(--muted-fg);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+    .summary-vocab-item {
+      background: #faf5ff;
+      border: 1px solid #f3e8ff;
+      border-radius: 12px;
+      padding: 12px 16px;
+      margin-bottom: 10px;
+    }
+    .summary-cta-box {
+      background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+      border-radius: 20px;
+      padding: 24px;
+      color: #fff;
+      text-align: center;
+      margin-top: 20px;
+    }
   </style>
 </head>
 
@@ -1849,10 +1942,15 @@
               style="height:180px;background:var(--secondary-bg);display:flex;align-items:center;justify-content:center;font-size:4rem">
             </div>
             <div
-              style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px">
-              <span id="conv-title" style="font-weight:700;font-size:.95rem"></span>
-              <span id="conv-lang"
-                style="background:var(--secondary-bg);color:var(--primary);font-size:.7rem;font-weight:600;border-radius:8px;padding:2px 8px"></span>
+              style="padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+              <div style="display:flex;align-items:center;gap:10px">
+                <span id="conv-title" style="font-weight:700;font-size:.95rem"></span>
+                <span id="conv-lang"
+                  style="background:var(--secondary-bg);color:var(--primary);font-size:.7rem;font-weight:600;border-radius:8px;padding:2px 8px"></span>
+              </div>
+              <button class="btn-end-lesson" onclick="endLesson()">
+                <i class="bi bi-flag-fill"></i> End Lesson
+              </button>
             </div>
             <div class="msg-list" id="msg-list"></div>
             <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
@@ -1862,9 +1960,6 @@
                   <div style="font-size:.85rem;color:var(--muted-fg)" id="mic-status">Press the mic to start speaking</div>
                   <div style="font-size:.7rem;color:var(--muted-fg)">Powered by OpenAI Whisper · ElevenLabs TTS</div>
                 </div>
-                <button onclick="skipTurn()" style="background:var(--muted);border:none;border-radius:8px;padding:7px 14px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
-                  <i class="bi bi-skip-forward-fill"></i> Skip
-                </button>
               </div>
               <div class="text-fallback-container" id="text-fallback-container" style="display:none;">
                 <input type="text" id="text-fallback-input" class="text-fallback-input" placeholder="Type your message here..." onkeypress="handleTextSubmit(event)">
@@ -1890,6 +1985,88 @@
     </div>
   </div>
 
+  <!-- ═══ SUMMARY ══════════════════════════════════════════════ -->
+  <div id="page-summary" class="page">
+    <div class="inner-page">
+      <div class="section-wrap" style="max-width:960px">
+        <!-- Hero card -->
+        <div class="summary-hero-card">
+          <div style="font-size:3.5rem;margin-bottom:8px" id="sum-emoji">🎉</div>
+          <h1 class="page-title" style="font-size:2rem;margin-bottom:6px">Lesson Completed!</h1>
+          <p style="color:var(--muted-fg);font-size:0.95rem;" id="sum-subtitle">Great job practicing your conversational skills.</p>
+          
+          <!-- Score Grid -->
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:24px" id="sum-scores-grid">
+            <div class="summary-score-item">
+              <div class="summary-score-val" id="sum-overall-score">90%</div>
+              <div class="summary-score-lbl">Overall Score</div>
+            </div>
+            <div class="summary-score-item">
+              <div class="summary-score-val" id="sum-grammar-score">92%</div>
+              <div class="summary-score-lbl">Grammar</div>
+            </div>
+            <div class="summary-score-item">
+              <div class="summary-score-val" id="sum-pronun-score">88%</div>
+              <div class="summary-score-lbl">Pronunciation</div>
+            </div>
+            <div class="summary-score-item">
+              <div class="summary-score-val" id="sum-vocab-score">90%</div>
+              <div class="summary-score-lbl">Vocabulary</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Detail Grid -->
+        <div class="summary-grid">
+          <!-- Left: Feedback, Corrections, Suggestions -->
+          <div style="display:flex;flex-direction:column;gap:20px">
+            <div class="summary-box">
+              <div class="summary-box-title"><i class="bi bi-chat-heart-fill" style="color:var(--primary)"></i> AI Evaluation & Feedback</div>
+              <div id="sum-ai-comments" style="color:#4b5563;font-size:0.9rem;line-height:1.6;margin-bottom:14px"></div>
+              
+              <div id="sum-corrections-wrap" style="display:none;margin-top:14px;">
+                <div style="font-weight:700;font-size:0.85rem;color:#dc2626;margin-bottom:8px;"><i class="bi bi-exclamation-triangle-fill"></i> Key Corrections Made</div>
+                <div id="sum-corrections-list"></div>
+              </div>
+
+              <div id="sum-suggestions-wrap" style="display:none;margin-top:14px;">
+                <div style="font-weight:700;font-size:0.85rem;color:#d97706;margin-bottom:8px;"><i class="bi bi-lightbulb-fill"></i> Pro Tips & Suggestions</div>
+                <div id="sum-suggestions-list"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right: Session Vocabulary & CTAs -->
+          <div style="display:flex;flex-direction:column;gap:20px">
+            <div class="summary-box">
+              <div class="summary-box-title"><i class="bi bi-bookmark-star-fill" style="color:#f59e0b"></i> New Vocabulary Learned</div>
+              <div id="sum-vocab-list" style="max-height:220px;overflow-y:auto;padding-right:4px;"></div>
+            </div>
+
+            <!-- Action CTAs -->
+            <div class="summary-cta-box">
+              <div style="font-size:1.6rem;margin-bottom:6px">🧠</div>
+              <h3 style="font-size:1.15rem;font-weight:800;margin-bottom:8px">Ready to memorize?</h3>
+              <p style="font-size:0.82rem;opacity:0.9;margin-bottom:16px">Reinforce these new words now using Spaced Repetition (Anki)!</p>
+              <button onclick="showPage('flashcards')" style="background:#fff;color:var(--primary);border:none;border-radius:12px;padding:12px 22px;font-size:0.9rem;font-weight:800;cursor:pointer;width:100%;box-shadow:0 4px 12px rgba(0,0,0,0.15);font-family:'DM Sans',sans-serif">
+                <i class="bi bi-card-text"></i> Practice Flashcards Now
+              </button>
+              
+              <div style="display:flex;gap:8px;margin-top:12px">
+                <button onclick="showPage('scenarios')" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:10px;padding:8px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;flex:1;font-family:'DM Sans',sans-serif">
+                  <i class="bi bi-arrow-repeat"></i> Another Scenario
+                </button>
+                <button onclick="showPage('dashboard')" style="background:rgba(255,255,255,0.15);color:#fff;border:1px solid rgba(255,255,255,0.3);border-radius:10px;padding:8px 12px;font-size:0.78rem;font-weight:700;cursor:pointer;flex:1;font-family:'DM Sans',sans-serif">
+                  <i class="bi bi-grid-1x2"></i> Dashboard
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ DASHBOARD ════════════════════════════════════════════ -->
   <div id="page-dashboard" class="page">
     <div class="inner-page">
@@ -1901,9 +2078,6 @@
             <p style="color:var(--muted-fg);font-size:.88rem;margin-top:4px" id="dash-welcome">Welcome back!</p>
           </div>
           <div style="display:flex; gap:10px;">
-            <button class="btn-try" onclick="resumeSession()" style="display:none;align-items:center;gap:6px; background:var(--muted); color:var(--fg);" id="btn-resume-session">
-              <i class="bi bi-play-circle-fill"></i> Resume Session
-            </button>
             <button class="btn-try" onclick="showPage('scenarios')" style="display:flex;align-items:center;gap:6px">
               <i class="bi bi-mic-fill"></i> New Session
             </button>
@@ -2281,7 +2455,7 @@
     let currentUserId = currentUser ? currentUser.id : (localStorage.getItem('linguist_user_id') || '00000000-0000-0000-0000-000000000001');
     localStorage.setItem('linguist_user_id', currentUserId);
 
-    const PROTECTED_PAGES = ['dashboard', 'profile', 'flashcards'];
+    const PROTECTED_PAGES = ['dashboard', 'profile', 'flashcards', 'summary'];
 
     function showPage(name, syncUrl = true) {
       // Auth Guard: Redirect unauthenticated guest to login
@@ -2394,7 +2568,7 @@
               emoji: s.emoji || '💬',
               popular: !!s.popular,
               lang: s.lang || 'English',
-              msgs: s.msgs || [{ r: 'ai', t: `Welcome to ${s.title}! How can I help you today?` }],
+              msgs: s.msgs || [{ r: 'ai', t: getScenarioGreeting(s) }],
               fb: s.fb || [{ i: 'ℹ️', t: 'Start speaking to receive AI feedback.' }],
               vocab: s.vocab || []
             }));
@@ -2403,6 +2577,124 @@
       } catch (e) {
         console.warn("Could not load scenarios from API, using fallback", e);
       }
+    }
+
+    // Dynamic Scenario Greeting Generator per Topic & Language
+    function getScenarioGreeting(s) {
+      if (!s) return "Hello! How can I help you today?";
+      const titleLower = (s.title || '').toLowerCase();
+      const lang = s.lang || 'English';
+
+      const greetings = {
+        'French': {
+          'restaurant': "Bonjour ! Bienvenue au restaurant Le Petit Paris. Avez-vous une réservation pour ce soir ?",
+          'coffee': "Bonjour ! Que puis-je vous servir aujourd'hui à la brasserie ?",
+          'hotel': "Bonjour et bienvenue à l'hôtel ! Avez-vous une réservation chez nous ?",
+          'airport': "Bonjour ! Puis-je voir votre passeport et votre carte d'embarquement, s'il vous plaît ?",
+          'job': "Bonjour et bienvenue à cet entretien d'embauche. Pourriez-vous commencer par vous présenter ?",
+          'interview': "Bonjour et bienvenue à cet entretien d'embauche. Pourriez-vous commencer par vous présenter ?",
+          'shop': "Bonjour ! Puis-je vous aider à trouver quelque chose en magasin ?",
+          'direction': "Bonjour ! Je cherche la gare principale, pouvez-vous m'aider ?",
+          'emergency': "Bonjour, je suis le médecin de garde. Quels symptômes ressentez-vous ?",
+          'default': `Bonjour ! Bienvenue dans votre session "${s.title}". Comment puis-je vous aider aujourd'hui ?`
+        },
+        'Spanish': {
+          'restaurant': "¡Hola! Bienvenido a nuestro restaurante. ¿Tiene una reserva para hoy?",
+          'coffee': "¡Hola! Bienvenido a la cafetería. ¿Qué le gustaría pedir hoy?",
+          'hotel': "¡Buenos días! Bienvenido al Hotel Sol. ¿Tiene una reserva con nosotros?",
+          'airport': "¡Buenos días! ¿Me permite su pasaporte y tarjeta de embarque, por favor?",
+          'job': "¡Hola y bienvenido a la entrevista! ¿Podría empezar contándome un poco sobre su experiencia?",
+          'interview': "¡Hola y bienvenido a la entrevista! ¿Podría empezar contándome un poco sobre su experiencia?",
+          'shop': "¡Hola! ¿En qué le puedo ayudar a buscar hoy?",
+          'direction': "¡Hola! Disculpe, ¿sabe cómo llegar al centro desde aquí?",
+          'emergency': "¡Hola! Soy el médico de guardia. ¿Qué síntomas tiene?",
+          'default': `¡Hola! Bienvenido a la práctica de "${s.title}". ¿En qué le puedo ayudar hoy?`
+        },
+        'German': {
+          'restaurant': "Guten Tag! Willkommen im Restaurant. Haben Sie einen Tisch reserviert?",
+          'coffee': "Guten Tag! Willkommen im Café. Was darf ich Ihnen heute bringen?",
+          'hotel': "Guten Tag und herzlich willkommen! Haben Sie eine Zimmerreservierung bei uns?",
+          'airport': "Guten Tag! Kann ich bitte Ihren Reisepass und Ihre Bordkarte sehen?",
+          'job': "Guten Tag! Vielen Dank für Ihr Kommen. Könnten Sie sich bitte kurz vorstellen?",
+          'interview': "Guten Tag! Vielen Dank für Ihr Kommen. Könnten Sie sich bitte kurz vorstellen?",
+          'shop': "Hallo! Kann ich Ihnen heute beim Einkaufen behilflich sein?",
+          'direction': "Entschuldigung! Können Sie mir bitte sagen, wo der Bahnhof ist?",
+          'emergency': "Guten Tag, ich bin der diensthabende Arzt. Was für Beschwerden haben Sie?",
+          'default': `Guten Tag! Willkommen zu Ihrer "${s.title}" Übung. Wie kann ich Ihnen helfen?`
+        },
+        'Japanese': {
+          'restaurant': "いらっしゃいませ！レストランへようこそ。ご予約はされていますでしょうか？",
+          'coffee': "いらっしゃいませ！カフェへようこそ。何をご注文されますか？",
+          'hotel': "いらっしゃいませ、当ホテルへようこそ！ご予約のお名前を伺えますでしょうか？",
+          'airport': "こんにちは！パスポートと搭乗券を拝見できますでしょうか？",
+          'job': "本日は面接にお越しいただきありがとうございます。簡単に自己紹介をお願いできますか？",
+          'interview': "本日は面接にお越しいただきありがとうございます。簡単に自己紹介をお願いできますか？",
+          'shop': "いらっしゃいませ！何かお探しの商品はございますか？",
+          'direction': "すみません、駅までの道を教えていただけますでしょうか？",
+          'emergency': "こんにちは、当直医です。どのような症状がありますか？",
+          'default': `こんにちは！「${s.title}」の練習へようこそ。どのようなご用件でしょうか？`
+        },
+        'Korean': {
+          'restaurant': "안녕하세요! 식당에 오신 것을 환영합니다. 예약하셨나요?",
+          'coffee': "안녕하세요! 카페에 오신 것을 환영합니다. 어떤 음료를 드릴까요?",
+          'hotel': "어서오세요! 호텔에 오신 것을 환영합니다. 예약자 성함이 어떻게 되시나요?",
+          'airport': "안녕하세요! 여권과 탑승권을 보여주시겠습니까?",
+          'job': "면접에 와주셔서 감사합니다. 먼저 간단하게 자기소개 부탁드립니다.",
+          'interview': "면접에 와주셔서 감사합니다. 먼저 간단하게 자기소개 부탁드립니다.",
+          'shop': "어서오세요! 찾으시는 물건이 있으신가요?",
+          'direction': "실례합니다, 지하철역으로 가려면 어디로 가야 하나요?",
+          'emergency': "안녕하세요, 담당 의사입니다. 어디가 불편하신가요?",
+          'default': `안녕하세요! "${s.title}" 연습에 오신 것을 환영합니다. 무엇을 도와드릴까요?`
+        },
+        'Chinese': {
+          'restaurant': "您好！欢迎光临餐厅。请问您今天有预订吗？",
+          'coffee': "您好！欢迎光临咖啡厅，今天想喝点什么？",
+          'hotel': "您好！欢迎入住酒店。请问预订的名字是什么？",
+          'airport': "您好！请出示您的护照和登机牌。",
+          'job': "您好，感谢您来参加面试。请先简单介绍一下您自己吧。",
+          'interview': "您好，感谢您来参加面试。请先简单介绍一下您自己吧。",
+          'shop': "您好！欢迎光临，请问有什么可以帮您的？",
+          'direction': "请问一下，去市中心应该怎么走？",
+          'emergency': "您好，我是值班医生。请问您哪里感觉不舒服？",
+          'default': `您好！欢迎来到“${s.title}”练习。请问有什么我可以协助您的？`
+        },
+        'Vietnamese': {
+          'restaurant': "Xin chào! Chào mừng bạn đến với nhà hàng. Bạn đã đặt bàn trước chưa ạ?",
+          'coffee': "Xin chào! Chào mừng bạn đến quán cà phê. Bạn muốn dùng đồ uống gì hôm nay?",
+          'hotel': "Xin chào! Chào mừng quý khách đến khách sạn. Quý khách đã đặt phòng trước chưa ạ?",
+          'airport': "Xin chào! Vui lòng cho tôi xem hộ chiếu và thẻ lên máy bay của bạn.",
+          'job': "Chào bạn, cảm ơn bạn đã đến phỏng vấn. Bạn có thể giới thiệu đôi nét về bản thân không?",
+          'interview': "Chào bạn, cảm ơn bạn đã đến phỏng vấn. Bạn có thể giới thiệu đôi nét về bản thân không?",
+          'shop': "Xin chào! Bạn đang tìm kiếm sản phẩm nào để mình hỗ trợ nhé?",
+          'direction': "Xin lỗi, bạn có thể chỉ đường giúp tôi đến ga tàu gần nhất được không?",
+          'emergency': "Chào bạn, tôi là bác sĩ trực. Bạn đang cảm thấy khó chịu ở đâu?",
+          'default': `Xin chào! Chào mừng bạn đến với buổi luyện tập "${s.title}". Tôi có thể giúp gì cho bạn hôm nay?`
+        },
+        'English': {
+          'restaurant': "Hello! Welcome to our restaurant. Do you have a table reservation with us today?",
+          'coffee': "Hi there! Welcome to the coffee shop. What can I get started for you today?",
+          'hotel': "Good day and welcome to the hotel! Do you have a reservation under your name?",
+          'airport': "Good morning! May I please see your passport and boarding pass?",
+          'job': "Hello, thank you for coming in today for the interview. Could you start by telling me a little about yourself?",
+          'interview': "Hello, thank you for coming in today for the interview. Could you start by telling me a little about yourself?",
+          'shop': "Hello! Welcome in. Are you looking for anything specific today?",
+          'direction': "Excuse me! Could you tell me how to get to the central station from here?",
+          'emergency': "Hello, I am the doctor on duty. Could you describe what symptoms you've been experiencing?",
+          'default': `Hello and welcome to your "${s.title}" practice! How can I help you today?`
+        }
+      };
+
+      const langMap = greetings[lang] || greetings['English'];
+      let matchedGreeting = null;
+
+      for (const [key, msg] of Object.entries(langMap)) {
+        if (key !== 'default' && titleLower.includes(key)) {
+          matchedGreeting = msg;
+          break;
+        }
+      }
+
+      return matchedGreeting || langMap['default'] || `Welcome to ${s.title}! How can I help you today?`;
     }
 
     async function renderScenarios() {
@@ -2482,20 +2774,26 @@
       renderScenarios();
     }
 
-    // ── CONVERSATION ──────────────────────────────────────────────
+    // ── CONVERSATION & SESSION STATE ──────────────────────────────
     let currentScenarioId = 1;
+    let currentSessionFeedbackList = [];
+    let currentSessionVocabList = [];
+    let currentSessionScores = { grammar: [], pronunciation: [], vocab: [], overall: [] };
 
     async function startConv(id) {
       currentScenarioId = id;
       currentSessionId = null;
+      currentSessionFeedbackList = [];
+      currentSessionVocabList = [];
+      currentSessionScores = { grammar: [], pronunciation: [], vocab: [], overall: [] };
 
       const s = SCENARIOS.find(x => String(x.id) === String(id)) || SCENARIOS[0];
       document.getElementById('conv-title').textContent = s.title;
       document.getElementById('conv-lang').textContent = s.lang;
       document.getElementById('conv-banner').textContent = s.emoji;
 
-      // Show clean initial AI greeting for this scenario
-      const initialGreeting = (s.msgs && s.msgs.length > 0) ? s.msgs[0].t : `Hello! Welcome to our ${s.title} practice. How can I help you today?`;
+      // Show dynamic, natural initial AI greeting for this scenario and language
+      const initialGreeting = getScenarioGreeting(s);
       const ml = document.getElementById('msg-list');
       ml.innerHTML = `
     <div class="msg-wrap">
@@ -2540,6 +2838,15 @@
 
     function updateFeedbackUI(feedback) {
       if (!feedback) return;
+
+      // Track session metrics for Summary page
+      if (feedback.grammar_score !== undefined) currentSessionScores.grammar.push(feedback.grammar_score);
+      if (feedback.pronunciation_score !== undefined) currentSessionScores.pronunciation.push(feedback.pronunciation_score);
+      if (feedback.vocabulary_score !== undefined) currentSessionScores.vocab.push(feedback.vocabulary_score);
+      const turnOverall = Math.round(((feedback.grammar_score || 85) + (feedback.pronunciation_score || 80)) / 2);
+      currentSessionScores.overall.push(turnOverall);
+      currentSessionFeedbackList.push(feedback);
+
       const fbList = document.getElementById('fb-list');
       if (!fbList) return;
 
@@ -2569,6 +2876,11 @@
           const existingHTML = vocabList.innerHTML;
           let newVocabHTML = '';
           feedback.extracted_vocabulary.forEach(v => {
+            // Track session vocabulary for Summary page
+            if (!currentSessionVocabList.some(item => item.word.toLowerCase() === v.word.toLowerCase())) {
+              currentSessionVocabList.push(v);
+            }
+
             // Deduplicate in UI
             if (!existingHTML.includes(`🌟 ${v.word}`)) {
               newVocabHTML += `<div style="margin-bottom:8px;">
@@ -2578,7 +2890,6 @@
             }
           });
           
-          // Check if there's already content. If empty or hasn't started, replace. Otherwise append.
           if (vocabList.innerHTML.trim() === '') {
             vocabList.innerHTML = newVocabHTML;
           } else {
@@ -2586,6 +2897,107 @@
           }
         }
       }
+    }
+
+    // End Lesson & Aggregate Summary Function
+    function endLesson() {
+      // 1. Calculate average scores
+      const gScores = currentSessionScores.grammar;
+      const pScores = currentSessionScores.pronunciation;
+      const vScores = currentSessionScores.vocab;
+      const oScores = currentSessionScores.overall;
+
+      const avg = arr => arr.length > 0 ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length) : 85;
+
+      const avgG = avg(gScores);
+      const avgP = avg(pScores);
+      const avgV = avg(vScores);
+      const avgO = oScores.length > 0 ? avg(oScores) : Math.round((avgG + avgP) / 2);
+
+      // 2. Set Score KPIs
+      document.getElementById('sum-overall-score').textContent = `${avgO}%`;
+      document.getElementById('sum-grammar-score').textContent = `${avgG}%`;
+      document.getElementById('sum-pronun-score').textContent = `${avgP}%`;
+      document.getElementById('sum-vocab-score').textContent = `${avgV}%`;
+
+      // 3. Hero Subtitle & Emoji
+      const currentScen = SCENARIOS.find(x => String(x.id) === String(currentScenarioId)) || { title: 'Practice Session', emoji: '🎉', lang: 'English' };
+      document.getElementById('sum-emoji').textContent = currentScen.emoji || '🎉';
+      document.getElementById('sum-subtitle').textContent = `Completed ${currentScen.title} (${currentScen.lang}) with ${currentSessionFeedbackList.length} turns practiced.`;
+
+      // 4. AI Feedback Recap
+      const commentsDiv = document.getElementById('sum-ai-comments');
+      const lastFb = currentSessionFeedbackList[currentSessionFeedbackList.length - 1];
+      if (lastFb && lastFb.comments) {
+        commentsDiv.textContent = lastFb.comments;
+      } else if (currentSessionFeedbackList.length === 0) {
+        commentsDiv.textContent = "You completed the lesson! Practice speaking into the microphone or typing responses to receive in-depth real-time grammar, pronunciation, and vocabulary ratings.";
+      } else {
+        commentsDiv.textContent = "Great conversational practice! Your fluency and expression are steadily improving. Keep exploring varied scenarios to strengthen your speaking reflexes.";
+      }
+
+      // 5. Corrections list
+      const correctionsWrap = document.getElementById('sum-corrections-wrap');
+      const correctionsList = document.getElementById('sum-corrections-list');
+      const allCorrections = [];
+      currentSessionFeedbackList.forEach(fb => {
+        if (Array.isArray(fb.corrections)) {
+          fb.corrections.forEach(c => allCorrections.push(c));
+        }
+      });
+
+      if (allCorrections.length > 0) {
+        correctionsWrap.style.display = 'block';
+        correctionsList.innerHTML = allCorrections.map(c => `
+          <div style="background:#fef2f2;border:1px solid #fee2e2;border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:0.85rem;">
+            <div style="color:#dc2626;text-decoration:line-through;margin-bottom:2px;">${c.original}</div>
+            <div style="color:#16a34a;font-weight:700;">➔ ${c.corrected}</div>
+            <div style="color:#6b7280;font-size:0.78rem;margin-top:4px;">${c.explanation}</div>
+          </div>
+        `).join('');
+      } else {
+        correctionsWrap.style.display = 'none';
+      }
+
+      // 6. Suggestions list
+      const suggestionsWrap = document.getElementById('sum-suggestions-wrap');
+      const suggestionsList = document.getElementById('sum-suggestions-list');
+      const allSuggestions = [];
+      currentSessionFeedbackList.forEach(fb => {
+        if (Array.isArray(fb.suggestions)) {
+          fb.suggestions.forEach(s => {
+            if (!allSuggestions.includes(s)) allSuggestions.push(s);
+          });
+        }
+      });
+
+      if (allSuggestions.length > 0) {
+        suggestionsWrap.style.display = 'block';
+        suggestionsList.innerHTML = allSuggestions.map(s => `
+          <div style="background:#fffbeb;border:1px solid #fef3c7;border-radius:10px;padding:8px 12px;margin-bottom:6px;font-size:0.85rem;color:#92400e;display:flex;align-items:center;gap:8px;">
+            <span>💡</span><span>${s}</span>
+          </div>
+        `).join('');
+      } else {
+        suggestionsWrap.style.display = 'none';
+      }
+
+      // 7. Vocabulary list
+      const vocabListDiv = document.getElementById('sum-vocab-list');
+      if (currentSessionVocabList.length > 0) {
+        vocabListDiv.innerHTML = currentSessionVocabList.map(v => `
+          <div class="summary-vocab-item">
+            <div style="font-weight:700;color:var(--primary);font-size:0.95rem;">🌟 ${v.word}</div>
+            <div style="color:#4b5563;font-size:0.82rem;margin-top:2px;">${v.translation || ''}</div>
+            ${v.example ? `<div style="color:#9ca3af;font-size:0.75rem;font-style:italic;margin-top:4px;">"${v.example}"</div>` : ''}
+          </div>
+        `).join('');
+      } else {
+        vocabListDiv.innerHTML = `<div style="text-align:center;color:var(--muted-fg);font-size:0.85rem;padding:20px;">No new words were extracted in this session.</div>`;
+      }
+
+      // 8. Navigate to summary page
+      showPage('summary');
     }
 
     async function ensureActiveSession() {
@@ -2859,10 +3271,6 @@
         document.getElementById('ai-typing')?.remove();
         console.error("Error submitting audio response:", e);
       }
-    }
-
-    function skipTurn() {
-      submitUserMessage("Can you please help me practice next steps in this conversation?");
     }
 
 
@@ -3430,56 +3838,6 @@
     // Already in HTML, just handle display logic if needed (it's visible now by default in HTML? No, we set display:none. Let's make it display:flex)
     document.getElementById('text-fallback-container').style.display = 'flex';
 
-    async function resumeSession() {
-      if (!currentSessionId) {
-        // Try to fetch last session from API (or just show scenarios if none)
-        // For simplicity, we just use the last local one if available in memory
-        return;
-      }
-      try {
-        const res = await fetch(`/api/sessions/${currentSessionId}/logs/`);
-        if (res.ok) {
-          const data = await res.json();
-          const ml = document.getElementById('msg-list');
-          ml.innerHTML = '';
-          data.history.forEach(log => {
-            if (log.user_transcript) {
-              const u = document.createElement('div');
-              u.className = 'msg-wrap msg-user-wrap';
-              u.innerHTML = `<div class="msg-lbl">🧑 You</div><div class="msg-bubble msg-user">${log.user_transcript}</div>`;
-              ml.appendChild(u);
-            }
-            if (log.ai_response_text) {
-              const a = document.createElement('div');
-              a.className = 'msg-wrap';
-              let au = log.ai_audio_url ? `<audio controls src="${log.ai_audio_url}" style="margin-top:8px;width:100%;height:32px;"></audio>` : '';
-              a.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${log.ai_response_text} ${au}</div>`;
-              ml.appendChild(a);
-            }
-            if (log.detailed_feedback) {
-              updateFeedbackUI(log.detailed_feedback);
-            }
-          });
-          ml.scrollTop = ml.scrollHeight;
-          showPage('conversation');
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    // Update Dashboard to show Resume button if currentSessionId exists
-    const originalShowPage = showPage;
-    showPage = function(name, syncUrl = true) {
-      originalShowPage(name, syncUrl);
-      if (name === 'dashboard') {
-        const btnResume = document.getElementById('btn-resume-session');
-        if (btnResume) {
-          btnResume.style.display = currentSessionId ? 'flex' : 'none';
-        }
-      }
-    };
-  
     // --- Anki Flashcards ---
     let dueCards = [];
     let currentCardIndex = 0;
