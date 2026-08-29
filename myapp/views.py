@@ -598,7 +598,8 @@ class SubmitResponseView(View):
             detailed_feedback = generate_grammar_and_feedback(
                 user_transcript=user_transcript,
                 target_language=target_lang,
-                user_level=user_level
+                user_level=user_level,
+                ai_response=ai_response
             )
 
             # ElevenLabs Voice Audio Generation (supports native language intonation)
@@ -718,7 +719,8 @@ class SubmitAudioResponseView(View):
             detailed_feedback = generate_grammar_and_feedback(
                 user_transcript=user_transcript,
                 target_language=target_lang,
-                user_level=user_level
+                user_level=user_level,
+                ai_response=ai_response
             )
 
             ai_audio_url = generate_tts_elevenlabs(ai_response, target_language=target_lang)

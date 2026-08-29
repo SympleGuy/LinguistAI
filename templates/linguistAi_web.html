@@ -2221,7 +2221,7 @@
     let currentUserId = currentUser ? currentUser.id : (localStorage.getItem('linguist_user_id') || '00000000-0000-0000-0000-000000000001');
     localStorage.setItem('linguist_user_id', currentUserId);
 
-    const PROTECTED_PAGES = ['dashboard', 'profile'];
+    const PROTECTED_PAGES = ['dashboard', 'profile', 'flashcards'];
 
     function showPage(name, syncUrl = true) {
       // Auth Guard: Redirect unauthenticated guest to login
@@ -2267,6 +2267,7 @@
       if (name === 'dashboard') loadDashboardData();
       if (name === 'profile') loadProfileData();
       if (name === 'login') resetAuthForm(true);
+      if (name === 'flashcards') loadFlashcards();
     }
 
     function handleBrandClick() {
@@ -3463,14 +3464,7 @@
       }
     }
 
-    // Hook into showPage to load cards when opening practice
-    const flashcardOriginalShowPage = showPage;
-    showPage = function(name, syncUrl = true) {
-      flashcardOriginalShowPage(name, syncUrl);
-      if (name === 'flashcards') {
-        loadFlashcards();
-      }
-    };
+    // (Hook removed)
 
   </script>
   <!-- Upgrade Modal -->

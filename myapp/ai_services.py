@@ -233,10 +233,10 @@ def generate_ai_conversation_response(scenario_prompt, user_level="Beginner", ta
         return f"That's a very interesting response! Regarding '{user_transcript}', could you tell me more or elaborate a bit in {target_language}?"
 
 
-def generate_grammar_and_feedback(user_transcript, target_language="English", user_level="Beginner"):
+def generate_grammar_and_feedback(user_transcript, target_language, user_level, ai_response=""):
     """
-    Generate detailed multi-layered feedback (grammar, pronunciation score, corrections, suggestions) (UC7/UC8).
-    Multi-provider support: Google Gemini (Free) -> OpenAI GPT-4o-mini -> Rule-Based Fallback.
+    Evaluates the user's spoken transcript for grammar, pronunciation, and vocabulary.
+    Returns a dictionary of scores and feedback.
     """
     feedback_system_instruction = (
         f"You are an expert language evaluator for {target_language} at CEFR level {user_level}.\n"
@@ -254,12 +254,12 @@ def generate_grammar_and_feedback(user_transcript, target_language="English", us
         f'  "suggestions": ["suggestion 1", "suggestion 2"],\n'
         f'  "extracted_vocabulary": [ {{"word": "word in target language", "translation": "translation in English", "example": "example sentence"}} ]\n'
         f"}}\n"
-        f"For extracted_vocabulary, extract 1-2 useful new words from the context that the user should learn.\n"
+        f"For extracted_vocabulary, extract 1-2 useful new vocabulary words from the provided AI response that the user should learn. If AI response is empty, extract from user transcript.\n"
     )
 
     # 1. Try Google Gemini (Free Tier JSON Mode)
     if GEMINI_API_KEY:
-        gemini_json_str = _call_gemini_generate(feedback_system_instruction, f"User Transcript to evaluate: '{user_transcript}'", response_json=True)
+        gemini_json_str = _call_gemini_generate(feedback_system_instruction, f"User Transcript: '{user_transcript}'\nAI Response: '{ai_response}'", response_json=True)
         if gemini_json_str:
             try:
                 return json.loads(gemini_json_str)
@@ -273,7 +273,7 @@ def generate_grammar_and_feedback(user_transcript, target_language="English", us
                 "model": "gpt-4o-mini",
                 "messages": [
                     {"role": "system", "content": feedback_system_instruction},
-                    {"role": "user", "content": f"User Transcript: '{user_transcript}'"}
+                    {"role": "user", "content": f"User Transcript: '{user_transcript}'\nAI Response: '{ai_response}'"}
                 ],
                 "response_format": {"type": "json_object"},
                 "temperature": 0.3
