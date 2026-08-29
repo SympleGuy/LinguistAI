@@ -2022,16 +2022,18 @@
           <div style="display:flex;flex-direction:column;gap:20px">
             <div class="summary-box">
               <div class="summary-box-title"><i class="bi bi-chat-heart-fill" style="color:var(--primary)"></i> AI Evaluation & Feedback</div>
-              <div id="sum-ai-comments" style="color:#4b5563;font-size:0.9rem;line-height:1.6;margin-bottom:14px"></div>
-              
-              <div id="sum-corrections-wrap" style="display:none;margin-top:14px;">
-                <div style="font-weight:700;font-size:0.85rem;color:#dc2626;margin-bottom:8px;"><i class="bi bi-exclamation-triangle-fill"></i> Key Corrections Made</div>
-                <div id="sum-corrections-list"></div>
-              </div>
+              <div class="scrollable-panel" style="max-height:440px;overflow-y:auto;padding-right:6px">
+                <div id="sum-ai-comments" style="color:#4b5563;font-size:0.9rem;line-height:1.6;margin-bottom:14px"></div>
+                
+                <div id="sum-corrections-wrap" style="display:none;margin-top:14px;">
+                  <div style="font-weight:700;font-size:0.85rem;color:#dc2626;margin-bottom:8px;"><i class="bi bi-exclamation-triangle-fill"></i> Key Corrections Made</div>
+                  <div id="sum-corrections-list"></div>
+                </div>
 
-              <div id="sum-suggestions-wrap" style="display:none;margin-top:14px;">
-                <div style="font-weight:700;font-size:0.85rem;color:#d97706;margin-bottom:8px;"><i class="bi bi-lightbulb-fill"></i> Pro Tips & Suggestions</div>
-                <div id="sum-suggestions-list"></div>
+                <div id="sum-suggestions-wrap" style="display:none;margin-top:14px;">
+                  <div style="font-weight:700;font-size:0.85rem;color:#d97706;margin-bottom:8px;"><i class="bi bi-lightbulb-fill"></i> Pro Tips & Suggestions</div>
+                  <div id="sum-suggestions-list"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -2040,7 +2042,7 @@
           <div style="display:flex;flex-direction:column;gap:20px">
             <div class="summary-box">
               <div class="summary-box-title"><i class="bi bi-bookmark-star-fill" style="color:#f59e0b"></i> New Vocabulary Learned</div>
-              <div id="sum-vocab-list" style="max-height:220px;overflow-y:auto;padding-right:4px;"></div>
+              <div id="sum-vocab-list" class="scrollable-panel" style="max-height:220px;overflow-y:auto;padding-right:4px;"></div>
             </div>
 
             <!-- Action CTAs -->
