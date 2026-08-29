@@ -1296,6 +1296,127 @@
     .divider-col {
       color: rgba(255, 255, 255, .25)
     }
+    /* --- UX/UI Upgrades --- */
+    /* Upgrade Modal */
+    .upgrade-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(5px);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .upgrade-modal {
+      background: white;
+      padding: 2rem;
+      border-radius: 20px;
+      text-align: center;
+      max-width: 400px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+      animation: popIn 0.3s ease-out;
+    }
+    .upgrade-modal h2 {
+      margin-top: 0;
+      color: #7C3AED;
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .upgrade-modal p {
+      color: #4b5563;
+      margin-bottom: 1.5rem;
+    }
+    .btn-upgrade {
+      background: linear-gradient(135deg, #7C3AED, #F59E0B);
+      color: white;
+      border: none;
+      padding: 0.75rem 2rem;
+      border-radius: 9999px;
+      font-weight: 600;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .btn-upgrade:hover {
+      transform: scale(1.05);
+    }
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.9); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* Typing Indicator */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 16px;
+      background: #f3f4f6;
+      border-radius: 12px;
+      width: fit-content;
+      margin-top: 10px;
+    }
+    .typing-dot {
+      width: 6px;
+      height: 6px;
+      background: #9ca3af;
+      border-radius: 50%;
+      animation: typing 1.4s infinite ease-in-out both;
+    }
+    .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+    .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+    @keyframes typing {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    /* Pulsing Mic */
+    .mic-pulsing {
+      animation: pulse 1.5s infinite;
+      box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+      70% { transform: scale(1.1); box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); }
+      100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+    }
+
+    /* Text Fallback Input */
+    .text-fallback-container {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+      width: 100%;
+    }
+    .text-fallback-input {
+      flex: 1;
+      padding: 10px 15px;
+      border: 1px solid #d1d5db;
+      border-radius: 9999px;
+      outline: none;
+      font-size: 0.9rem;
+      transition: border-color 0.2s;
+    }
+    .text-fallback-input:focus {
+      border-color: #7C3AED;
+    }
+    .btn-send-text {
+      background: #7C3AED;
+      color: white;
+      border: none;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .btn-send-text:hover {
+      background: #6d28d9;
+    }
   </style>
 </head>
 
@@ -1653,18 +1774,21 @@
                 style="background:var(--secondary-bg);color:var(--primary);font-size:.7rem;font-weight:600;border-radius:8px;padding:2px 8px"></span>
             </div>
             <div class="msg-list" id="msg-list"></div>
-            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;align-items:center;gap:14px">
-              <button class="mic-btn" id="mic-btn" onclick="toggleMic()"><i class="bi bi-mic-fill"
-                  id="mic-icon"></i></button>
-              <div style="flex:1">
-                <div style="font-size:.85rem;color:var(--muted-fg)" id="mic-status">Press the mic to start speaking
+            <div style="padding:14px 20px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:10px">
+              <div style="display:flex;align-items:center;gap:14px">
+                <button class="mic-btn" id="mic-btn" onclick="toggleMic()"><i class="bi bi-mic-fill" id="mic-icon"></i></button>
+                <div style="flex:1">
+                  <div style="font-size:.85rem;color:var(--muted-fg)" id="mic-status">Press the mic to start speaking</div>
+                  <div style="font-size:.7rem;color:var(--muted-fg)">Powered by OpenAI Whisper · ElevenLabs TTS</div>
                 </div>
-                <div style="font-size:.7rem;color:var(--muted-fg)">Powered by OpenAI Whisper · ElevenLabs TTS</div>
+                <button onclick="skipTurn()" style="background:var(--muted);border:none;border-radius:8px;padding:7px 14px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
+                  <i class="bi bi-skip-forward-fill"></i> Skip
+                </button>
               </div>
-              <button onclick="skipTurn()"
-                style="background:var(--muted);border:none;border-radius:8px;padding:7px 14px;font-size:.8rem;font-weight:600;cursor:pointer;font-family:'DM Sans',sans-serif">
-                <i class="bi bi-skip-forward-fill"></i> Skip
-              </button>
+              <div class="text-fallback-container" id="text-fallback-container" style="display:none;">
+                <input type="text" id="text-fallback-input" class="text-fallback-input" placeholder="Type your message here..." onkeypress="handleTextSubmit(event)">
+                <button class="btn-send-text" onclick="submitTextFallback()"><i class="bi bi-send-fill"></i></button>
+              </div>
             </div>
           </div>
           <!-- Feedback -->
@@ -1695,9 +1819,14 @@
             <h1 class="page-title">Progress Dashboard</h1>
             <p style="color:var(--muted-fg);font-size:.88rem;margin-top:4px" id="dash-welcome">Welcome back!</p>
           </div>
-          <button class="btn-try" onclick="showPage('scenarios')" style="display:flex;align-items:center;gap:6px">
-            <i class="bi bi-mic-fill"></i> New Session
-          </button>
+          <div style="display:flex; gap:10px;">
+            <button class="btn-try" onclick="resumeSession()" style="display:none;align-items:center;gap:6px; background:var(--muted); color:var(--fg);" id="btn-resume-session">
+              <i class="bi bi-play-circle-fill"></i> Resume Session
+            </button>
+            <button class="btn-try" onclick="showPage('scenarios')" style="display:flex;align-items:center;gap:6px">
+              <i class="bi bi-mic-fill"></i> New Session
+            </button>
+          </div>
         </div>
 
         <!-- Stats -->
@@ -2344,10 +2473,17 @@
       if (!sessId) return;
 
       const typing = document.createElement('div');
-      typing.className = 'msg-wrap';
+      typing.className = 'typing-indicator';
       typing.id = 'ai-typing';
-      typing.innerHTML = '<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai"><em>Thinking & evaluating...</em></div>';
-      ml.appendChild(typing);
+      typing.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+      
+      const typingWrap = document.createElement('div');
+      typingWrap.className = 'msg-wrap';
+      typingWrap.id = 'ai-typing-wrap';
+      typingWrap.innerHTML = '<div class="msg-lbl">🤖 LinguistAI</div>';
+      typingWrap.appendChild(typing);
+      
+      ml.appendChild(typingWrap);
       ml.scrollTop = ml.scrollHeight;
 
       try {
@@ -2357,11 +2493,11 @@
           body: JSON.stringify({ user_transcript: userText })
         });
 
-        document.getElementById('ai-typing')?.remove();
+        document.getElementById('ai-typing-wrap')?.remove();
 
         if (res.status === 403) {
           const errData = await res.json();
-          alert(errData.error || "Daily limit reached for Free Tier (5/5 turns used).");
+          document.getElementById('upgradeModal').style.display = 'flex';
           return;
         }
 
@@ -2509,10 +2645,17 @@
 
       const ml = document.getElementById('msg-list');
       const typing = document.createElement('div');
-      typing.className = 'msg-wrap';
+      typing.className = 'typing-indicator';
       typing.id = 'ai-typing';
-      typing.innerHTML = '<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai"><em>Transcribing audio & evaluating grammar...</em></div>';
-      ml.appendChild(typing);
+      typing.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+      
+      const typingWrap = document.createElement('div');
+      typingWrap.className = 'msg-wrap';
+      typingWrap.id = 'ai-typing-wrap';
+      typingWrap.innerHTML = '<div class="msg-lbl">🤖 LinguistAI</div>';
+      typingWrap.appendChild(typing);
+      
+      ml.appendChild(typingWrap);
       ml.scrollTop = ml.scrollHeight;
 
       const formData = new FormData();
@@ -2527,11 +2670,11 @@
           body: formData
         });
 
-        document.getElementById('ai-typing')?.remove();
+        document.getElementById('ai-typing-wrap')?.remove();
 
         if (res.status === 403) {
           const errData = await res.json();
-          alert(errData.error || "Daily limit reached for Free Tier (5/5 turns used).");
+          document.getElementById('upgradeModal').style.display = 'flex';
           return;
         }
 
@@ -3090,7 +3233,117 @@
       showPage(targetPage, false);
     });
 
+    // --- UX/UI Upgrades ---
+    function closeUpgradeModal() {
+      document.getElementById('upgradeModal').style.display = 'none';
+      if (document.getElementById('text-fallback-input')) {
+        document.getElementById('text-fallback-input').value = '';
+      }
+    }
+
+    async function mockUpgradeToVIP() {
+      const btn = document.querySelector('.btn-upgrade');
+      btn.textContent = 'Upgrading...';
+      try {
+        const res = await fetch('/api/auth/upgrade/', { method: 'POST' });
+        if (res.ok) {
+          btn.textContent = 'Success!';
+          setTimeout(() => {
+            closeUpgradeModal();
+            btn.textContent = 'Upgrade to VIP';
+            if (currentUser) {
+              currentUser.subscription_plan = "VIP";
+              updateUserNavUI(false, false);
+            }
+          }, 1000);
+        } else {
+          btn.textContent = 'Failed';
+        }
+      } catch (e) {
+        btn.textContent = 'Error';
+      }
+    }
+
+    function handleTextSubmit(e) {
+      if (e.key === 'Enter') {
+        submitTextFallback();
+      }
+    }
+
+    function submitTextFallback() {
+      const input = document.getElementById('text-fallback-input');
+      const text = input.value.trim();
+      if (text) {
+        input.value = '';
+        submitUserMessage(text);
+      }
+    }
+
+    // Toggle Text Input Fallback if Mic fails or user prefers it
+    // Already in HTML, just handle display logic if needed (it's visible now by default in HTML? No, we set display:none. Let's make it display:flex)
+    document.getElementById('text-fallback-container').style.display = 'flex';
+
+    async function resumeSession() {
+      if (!currentSessionId) {
+        // Try to fetch last session from API (or just show scenarios if none)
+        // For simplicity, we just use the last local one if available in memory
+        return;
+      }
+      try {
+        const res = await fetch(`/api/sessions/${currentSessionId}/logs/`);
+        if (res.ok) {
+          const data = await res.json();
+          const ml = document.getElementById('msg-list');
+          ml.innerHTML = '';
+          data.history.forEach(log => {
+            if (log.user_transcript) {
+              const u = document.createElement('div');
+              u.className = 'msg-wrap msg-user-wrap';
+              u.innerHTML = `<div class="msg-lbl">🧑 You</div><div class="msg-bubble msg-user">${log.user_transcript}</div>`;
+              ml.appendChild(u);
+            }
+            if (log.ai_response_text) {
+              const a = document.createElement('div');
+              a.className = 'msg-wrap';
+              let au = log.ai_audio_url ? `<audio controls src="${log.ai_audio_url}" style="margin-top:8px;width:100%;height:32px;"></audio>` : '';
+              a.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${log.ai_response_text} ${au}</div>`;
+              ml.appendChild(a);
+            }
+            if (log.detailed_feedback) {
+              updateFeedbackUI(log.detailed_feedback);
+            }
+          });
+          ml.scrollTop = ml.scrollHeight;
+          showPage('conversation');
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    // Update Dashboard to show Resume button if currentSessionId exists
+    const originalShowPage = showPage;
+    showPage = function(name, syncUrl = true) {
+      originalShowPage(name, syncUrl);
+      if (name === 'dashboard') {
+        const btnResume = document.getElementById('btn-resume-session');
+        if (btnResume) {
+          btnResume.style.display = currentSessionId ? 'flex' : 'none';
+        }
+      }
+    };
   </script>
+  <!-- Upgrade Modal -->
+  <div class="upgrade-modal-overlay" id="upgradeModal">
+    <div class="upgrade-modal">
+      <h2>Limit Reached!</h2>
+      <p>You have used your 5 free turns for today.<br>Upgrade to VIP for unlimited practice!</p>
+      <button class="btn-upgrade" onclick="mockUpgradeToVIP()">Upgrade to VIP</button>
+      <br><br>
+      <button style="border:none; background:none; color:#9ca3af; cursor:pointer;" onclick="closeUpgradeModal()">Not Now</button>
+    </div>
+  </div>
+
 </body>
 
 </html>

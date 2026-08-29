@@ -1123,3 +1123,48 @@ class OAuthSessionSyncView(View):
             return JsonResponse({"error": str(e)}, status=500)
 
 
+
+@method_decorator(csrf_exempt, name='dispatch')
+class UpgradeToProView(View):
+    def post(self, request):
+        """Mock payment endpoint to upgrade user to VIP"""
+        user_id = request.session.get("supabase_user_id")
+        if not user_id:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+        
+        try:
+            app_user = AppUser.objects.get(id=user_id)
+            app_user.subscription_plan = "VIP"
+            app_user.save()
+            return JsonResponse({"message": "Successfully upgraded to VIP", "subscription_plan": "VIP"}, status=200)
+        except AppUser.DoesNotExist:
+            return JsonResponse({"error": "User not found"}, status=404)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SessionLogsView(View):
+    def get(self, request, session_id):
+        """Fetch chat history for a specific session to resume it"""
+        user_id = request.session.get("supabase_user_id")
+        if not user_id:
+            return JsonResponse({"error": "Unauthorized"}, status=401)
+            
+        try:
+            session = LearningSession.objects.get(id=session_id)
+            if str(session.user_id) != str(user_id):
+                return JsonResponse({"error": "Forbidden"}, status=403)
+                
+            logs = InteractionLog.objects.filter(session_id=session.id).order_by('created_at')
+            history = []
+            for log in logs:
+                history.append({
+                    "id": str(log.id),
+                    "user_transcript": log.user_transcript,
+                    "ai_response_text": log.ai_response_text,
+                    "ai_audio_url": log.ai_audio_url,
+                    "detailed_feedback": log.detailed_feedback,
+                    "created_at": log.created_at.isoformat() if log.created_at else None
+                })
+            
+            return JsonResponse({"session_id": str(session.id), "history": history}, status=200)
+        except LearningSession.DoesNotExist:
+            return JsonResponse({"error": "Session not found"}, status=404)

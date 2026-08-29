@@ -24,4 +24,6 @@ urlpatterns = [
     path("api/user/profile/", views.UserProfileUpdateView.as_view(), name="user_profile_update_self"),
     path("api/user/<uuid:user_id>/profile/", views.UserProfileUpdateView.as_view(), name="user_profile_update"),
     path("api/user/<uuid:user_id>/analytics/", views.UserAnalyticsView.as_view(), name="user_analytics"),
+    path("api/auth/upgrade/", views.UpgradeToProView.as_view(), name="api_upgrade_pro"),
+    path("api/sessions/<uuid:session_id>/logs/", views.SessionLogsView.as_view(), name="session_logs"),
 ]
