@@ -252,9 +252,9 @@ def generate_grammar_and_feedback(user_transcript, target_language, user_level, 
         f'  "comments": "Short encouraging evaluation summary.",\n'
         f'  "corrections": [ {{"original": "incorrect segment", "corrected": "fixed segment", "explanation": "why" }} ],\n'
         f'  "suggestions": ["suggestion 1", "suggestion 2"],\n'
-        f'  "extracted_vocabulary": [ {{"word": "word in target language", "translation": "translation in English", "example": "example sentence"}} ]\n'
+        f'  "extracted_vocabulary": [ {{"word": "advanced target language word", "translation": "accurate contextual translation in English", "example": "example sentence"}} ]\n'
         f"}}\n"
-        f"For extracted_vocabulary, extract 1-2 useful new vocabulary words from the provided AI response that the user should learn. If AI response is empty, extract from user transcript.\n"
+        f"For extracted_vocabulary, extract 1-2 ADVANCED, CHALLENGING, or SCENARIO-SPECIFIC vocabulary words (CEFR B1-C1 level) from the provided AI response that the user should learn. DO NOT extract basic, generic words like 'website', 'tool', 'computer', etc. If there are no advanced words, leave the array empty. Ensure the translation accurately reflects the context.\n"
     )
 
     # 1. Try Google Gemini (Free Tier JSON Mode)
