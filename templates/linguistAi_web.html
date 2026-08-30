@@ -14,6 +14,7 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/2.0.0/htmx.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root {
       --primary: #4f46e5;
@@ -2555,8 +2556,9 @@
             <hr style="flex:1;border-color:var(--border)"><span style="color:var(--muted-fg);font-size:.82rem">or</span>
             <hr style="flex:1;border-color:var(--border)">
           </div>
+          <div id="google-btn-container" style="width:100%;display:flex;justify-content:center;margin-top:6px;min-height:44px;"></div>
           <button onclick="handleGoogleOAuth()" id="btn-google-oauth"
-            style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.88rem;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+            style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.88rem;background:#fff;cursor:pointer;display:none;align-items:center;justify-content:center;gap:8px">
             <i class="bi bi-google" style="color:#ea4335"></i> Continue with Google
           </button>
         </div>
@@ -2668,7 +2670,10 @@
       if (name === 'scenarios') renderScenarios();
       if (name === 'dashboard') loadDashboardData();
       if (name === 'profile') loadProfileData();
-      if (name === 'login') resetAuthForm(true);
+      if (name === 'login') {
+        resetAuthForm(true);
+        setTimeout(initGoogleIdentityServices, 100);
+      }
       if (name === 'flashcards') loadFlashcards();
 
       if (authRedirectMsg) {
@@ -2679,6 +2684,10 @@
         }
       }
     }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      setTimeout(initGoogleIdentityServices, 400);
+    });
 
     function handleBrandClick() {
       if (currentUser) {
@@ -3565,7 +3574,116 @@
       }
     } catch (e) { }
 
+    const GOOGLE_CLIENT_ID = "425380815205-3ene0k0lhmd58unopjkd3nbnjcid3n2u.apps.googleusercontent.com";
+
+    function initGoogleIdentityServices() {
+      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+        try {
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true
+          });
+
+          const gContainer = document.getElementById('google-btn-container');
+          const fallbackBtn = document.getElementById('btn-google-oauth');
+          if (gContainer) {
+            google.accounts.id.renderButton(gContainer, {
+              theme: 'outline',
+              size: 'large',
+              type: 'standard',
+              shape: 'rectangular',
+              text: 'continue_with',
+              logo_alignment: 'left',
+              width: 380
+            });
+            if (fallbackBtn) fallbackBtn.style.display = 'none';
+          }
+        } catch (err) {
+          console.warn("Could not render GIS button:", err);
+          const fallbackBtn = document.getElementById('btn-google-oauth');
+          if (fallbackBtn) fallbackBtn.style.display = 'flex';
+        }
+      } else {
+        const fallbackBtn = document.getElementById('btn-google-oauth');
+        if (fallbackBtn) fallbackBtn.style.display = 'flex';
+      }
+    }
+
+    async function handleGoogleCredentialResponse(response) {
+      const idToken = response.credential;
+      if (!idToken) return;
+
+      const errEl = document.getElementById('auth-error-msg');
+
+      try {
+        // Decode payload from Google ID Token
+        const base64Url = idToken.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        const payload = JSON.parse(jsonPayload);
+
+        let supabaseUserId = payload.sub;
+        if (supabaseClient && supabaseClient.auth && supabaseClient.auth.signInWithIdToken) {
+          try {
+            const sbRes = await supabaseClient.auth.signInWithIdToken({
+              provider: 'google',
+              token: idToken
+            });
+            if (sbRes.data && sbRes.data.user) {
+              supabaseUserId = sbRes.data.user.id;
+            }
+          } catch (sbErr) {
+            console.warn("Supabase signInWithIdToken:", sbErr);
+          }
+        }
+
+        const syncRes = await fetch('/api/auth/oauth-sync/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            supabase_user_id: supabaseUserId,
+            email: payload.email,
+            username: payload.name || payload.email.split('@')[0],
+            avatar_url: payload.picture || ''
+          })
+        });
+
+        if (syncRes.ok) {
+          const syncData = await syncRes.json();
+          if (syncData.status === 'success' && syncData.user) {
+            currentUser = syncData.user;
+            currentUserId = currentUser.id;
+            localStorage.setItem('linguist_user', JSON.stringify(currentUser));
+            localStorage.setItem('linguist_user_id', currentUserId);
+            resetAuthForm(true);
+            updateUserNavUI(false, false);
+            showPage('dashboard');
+            return;
+          }
+        }
+      } catch (err) {
+        console.error("Google credential handling error:", err);
+        if (errEl) {
+          errEl.textContent = 'Google Sign-In failed. Please try again.';
+          errEl.style.display = 'block';
+        }
+      }
+    }
+
     async function handleGoogleOAuth() {
+      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+        initGoogleIdentityServices();
+        google.accounts.id.prompt();
+      } else {
+        fallbackGoogleOAuth();
+      }
+    }
+
+    async function fallbackGoogleOAuth() {
       const errEl = document.getElementById('auth-error-msg');
       if (!supabaseClient) {
         if (errEl) {
@@ -3577,8 +3695,6 @@
 
       try {
         const redirectUrl = window.location.origin + '/?page=dashboard';
-
-        // Attempt standard Supabase OAuth
         const { data, error } = await supabaseClient.auth.signInWithOAuth({
           provider: 'google',
           options: {
@@ -3587,35 +3703,9 @@
         });
 
         if (error) {
-          // If Google provider is not enabled on Supabase project dashboard, offer instant Demo OAuth sync
-          const useDemo = confirm("Google OAuth provider is not enabled yet in your Supabase Dashboard.\n\nWould you like to simulate an instant 1-Click Google Sign-In for testing?");
-          if (useDemo) {
-            const demoSyncRes = await fetch('/api/auth/oauth-sync/', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                supabase_user_id: '00000000-0000-0000-0000-000000000088',
-                email: 'alex.google.demo@linguistai.com',
-                username: 'Alex (Google Account)'
-              })
-            });
-            if (demoSyncRes.ok) {
-              const dData = await demoSyncRes.json();
-              if (dData.status === 'success' && dData.user) {
-                currentUser = dData.user;
-                currentUserId = currentUser.id;
-                localStorage.setItem('linguist_user', JSON.stringify(currentUser));
-                localStorage.setItem('linguist_user_id', currentUserId);
-                resetAuthForm(true);
-                updateUserNavUI(false, false);
-                showPage('dashboard');
-              }
-            }
-          } else {
-            if (errEl) {
-              errEl.innerHTML = 'To enable real Google Sign-In, please enable Google Provider in your <a href="https://supabase.com/dashboard/project/foxstplfovfvqoctimqm/auth/providers" target="_blank" style="color:var(--primary);text-decoration:underline">Supabase Auth Dashboard</a>.';
-              errEl.style.display = 'block';
-            }
+          if (errEl) {
+            errEl.innerHTML = 'To enable standard redirect Google Sign-In, please enable Google Provider in your <a href="https://supabase.com/dashboard/project/foxstplfovfvqoctimqm/auth/providers" target="_blank" style="color:var(--primary);text-decoration:underline">Supabase Auth Dashboard</a>.';
+            errEl.style.display = 'block';
           }
         }
       } catch (e) {
