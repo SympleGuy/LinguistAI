@@ -44,18 +44,19 @@
 
 LinguistAI features a plug-and-play multi-provider architecture designed to support both free and premium AI services:
 
-| Function | Primary Provider (Free Tier Available) | Secondary / Premium Provider | Offline Fallback |
-| :--- | :--- | :--- | :--- |
-| **Conversational LLM** | **Google Gemini 1.5/3.5 Flash** (`GEMINI_API_KEY`) | Dynamic Scenario-aware Engine |
-| **Grammar Evaluation** | **Google Gemini JSON Schema Mode** (`GEMINI_API_KEY`) | Rule-based Heuristic Analyzer |
-| **Speech-to-Text (STT)** | **Google Gemini Multimodal** (`GEMINI_API_KEY`) | Audio Blob Preservation |
-| **Text-to-Speech (TTS)** | **ElevenLabs Free Tier** (`ELEVENLABS_API_KEY`) | Client Audio Response |
+| Function                 | Primary Provider (Free Tier Available)                | Secondary / Premium Provider  | Offline Fallback |
+| :----------------------- | :---------------------------------------------------- | :---------------------------- | :--------------- |
+| **Conversational LLM**   | **Google Gemini 1.5/3.5 Flash** (`GEMINI_API_KEY`)    | Dynamic Scenario-aware Engine |
+| **Grammar Evaluation**   | **Google Gemini JSON Schema Mode** (`GEMINI_API_KEY`) | Rule-based Heuristic Analyzer |
+| **Speech-to-Text (STT)** | **Google Gemini Multimodal** (`GEMINI_API_KEY`)       | Audio Blob Preservation       |
+| **Text-to-Speech (TTS)** | **ElevenLabs Free Tier** (`ELEVENLABS_API_KEY`)       | Client Audio Response         |
 
 ---
 
 ## Smart Fallback Simulation Engine
 
 The platform is engineered with an intelligent **Smart Fallback Simulation Engine** in `myapp/ai_services.py`. If external API keys (`GEMINI_API_KEY`, `ELEVENLABS_API_KEY`) are missing or inactive:
+
 - **LLM Roleplay**: Generates contextual, grammatically sound scenario responses.
 - **Feedback Engine**: Computes realistic grammar/pronunciation scores and generates precise corrections.
 - **Audio Engine**: Synthesizes speech or falls back seamlessly to text-based audio payloads.
@@ -66,18 +67,21 @@ The platform is engineered with an intelligent **Smart Fallback Simulation Engin
 ## Local Setup and Execution Guide
 
 ### Prerequisites
+
 - **Python 3.11+** installed on the local system.
 - **Git** and a standard terminal shell.
 
 ---
 
 ### Step 1: Clone the Repository
+
 ```bash
 git clone https://github.com/SympleGuy/LinguistAI.git
 cd LinguistAI
 ```
 
 ### Step 2: Create and Activate Python Virtual Environment
+
 ```bash
 # On Linux / macOS (Bash / Zsh):
 python3 -m venv venv
@@ -92,17 +96,21 @@ python -m venv venv
 ```
 
 ### Step 3: Install Required Dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ### Step 4: Environment Configuration
+
 Create a `.env` file in the project root directory based on `.env.example`:
+
 ```bash
 cp .env.example .env
 ```
 
 Define the desired environment variable keys in `.env`:
+
 ```env
 SECRET_KEY=your_django_secret_key_here
 DEBUG=True
@@ -118,20 +126,25 @@ SUPABASE_ANON_KEY=your_supabase_anon_key_here
 ```
 
 ### Step 5: Apply Database Migrations
+
 ```bash
 python manage.py migrate
 ```
 
 ### Step 6: Seed Conversation Scenarios
+
 Populates default conversation scenarios (Restaurant, Airport, Job Interview, Hotel, Directions, Cafe):
+
 ```bash
 python manage.py seed_scenarios
 ```
 
 ### Step 7: Run the Development Server
+
 ```bash
 python manage.py runserver 127.0.0.1:8000
 ```
+
 Open the browser and navigate to: `http://127.0.0.1:8000/`
 
 ---
@@ -140,34 +153,39 @@ Open the browser and navigate to: `http://127.0.0.1:8000/`
 
 All protected routes enforce authentication via Django session or Bearer token through `ApiAuthenticationMiddleware`.
 
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/register/` | Public | Register new user account with email and password |
-| `POST` | `/api/auth/login/` | Public | Authenticate user and initialize session |
-| `POST` | `/api/auth/logout/` | Public | Terminate active session and clear cookies |
-| `GET` | `/api/auth/me/` | Public | Check current authentication status and user details |
-| `POST` | `/api/auth/oauth-sync/` | Public | Synchronize OAuth user (Google Sign-In) into database |
-| `GET` | `/api/scenarios/` | Public | Fetch list of all active learning scenarios |
-| `GET` | `/api/scenarios/<id>/` | Public | Fetch detail for a specific scenario |
-| `POST` | `/api/sessions/start/` | Protected | Start a new learning session for a scenario |
-| `POST` | `/api/sessions/<uuid>/respond/` | Protected | Submit text transcript response and receive AI feedback |
+| Method | Endpoint                              | Access    | Description                                               |
+| :----- | :------------------------------------ | :-------- | :-------------------------------------------------------- |
+| `POST` | `/api/auth/register/`                 | Public    | Register new user account with email and password         |
+| `POST` | `/api/auth/login/`                    | Public    | Authenticate user and initialize session                  |
+| `POST` | `/api/auth/logout/`                   | Public    | Terminate active session and clear cookies                |
+| `GET`  | `/api/auth/me/`                       | Public    | Check current authentication status and user details      |
+| `POST` | `/api/auth/upgrade/`                  | Protected | Upgrade user subscription plan to VIP                     |
+| `GET`  | `/api/scenarios/`                     | Public    | Fetch list of all active learning scenarios               |
+| `GET`  | `/api/scenarios/<id>/`                | Public    | Fetch detail for a specific scenario                      |
+| `POST` | `/api/sessions/start/`                | Protected | Start a new learning session for a scenario               |
+| `POST` | `/api/sessions/<uuid>/respond/`       | Protected | Submit text transcript response and receive AI feedback   |
 | `POST` | `/api/sessions/<uuid>/respond-audio/` | Protected | Upload voice recording for STT transcription and feedback |
-| `GET` | `/api/dashboard/<uuid:user_id>/` | Protected | Fetch summary statistics and recent session history |
-| `GET` | `/api/user/<uuid:user_id>/analytics/` | Protected | Fetch performance series for Chart.js visualization |
-| `POST` | `/api/user/profile/` | Protected | Update user target language and CEFR proficiency level |
+| `GET`  | `/api/dashboard/<uuid:user_id>/`      | Protected | Fetch summary statistics and recent session history       |
+| `GET`  | `/api/user/<uuid:user_id>/analytics/` | Protected | Fetch performance series for Chart.js visualization       |
+| `POST` | `/api/user/profile/`                  | Protected | Update user target language and CEFR proficiency level    |
+| `GET`  | `/api/flashcards/due/`                | Protected | Fetch SRS flashcards due for review                       |
+| `POST` | `/api/flashcards/<uuid>/review/`      | Protected | Submit SRS card review grading                            |
 
 ---
 
 ## Database Schema and Security
 
 ### 1. 3NF Relational Data Model
+
 - **`users`**: UUID primary key, `username`, `email`, `target_language`, `proficiency_level`, `subscription_plan`.
 - **`scenarios`**: `id`, `title`, `system_prompt`, `category`, `cefr`, `emoji`, `lang`, `description`.
 - **`learning_sessions`**: UUID primary key, `user_id` (FK), `scenario_id` (FK), `started_at`, `completed_at`, `overall_score`.
 - **`interaction_logs`**: UUID primary key, `session_id` (FK), `user_transcript`, `ai_response_text`, `audio_file_url`, `detailed_feedback` (JSONB).
 
 ### 2. Supabase Row Level Security (RLS)
+
 The included script `supabase_rls_policies.sql` enforces zero-trust tenant isolation on PostgreSQL:
+
 - Users can only select and update their own profile (`auth.uid() = id`).
 - Users can only create and view their own learning sessions (`auth.uid() = user_id`).
 - Interaction logs are strictly restricted to session owners.

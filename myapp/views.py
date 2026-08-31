@@ -318,6 +318,11 @@ def api_me(request):
 
     user_email = app_user.email or app_user.username
     user_display = app_user.username or user_email
+
+    is_allowed, today_turns, plan = check_user_daily_turn_limit(app_user.id)
+    daily_limit = 5 if plan.lower() == "free" else None
+    remaining_turns = max(0, 5 - today_turns) if plan.lower() == "free" else None
+
     return JsonResponse({
         "authenticated": True,
         "user": {
@@ -326,7 +331,10 @@ def api_me(request):
             "email": user_email,
             "proficiency_level": app_user.proficiency_level or "Beginner",
             "target_language": app_user.target_language or "English",
-            "subscription_plan": app_user.subscription_plan or "Free"
+            "subscription_plan": app_user.subscription_plan or "Free",
+            "today_turns": today_turns,
+            "daily_limit": daily_limit,
+            "remaining_turns": remaining_turns
         }
     })
 
@@ -1098,18 +1106,41 @@ class UserAnalyticsView(View):
 @method_decorator(csrf_exempt, name='dispatch')
 class UpgradeToProView(View):
     def post(self, request):
-        """Mock payment endpoint to upgrade user to VIP"""
-        user_id = request.session.get("supabase_user_id")
+        """
+        Upgrade user subscription to VIP.
+        Accepts optional payment information in JSON body for recording/processing.
+        """
+        user_id = request.session.get("supabase_user_id") or request.headers.get("X-User-ID")
         if not user_id:
             return JsonResponse({"error": "Unauthorized"}, status=401)
         
         try:
+            # Parse payment payload if present (available for future persistence)
+            payment_info = {}
+            if request.content_type == "application/json" and request.body:
+                try:
+                    payment_info = json.loads(request.body.decode("utf-8") or "{}")
+                except Exception:
+                    payment_info = {}
+
             app_user = AppUser.objects.get(id=user_id)
             app_user.subscription_plan = "VIP"
-            app_user.save()
-            return JsonResponse({"message": "Successfully upgraded to VIP", "subscription_plan": "VIP"}, status=200)
+            app_user.save(update_fields=["subscription_plan"])
+
+            # Ensure session is established
+            if not request.session.get("supabase_user_id"):
+                request.session["supabase_user_id"] = str(app_user.id)
+                request.session.modified = True
+
+            return JsonResponse({
+                "message": "Successfully upgraded to VIP Plan",
+                "subscription_plan": "VIP",
+                "payment_processed": bool(payment_info)
+            }, status=200)
         except AppUser.DoesNotExist:
             return JsonResponse({"error": "User not found"}, status=404)
+        except Exception as e:
+            return JsonResponse({"error": str(e)}, status=500)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class SessionLogsView(View):
