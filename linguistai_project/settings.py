@@ -118,3 +118,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 SUPABASE_URL = config('SUPABASE_URL', default='')
 SUPABASE_ANON_KEY = config('SUPABASE_ANON_KEY', default='')
 SUPABASE_SERVICE_ROLE_KEY = config('SUPABASE_SERVICE_ROLE_KEY', default='')
+
+# Session cookie settings — ensure cookies work for local HTTP development
+SESSION_COOKIE_SAMESITE = 'Lax'   # Allows cookie to be sent on same-site requests
+SESSION_COOKIE_SECURE = False      # Set to True only if using HTTPS in production
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 days
+SESSION_SAVE_EVERY_REQUEST = True  # Refresh session on every request to keep it alive

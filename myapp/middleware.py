@@ -12,8 +12,6 @@ PUBLIC_API_ROUTES = [
     "/api/auth/login/",
     "/api/auth/logout/",
     "/api/auth/me/",
-    "/api/auth/oauth-sync/",
-    "/api/auth/callback/",
     "/api/scenarios/",
     "/api/debug-session/",
 ]
@@ -23,6 +21,7 @@ class ApiAuthenticationMiddleware:
     """
     Middleware that enforces authentication on protected API endpoints.
     Returns HTTP 401 Unauthorized with standardized JSON error when unauthenticated.
+    Accepts: Django session, Authorization: Bearer token, or X-User-ID header.
     """
     def __init__(self, get_response):
         self.get_response = get_response
@@ -38,8 +37,17 @@ class ApiAuthenticationMiddleware:
                 user_id = request.session.get("supabase_user_id")
                 auth_header = request.headers.get("Authorization", "")
                 has_bearer = auth_header.startswith("Bearer ") and len(auth_header.split(" ")) > 1
+                x_user_id = request.headers.get("X-User-ID", "")
 
-                if not user_id and not has_bearer and not (hasattr(request, "user") and request.user.is_authenticated):
+                # Also attach x_user_id to session if not already there (helps keep session alive)
+                if x_user_id and not user_id:
+                    try:
+                        request.session["supabase_user_id"] = x_user_id
+                        request.session.modified = True
+                    except Exception:
+                        pass
+
+                if not user_id and not has_bearer and not x_user_id and not (hasattr(request, "user") and request.user.is_authenticated):
                     return JsonResponse({
                         "error": "Unauthorized access. Authentication required.",
                         "code": 401

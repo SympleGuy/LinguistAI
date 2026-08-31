@@ -297,13 +297,24 @@ def logout_view(request):
 
 @csrf_exempt
 def api_me(request):
+    # Check Django session first
     user_id = request.session.get("supabase_user_id")
+
+    # Fallback: X-User-ID header sent from frontend localStorage
+    if not user_id:
+        user_id = request.headers.get("X-User-ID", "")
+
     if not user_id:
         return JsonResponse({"authenticated": False}, status=401)
 
     app_user = AppUser.objects.filter(id=user_id).first()
     if not app_user:
         return JsonResponse({"authenticated": False}, status=401)
+
+    # If we got the user via X-User-ID, re-establish Django session for future requests
+    if not request.session.get("supabase_user_id"):
+        request.session["supabase_user_id"] = str(app_user.id)
+        request.session.modified = True
 
     user_email = app_user.email or app_user.username
     user_display = app_user.username or user_email
@@ -318,6 +329,7 @@ def api_me(request):
             "subscription_plan": app_user.subscription_plan or "Free"
         }
     })
+
 
 
 
@@ -1079,78 +1091,7 @@ class UserAnalyticsView(View):
             return JsonResponse({"error": str(e)}, status=500)
 
 
-@method_decorator(csrf_exempt, name='dispatch')
-class OAuthSessionSyncView(View):
-    def post(self, request):
-        """
-        Synchronize OAuth user (e.g. Google Sign-In via Supabase) with Django DB and session.
-        POST /api/auth/oauth-sync/
-        """
-        try:
-            if request.content_type == "application/json":
-                data = json.loads(request.body.decode("utf-8") or "{}")
-            else:
-                data = request.POST
 
-            supabase_uid_str = (data.get("supabase_user_id") or "").strip()
-            email = (data.get("email") or "").strip()
-            display_name = (data.get("username") or data.get("name") or "").strip()
-
-            if not email and not supabase_uid_str:
-                return JsonResponse({"error": "Missing user identity details"}, status=400)
-
-            # Try parsing UUID
-            user_uuid = None
-            if supabase_uid_str:
-                try:
-                    user_uuid = uuid.UUID(supabase_uid_str)
-                except ValueError:
-                    user_uuid = None
-
-            # Look up existing user by ID or Email
-            app_user = None
-            if user_uuid:
-                app_user = AppUser.objects.filter(id=user_uuid).first()
-            if not app_user and email:
-                app_user = AppUser.objects.filter(email=email).first()
-
-            username_to_use = display_name or (email.split("@")[0] if email else f"User_{str(uuid.uuid4())[:8]}")
-
-            if not app_user:
-                final_uuid = user_uuid or uuid.uuid4()
-                app_user = AppUser.objects.create(
-                    id=final_uuid,
-                    username=username_to_use,
-                    email=email or f"{username_to_use}@example.com",
-                    password_hash="oauth_provider_authenticated",
-                    target_language="English",
-                    proficiency_level="Beginner",
-                    subscription_plan="Free",
-                    created_at=timezone.now()
-                )
-            else:
-                if display_name and not app_user.username:
-                    app_user.username = display_name
-                    app_user.save(update_fields=["username"])
-
-            # Establish Django session
-            request.session["supabase_user_id"] = str(app_user.id)
-            request.session.modified = True
-
-            return JsonResponse({
-                "status": "success",
-                "message": "OAuth session synchronized successfully",
-                "user": {
-                    "id": str(app_user.id),
-                    "username": app_user.username,
-                    "email": app_user.email,
-                    "target_language": app_user.target_language,
-                    "proficiency_level": app_user.proficiency_level,
-                    "subscription_plan": app_user.subscription_plan or "Free"
-                }
-            })
-        except Exception as e:
-            return JsonResponse({"error": str(e)}, status=500)
 
 
 

@@ -13,8 +13,7 @@
     rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/htmx/2.0.0/htmx.min.js" defer></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
   <style>
     :root {
       --primary: #4f46e5;
@@ -2552,14 +2551,6 @@
           <button class="btn-cta-primary" style="width:100%;justify-content:center" onclick="handleAuthSubmit()">
             <span id="auth-btn-lbl">Sign In</span> <i class="bi bi-arrow-right"></i>
           </button>
-          <div style="display:flex;align-items:center;gap:12px;margin:20px 0">
-            <hr style="flex:1;border-color:var(--border)"><span style="color:var(--muted-fg);font-size:.82rem">or</span>
-            <hr style="flex:1;border-color:var(--border)">
-          </div>
-          <button onclick="handleGoogleOAuth()" id="btn-google-oauth"
-            style="width:100%;border:1.5px solid var(--border);border-radius:10px;padding:11px;font-family:'DM Sans',sans-serif;font-weight:600;font-size:.88rem;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.2s ease">
-            <i class="bi bi-google" style="color:#ea4335"></i> Continue with Google
-          </button>
         </div>
       </div>
     </div>
@@ -2627,6 +2618,25 @@
     let currentUserId = currentUser ? currentUser.id : (localStorage.getItem('linguist_user_id') || '00000000-0000-0000-0000-000000000001');
     localStorage.setItem('linguist_user_id', currentUserId);
 
+    /**
+     * apiFetch – drop-in replacement for fetch() on /api/ routes.
+     * Automatically adds:
+     *   - credentials: 'include'  (sends session cookie)
+     *   - X-User-ID header        (fallback auth from localStorage)
+     */
+    function apiFetch(url, options = {}) {
+      const userId = currentUserId || localStorage.getItem('linguist_user_id') || '';
+      const headers = Object.assign({}, options.headers || {});
+      if (userId && userId !== '00000000-0000-0000-0000-000000000001') {
+        headers['X-User-ID'] = userId;
+      }
+      return fetch(url, Object.assign({}, options, {
+        headers,
+        credentials: 'include'
+      }));
+    }
+
+
     const PROTECTED_PAGES = ['scenarios', 'conversation', 'dashboard', 'profile', 'flashcards', 'summary'];
 
     function showPage(name, syncUrl = true) {
@@ -2671,7 +2681,6 @@
       if (name === 'profile') loadProfileData();
       if (name === 'login') {
         resetAuthForm(true);
-        setTimeout(initGoogleIdentityServices, 100);
       }
       if (name === 'flashcards') loadFlashcards();
 
@@ -2684,9 +2693,7 @@
       }
     }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      setTimeout(initGoogleIdentityServices, 400);
-    });
+
 
     function handleBrandClick() {
       if (currentUser) {
@@ -2738,7 +2745,7 @@
           }
         }
 
-        const res = await fetch(url);
+        const res = await apiFetch(url);
         if (res.ok) {
           const data = await res.json();
           if (Array.isArray(data)) {
@@ -3002,9 +3009,10 @@
 
       // Start real backend session
       try {
-        const res = await fetch('/api/sessions/start/', {
+        const res = await apiFetch('/api/sessions/start/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ user_id: currentUserId, scenario_id: id })
         });
         if (res.ok) {
@@ -3187,9 +3195,10 @@
     async function ensureActiveSession() {
       if (currentSessionId) return currentSessionId;
       try {
-        const res = await fetch('/api/sessions/start/', {
+        const res = await apiFetch('/api/sessions/start/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ user_id: currentUserId, scenario_id: currentScenarioId || 1 })
         });
         if (res.ok) {
@@ -3230,9 +3239,10 @@
       ml.scrollTop = ml.scrollHeight;
 
       try {
-        const res = await fetch(`/api/sessions/${sessId}/respond/`, {
+        const res = await apiFetch(`/api/sessions/${sessId}/respond/`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ user_transcript: userText })
         });
 
@@ -3408,8 +3418,9 @@
       }
 
       try {
-        const res = await fetch(`/api/sessions/${sessId}/respond-audio/`, {
+        const res = await apiFetch(`/api/sessions/${sessId}/respond-audio/`, {
           method: 'POST',
+          credentials: 'include',
           body: formData
         });
 
@@ -3535,9 +3546,10 @@
 
 
       try {
-        const res = await fetch(endpoint, {
+        const res = await apiFetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(payload)
         });
         const data = await res.json();
@@ -3563,159 +3575,11 @@
       }
     }
 
-    let supabaseClient = null;
-    try {
-      if (typeof supabase !== 'undefined' && supabase.createClient) {
-        supabaseClient = supabase.createClient(
-          "https://foxstplfovfvqoctimqm.supabase.co",
-          "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZveHN0cGxmb3ZmdnFvY3RpbXFtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk2OTI5NTIsImV4cCI6MjA2NTI2ODk1Mn0.e3aKk01F_R9hZ7w6lImsyK2W1-EId4Wc7344Z3G3Y6s"
-        );
-      }
-    } catch (e) { }
 
-    const GOOGLE_CLIENT_ID = "425380815205-3ene0k0lhmd58unopjkd3nbnjcid3n2u.apps.googleusercontent.com";
-
-    function initGoogleIdentityServices() {
-      if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
-        try {
-          google.accounts.id.initialize({
-            client_id: GOOGLE_CLIENT_ID,
-            callback: handleGoogleCredentialResponse,
-            auto_select: false,
-            cancel_on_tap_outside: true
-          });
-
-          const gContainer = document.getElementById('google-btn-container');
-          const fallbackBtn = document.getElementById('btn-google-oauth');
-          if (gContainer) {
-            google.accounts.id.renderButton(gContainer, {
-              theme: 'outline',
-              size: 'large',
-              type: 'standard',
-              shape: 'rectangular',
-              text: 'continue_with',
-              logo_alignment: 'left',
-              width: 380
-            });
-            if (fallbackBtn) fallbackBtn.style.display = 'none';
-          }
-        } catch (err) {
-          console.warn("Could not render GIS button:", err);
-          const fallbackBtn = document.getElementById('btn-google-oauth');
-          if (fallbackBtn) fallbackBtn.style.display = 'flex';
-        }
-      } else {
-        const fallbackBtn = document.getElementById('btn-google-oauth');
-        if (fallbackBtn) fallbackBtn.style.display = 'flex';
-      }
-    }
-
-    async function handleGoogleCredentialResponse(response) {
-      const idToken = response.credential;
-      if (!idToken) return;
-
-      const errEl = document.getElementById('auth-error-msg');
-
-      try {
-        // Decode payload from Google ID Token
-        const base64Url = idToken.split('.')[1];
-        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-        }).join(''));
-        const payload = JSON.parse(jsonPayload);
-
-        let supabaseUserId = payload.sub;
-        if (supabaseClient && supabaseClient.auth && supabaseClient.auth.signInWithIdToken) {
-          try {
-            const sbRes = await supabaseClient.auth.signInWithIdToken({
-              provider: 'google',
-              token: idToken
-            });
-            if (sbRes.data && sbRes.data.user) {
-              supabaseUserId = sbRes.data.user.id;
-            }
-          } catch (sbErr) {
-            console.warn("Supabase signInWithIdToken:", sbErr);
-          }
-        }
-
-        const syncRes = await fetch('/api/auth/oauth-sync/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            supabase_user_id: supabaseUserId,
-            email: payload.email,
-            username: payload.name || payload.email.split('@')[0],
-            avatar_url: payload.picture || ''
-          })
-        });
-
-        if (syncRes.ok) {
-          const syncData = await syncRes.json();
-          if (syncData.status === 'success' && syncData.user) {
-            currentUser = syncData.user;
-            currentUserId = currentUser.id;
-            localStorage.setItem('linguist_user', JSON.stringify(currentUser));
-            localStorage.setItem('linguist_user_id', currentUserId);
-            resetAuthForm(true);
-            updateUserNavUI(false, false);
-            showPage('dashboard');
-            return;
-          }
-        }
-      } catch (err) {
-        console.error("Google credential handling error:", err);
-        if (errEl) {
-          errEl.textContent = 'Google Sign-In failed. Please try again.';
-          errEl.style.display = 'block';
-        }
-      }
-    }
-
-    async function handleGoogleOAuth() {
-      fallbackGoogleOAuth();
-    }
-
-    async function fallbackGoogleOAuth() {
-      const errEl = document.getElementById('auth-error-msg');
-      if (!supabaseClient) {
-        if (errEl) {
-          errEl.textContent = 'Supabase client is initializing. Please try again.';
-          errEl.style.display = 'block';
-        }
-        return;
-      }
-
-      try {
-        const redirectUrl = window.location.origin + '/?page=dashboard';
-        const { data, error } = await supabaseClient.auth.signInWithOAuth({
-          provider: 'google',
-          options: {
-            redirectTo: redirectUrl
-          }
-        });
-
-        if (error) {
-          if (errEl) {
-            errEl.innerHTML = 'To enable standard redirect Google Sign-In, please enable Google Provider in your <a href="https://supabase.com/dashboard/project/foxstplfovfvqoctimqm/auth/providers" target="_blank" style="color:var(--primary);text-decoration:underline">Supabase Auth Dashboard</a>.';
-            errEl.style.display = 'block';
-          }
-        }
-      } catch (e) {
-        if (errEl) {
-          errEl.textContent = 'Could not initiate Google Sign-In.';
-          errEl.style.display = 'block';
-        }
-      }
-    }
 
     async function handleLogout() {
       try {
-        await fetch('/api/auth/logout/', { method: 'POST' });
-        if (supabaseClient && supabaseClient.auth) {
-          await supabaseClient.auth.signOut();
-        }
+        await apiFetch('/api/auth/logout/', { method: 'POST' });
       } catch (e) { }
       currentUser = null;
       currentUserId = '00000000-0000-0000-0000-000000000001';
@@ -3825,8 +3689,8 @@
       if (!currentUserId) return;
       try {
         const [dashRes, analyticsRes] = await Promise.allSettled([
-          fetch(`/api/dashboard/${currentUserId}/`),
-          fetch(`/api/user/${currentUserId}/analytics/`)
+          apiFetch(`/api/dashboard/${currentUserId}/`),
+          apiFetch(`/api/user/${currentUserId}/analytics/`)
         ]);
 
         if (dashRes.status === 'fulfilled' && dashRes.value.ok) {
@@ -3887,7 +3751,7 @@
       if (!sessionId) return;
       try {
         const uid = currentUserId || (currentUser ? currentUser.id : '');
-        const res = await fetch(`/api/sessions/${sessionId}/logs/?user_id=${encodeURIComponent(uid)}`);
+        const res = await apiFetch(`/api/sessions/${sessionId}/logs/?user_id=${encodeURIComponent(uid)}`);
         if (!res.ok) {
           console.warn("Could not fetch session logs", res.status);
           return;
@@ -4014,7 +3878,7 @@
     async function loadProfileData() {
       if (!currentUserId) return;
       try {
-        const res = await fetch(`/api/auth/me/`);
+        const res = await apiFetch(`/api/auth/me/`);
         let user = currentUser;
         if (res.ok) {
           const data = await res.json();
@@ -4047,7 +3911,7 @@
         }
 
         // Load stats into profile
-        const dashRes = await fetch(`/api/dashboard/${currentUserId}/`);
+        const dashRes = await apiFetch(`/api/dashboard/${currentUserId}/`);
         if (dashRes.ok) {
           const d = await dashRes.json();
           document.getElementById('prof-stats-sessions').textContent = d.total_sessions || 0;
@@ -4070,7 +3934,7 @@
       if (btn) { btn.disabled = true; btn.textContent = 'Saving...'; }
 
       try {
-        const res = await fetch('/api/user/profile/', {
+        const res = await apiFetch('/api/user/profile/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ username, proficiency_level, target_language })
@@ -4112,93 +3976,36 @@
 
     // Check session and route on load
     document.addEventListener('DOMContentLoaded', async () => {
-      // 1. Check if returning from Supabase OAuth redirect (Google Sign-In with #access_token)
-      if (window.location.hash && window.location.hash.includes('access_token')) {
-        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
-        const accessToken = hashParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token');
-
-        if (accessToken && supabaseClient && supabaseClient.auth) {
+      // Step 0: Fastest check — restore user from localStorage immediately
+      if (!currentUser) {
+        const savedUser = localStorage.getItem('linguist_user');
+        if (savedUser) {
           try {
-            if (supabaseClient.auth.setSession) {
-              await supabaseClient.auth.setSession({
-                access_token: accessToken,
-                refresh_token: refreshToken || ''
-              });
-            }
-            const { data, error } = await supabaseClient.auth.getUser(accessToken);
-            if (data && data.user) {
-              const syncRes = await fetch('/api/auth/oauth-sync/', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  supabase_user_id: data.user.id,
-                  email: data.user.email,
-                  username: data.user.user_metadata?.full_name || data.user.user_metadata?.name || (data.user.email ? data.user.email.split('@')[0] : '')
-                })
-              });
-              if (syncRes.ok) {
-                const syncData = await syncRes.json();
-                if (syncData.status === 'success' && syncData.user) {
-                  currentUser = syncData.user;
-                  currentUserId = currentUser.id;
-                  localStorage.setItem('linguist_user', JSON.stringify(currentUser));
-                  localStorage.setItem('linguist_user_id', currentUserId);
-                }
-              }
-            }
-          } catch (e) {
-            console.warn("Error processing OAuth access token:", e);
+            currentUser = JSON.parse(savedUser);
+            currentUserId = currentUser.id;
+          } catch(e) {
+            localStorage.removeItem('linguist_user');
           }
         }
       }
 
-      // 2. Check standard Supabase session
-      if (supabaseClient && supabaseClient.auth && !currentUser) {
+
+
+      // Step 2: Validate Django session — only clear user if no user from any source
+      if (!currentUser) {
         try {
-          const { data: { session } } = await supabaseClient.auth.getSession();
-          if (session && session.user) {
-            const syncRes = await fetch('/api/auth/oauth-sync/', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                supabase_user_id: session.user.id,
-                email: session.user.email,
-                username: session.user.user_metadata?.full_name || session.user.user_metadata?.name || (session.user.email ? session.user.email.split('@')[0] : '')
-              })
-            });
-            if (syncRes.ok) {
-              const syncData = await syncRes.json();
-              if (syncData.status === 'success' && syncData.user) {
-                currentUser = syncData.user;
-                currentUserId = currentUser.id;
-                localStorage.setItem('linguist_user', JSON.stringify(currentUser));
-                localStorage.setItem('linguist_user_id', currentUserId);
-              }
+          const res = await apiFetch('/api/auth/me/');
+          if (res.ok) {
+            const meData = await res.json();
+            if (meData.authenticated && meData.user) {
+              currentUser = meData.user;
+              currentUserId = currentUser.id;
+              localStorage.setItem('linguist_user', JSON.stringify(currentUser));
+              localStorage.setItem('linguist_user_id', currentUserId);
             }
           }
         } catch (e) { }
       }
-
-      // 3. Check standard Django session
-      try {
-        const res = await fetch('/api/auth/me/');
-        if (res.ok) {
-          const meData = await res.json();
-          if (meData.authenticated && meData.user) {
-            currentUser = meData.user;
-            currentUserId = currentUser.id;
-            localStorage.setItem('linguist_user', JSON.stringify(currentUser));
-            localStorage.setItem('linguist_user_id', currentUserId);
-          } else if (!currentUser) {
-            currentUser = null;
-            localStorage.removeItem('linguist_user');
-          }
-        } else if (!currentUser) {
-          currentUser = null;
-          localStorage.removeItem('linguist_user');
-        }
-      } catch (e) { }
 
       const urlParams = new URLSearchParams(window.location.search);
       let pageFromUrl = urlParams.get('page');
@@ -4237,7 +4044,7 @@
       const btn = document.querySelector('.btn-upgrade');
       btn.textContent = 'Upgrading...';
       try {
-        const res = await fetch('/api/auth/upgrade/', { method: 'POST' });
+        const res = await apiFetch('/api/auth/upgrade/', { method: 'POST' });
         if (res.ok) {
           btn.textContent = 'Success!';
           setTimeout(() => {
@@ -4311,7 +4118,7 @@
         const uid = currentUserId || (currentUser ? currentUser.id : '');
         const langParam = selectedFlashcardLang ? encodeURIComponent(selectedFlashcardLang) : 'All';
         const allParam = includeAll ? '&all=true' : '';
-        const res = await fetch(`/api/flashcards/due/?lang=${langParam}${allParam}&user_id=${encodeURIComponent(uid)}`);
+        const res = await apiFetch(`/api/flashcards/due/?lang=${langParam}${allParam}&user_id=${encodeURIComponent(uid)}`);
         if (res.ok) {
           const data = await res.json();
           dueCards = data.due_cards || [];
@@ -4454,9 +4261,10 @@
       // Send review in background
       try {
         const uid = currentUserId || (currentUser ? currentUser.id : '');
-        await fetch(`/api/flashcards/${card.id}/review/?user_id=${encodeURIComponent(uid)}`, {
+        await apiFetch(`/api/flashcards/${card.id}/review/?user_id=${encodeURIComponent(uid)}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify({ quality: quality })
         });
       } catch (e) {
