@@ -6163,7 +6163,7 @@
           }
         }
 
-        // Step 2: Validate Django session — only clear user if no user from any source
+        // Step 2: Validate Django session — clear stale localStorage cache if unauthenticated
         try {
           const res = await apiFetch("/api/auth/me/");
           if (res.ok) {
@@ -6176,13 +6176,21 @@
                 JSON.stringify(currentUser),
               );
               localStorage.setItem("linguist_user_id", currentUserId);
-              updateDailyTurnUI(
-                currentUser.today_turns,
-                currentUser.daily_limit,
-              );
+            } else {
+              currentUser = null;
+              currentUserId = "00000000-0000-0000-0000-000000000001";
+              localStorage.removeItem("linguist_user");
+              localStorage.removeItem("linguist_user_id");
             }
+          } else {
+            currentUser = null;
+            currentUserId = "00000000-0000-0000-0000-000000000001";
+            localStorage.removeItem("linguist_user");
+            localStorage.removeItem("linguist_user_id");
           }
         } catch (e) {}
+
+        updateDailyTurnUI();
 
         const urlParams = new URLSearchParams(window.location.search);
         let pageFromUrl = urlParams.get("page");
@@ -6241,7 +6249,6 @@
         const progressFill = document.getElementById("scen-turn-progress-fill");
         const upgradeBtn = document.getElementById("btn-scen-upgrade");
         const convBadge = document.getElementById("conv-turn-badge");
-        const convText = document.getElementById("conv-turns-text");
 
         if (isVip) {
           if (card) card.classList.add("vip");
@@ -6286,11 +6293,11 @@
               (remaining <= 1 ? (remaining === 0 ? " empty" : " warn") : "");
           }
 
-          if (convBadge && convText) {
+          if (convBadge) {
             convBadge.className =
               "conv-turn-badge" +
               (remaining <= 1 ? (remaining === 0 ? " empty" : " warn") : "");
-            convText.textContent = `${remaining} / ${limit} turns left`;
+            convBadge.innerHTML = `<i class="bi bi-lightning-charge-fill"></i> <span id="conv-turns-text">${remaining} / ${limit} turns left</span>`;
           }
         }
       }
