@@ -4112,8 +4112,49 @@
 
     // Check session and route on load
     document.addEventListener('DOMContentLoaded', async () => {
-      // 1. Check if returning from Supabase OAuth redirect (Google Sign-In)
-      if (supabaseClient && supabaseClient.auth) {
+      // 1. Check if returning from Supabase OAuth redirect (Google Sign-In with #access_token)
+      if (window.location.hash && window.location.hash.includes('access_token')) {
+        const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ''));
+        const accessToken = hashParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token');
+
+        if (accessToken && supabaseClient && supabaseClient.auth) {
+          try {
+            if (supabaseClient.auth.setSession) {
+              await supabaseClient.auth.setSession({
+                access_token: accessToken,
+                refresh_token: refreshToken || ''
+              });
+            }
+            const { data, error } = await supabaseClient.auth.getUser(accessToken);
+            if (data && data.user) {
+              const syncRes = await fetch('/api/auth/oauth-sync/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  supabase_user_id: data.user.id,
+                  email: data.user.email,
+                  username: data.user.user_metadata?.full_name || data.user.user_metadata?.name || (data.user.email ? data.user.email.split('@')[0] : '')
+                })
+              });
+              if (syncRes.ok) {
+                const syncData = await syncRes.json();
+                if (syncData.status === 'success' && syncData.user) {
+                  currentUser = syncData.user;
+                  currentUserId = currentUser.id;
+                  localStorage.setItem('linguist_user', JSON.stringify(currentUser));
+                  localStorage.setItem('linguist_user_id', currentUserId);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn("Error processing OAuth access token:", e);
+          }
+        }
+      }
+
+      // 2. Check standard Supabase session
+      if (supabaseClient && supabaseClient.auth && !currentUser) {
         try {
           const { data: { session } } = await supabaseClient.auth.getSession();
           if (session && session.user) {
@@ -4139,7 +4180,7 @@
         } catch (e) { }
       }
 
-      // 2. Check standard Django session
+      // 3. Check standard Django session
       try {
         const res = await fetch('/api/auth/me/');
         if (res.ok) {
@@ -4160,14 +4201,17 @@
       } catch (e) { }
 
       const urlParams = new URLSearchParams(window.location.search);
-      const pageFromUrl = urlParams.get('page') || (window.location.hash ? window.location.hash.replace('#', '') : null);
+      let pageFromUrl = urlParams.get('page');
+      if (!pageFromUrl && window.location.hash && !window.location.hash.includes('access_token')) {
+        pageFromUrl = window.location.hash.replace('#', '');
+      }
 
       let targetPage = pageFromUrl;
       if (PROTECTED_PAGES.includes(targetPage) && !currentUser) {
         targetPage = 'login';
-        const errEl = document.getElementById('auth-error');
+        const errEl = document.getElementById('auth-error-msg');
         if (errEl) {
-          errEl.textContent = 'Please log in to access your dashboard or profile.';
+          errEl.textContent = 'Please sign in or create an account to start practicing!';
           errEl.style.display = 'block';
         }
       }
