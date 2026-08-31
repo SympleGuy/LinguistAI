@@ -1390,6 +1390,66 @@
         }
       }
 
+      /* Shimmer Skeleton Loading */
+      .skeleton {
+        background: linear-gradient(90deg, #f0f1f7 25%, #e2e4ef 37%, #f0f1f7 63%);
+        background-size: 400% 100%;
+        animation: skeleton-shimmer 1.4s ease infinite;
+        border-radius: 8px;
+        display: inline-block;
+      }
+
+      @keyframes skeleton-shimmer {
+        0% {
+          background-position: 100% 50%;
+        }
+        100% {
+          background-position: 0 50%;
+        }
+      }
+
+      .skeleton-card {
+        background: #ffffff;
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        min-height: 200px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+      }
+
+      .skeleton-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+      }
+
+      .skeleton-title {
+        width: 65%;
+        height: 18px;
+        border-radius: 6px;
+      }
+
+      .skeleton-desc {
+        width: 90%;
+        height: 12px;
+        border-radius: 4px;
+      }
+
+      .skeleton-desc-sub {
+        width: 55%;
+        height: 12px;
+        border-radius: 4px;
+      }
+
+      .skeleton-badge {
+        width: 55px;
+        height: 20px;
+        border-radius: 9999px;
+      }
+
       /* Daily Turn Limit Widget Styles */
       .scen-turn-card {
         background: #ffffff;
@@ -4827,6 +4887,31 @@
         );
       }
 
+      function renderScenariosSkeleton() {
+        const grid = document.getElementById("scenarios-grid");
+        if (!grid) return;
+        grid.innerHTML = Array(6)
+          .fill(0)
+          .map(
+            () => `
+          <div class="skeleton-card">
+            <div style="display:flex;align-items:center;justify-content:space-between">
+              <div class="skeleton skeleton-icon"></div>
+              <div class="skeleton skeleton-badge"></div>
+            </div>
+            <div class="skeleton skeleton-title" style="margin-top:8px"></div>
+            <div class="skeleton skeleton-desc" style="margin-top:4px"></div>
+            <div class="skeleton skeleton-desc-sub"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:auto;padding-top:10px">
+              <div class="skeleton" style="width:50px;height:18px;border-radius:6px"></div>
+              <div class="skeleton" style="width:70px;height:18px;border-radius:6px"></div>
+            </div>
+          </div>
+        `,
+          )
+          .join("");
+      }
+
       async function renderScenarios() {
         // Update badge if user is logged in
         const badgeDiv = document.getElementById("scen-custom-badge");
@@ -4858,6 +4943,11 @@
           }
         } else if (badgeDiv) {
           badgeDiv.style.display = "none";
+        }
+
+        const grid = document.getElementById("scenarios-grid");
+        if (grid && (!SCENARIOS || SCENARIOS.length === 0)) {
+          renderScenariosSkeleton();
         }
 
         await loadScenariosFromAPI();
@@ -5769,8 +5859,46 @@
         });
       }
 
+      function renderDashboardSkeleton() {
+        const sSessions = document.getElementById("dash-stat-sessions");
+        const sGrammar = document.getElementById("dash-stat-grammar");
+        const sPron = document.getElementById("dash-stat-pron");
+        const sStreak = document.getElementById("dash-stat-streak");
+        if (sSessions)
+          sSessions.innerHTML =
+            '<span class="skeleton" style="display:inline-block;width:40px;height:24px;"></span>';
+        if (sGrammar)
+          sGrammar.innerHTML =
+            '<span class="skeleton" style="display:inline-block;width:45px;height:24px;"></span>';
+        if (sPron)
+          sPron.innerHTML =
+            '<span class="skeleton" style="display:inline-block;width:45px;height:24px;"></span>';
+        if (sStreak)
+          sStreak.innerHTML =
+            '<span class="skeleton" style="display:inline-block;width:55px;height:24px;"></span>';
+        const recList = document.getElementById("dash-recent-list");
+        if (recList) {
+          recList.innerHTML = Array(3)
+            .fill(0)
+            .map(
+              () => `
+            <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:12px;background:#f9fafb;margin-bottom:8px;">
+              <div class="skeleton" style="width:36px;height:36px;border-radius:10px;"></div>
+              <div style="flex:1">
+                <div class="skeleton" style="width:60%;height:14px;margin-bottom:6px;"></div>
+                <div class="skeleton" style="width:40%;height:10px;"></div>
+              </div>
+              <div class="skeleton" style="width:45px;height:20px;border-radius:6px;"></div>
+            </div>
+          `,
+            )
+            .join("");
+        }
+      }
+
       async function loadDashboardData() {
         if (!currentUserId) return;
+        renderDashboardSkeleton();
         try {
           const [dashRes, analyticsRes] = await Promise.allSettled([
             apiFetch(`/api/dashboard/${currentUserId}/`),

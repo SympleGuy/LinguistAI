@@ -29,23 +29,27 @@ def calculate_user_streak(user_id):
     Counts distinct days where the user completed a session or interaction.
     """
     try:
-        user_sessions = LearningSession.objects.filter(user_id=user_id).values_list('id', flat=True)
+        today = timezone.now().date()
+        since = today - timedelta(days=60)
 
         session_dates = set(
-            LearningSession.objects.filter(user_id=user_id, started_at__isnull=False)
+            LearningSession.objects.filter(user_id=user_id, started_at__date__gte=since)
             .values_list('started_at__date', flat=True)
         )
 
-        log_dates = set(
-            InteractionLog.objects.filter(session_id__in=user_sessions, created_at__isnull=False)
-            .values_list('created_at__date', flat=True)
-        )
+        active_dates = session_dates
+        if not active_dates:
+            user_sessions = list(LearningSession.objects.filter(user_id=user_id).values_list('id', flat=True))
+            if user_sessions:
+                log_dates = set(
+                    InteractionLog.objects.filter(session_id__in=user_sessions, created_at__date__gte=since)
+                    .values_list('created_at__date', flat=True)
+                )
+                active_dates = log_dates
 
-        active_dates = session_dates.union(log_dates)
         if not active_dates:
             return 0
 
-        today = timezone.now().date()
         yesterday = today - timedelta(days=1)
 
         # If user did not practice today and did not practice yesterday, streak is broken
@@ -362,6 +366,23 @@ def dashboard_view(request):
     return render(request, "linguistAi_web.html")
 
 
+_SCENARIO_CACHE = None
+_SCENARIO_CACHE_TIME = 0
+
+
+def get_cached_scenarios():
+    global _SCENARIO_CACHE, _SCENARIO_CACHE_TIME
+    import time
+    now = time.time()
+    if _SCENARIO_CACHE is not None and (now - _SCENARIO_CACHE_TIME) < 120:
+        return _SCENARIO_CACHE
+
+    scenarios = list(Scenario.objects.all().order_by('id'))
+    _SCENARIO_CACHE = scenarios
+    _SCENARIO_CACHE_TIME = now
+    return _SCENARIO_CACHE
+
+
 def scenarios_list(request):
     """
     API endpoint to list scenarios matching learner's target language and CEFR level.
@@ -385,7 +406,7 @@ def scenarios_list(request):
             if not req_cefr and not all_levels:
                 req_cefr = app_user.proficiency_level or ''
 
-    scenarios = Scenario.objects.all().order_by('id')
+    scenarios = get_cached_scenarios()
     scenario_list = []
     for scenario in scenarios:
         scenario_data = {
@@ -854,12 +875,16 @@ class DashboardView(View):
             avg_pronunciation = round(sum(p_scores) / len(p_scores)) if p_scores else 82
 
             recent_sessions = []
-            for session in sessions[:10]:
+            recent_slice = list(sessions[:10])
+            scen_ids = [s.scenario_id for s in recent_slice]
+            scenarios_batch = {sc.id: sc for sc in Scenario.objects.filter(id__in=scen_ids)}
+
+            for session in recent_slice:
                 title = "Practice Session"
                 emoji = "💬"
                 lang = "English"
-                try:
-                    scenario = Scenario.objects.get(id=session.scenario_id)
+                scenario = scenarios_batch.get(session.scenario_id)
+                if scenario:
                     title = scenario.title if scenario.title else "Practice Session"
                     if scenario.system_prompt:
                         try:
@@ -868,8 +893,6 @@ class DashboardView(View):
                             lang = parsed.get("lang", "English")
                         except Exception:
                             pass
-                except Scenario.DoesNotExist:
-                    pass
 
                 recent_sessions.append({
                     "session_id": str(session.id),
