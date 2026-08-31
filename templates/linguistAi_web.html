@@ -4488,7 +4488,10 @@
        */
       function apiFetch(url, options = {}) {
         const userId =
-          currentUserId || localStorage.getItem("linguist_user_id") || "";
+          (currentUser && currentUser.id) ||
+          currentUserId ||
+          localStorage.getItem("linguist_user_id") ||
+          "";
         const headers = Object.assign({}, options.headers || {});
         if (userId && userId !== "00000000-0000-0000-0000-000000000001") {
           headers["X-User-ID"] = userId;
@@ -4554,7 +4557,13 @@
           window.history.replaceState({}, "", url);
         }
 
-        if (name === "scenarios") renderScenarios();
+        if (name === "scenarios") {
+          renderScenarios();
+          updateDailyTurnUI();
+        }
+        if (name === "conversation") {
+          updateDailyTurnUI();
+        }
         if (name === "dashboard") loadDashboardData();
         if (name === "profile") loadProfileData();
         if (name === "login") {
@@ -4964,15 +4973,17 @@
     </div>`,
           )
           .join("");
+        updateDailyTurnUI();
         showPage("conversation");
 
         // Start real backend session
         try {
+          const activeUid = (currentUser && currentUser.id) || currentUserId || localStorage.getItem("linguist_user_id");
           const res = await apiFetch("/api/sessions/start/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             credentials: "include",
-            body: JSON.stringify({ user_id: currentUserId, scenario_id: id }),
+            body: JSON.stringify({ user_id: activeUid, scenario_id: id }),
           });
           if (res.ok) {
             const data = await res.json();
@@ -6219,7 +6230,9 @@
           userDailyLimit = currentUser.daily_limit || 5;
         }
 
-        const isVip = currentUser && currentUser.subscription_plan === "VIP";
+        const isVip =
+          currentUser &&
+          (currentUser.subscription_plan || "").toUpperCase() === "VIP";
         const card = document.getElementById("scen-turn-card");
         const statusText = document.getElementById("scen-turn-status-text");
         const vipBadge = document.getElementById("scen-turn-vip-badge");
@@ -6282,8 +6295,22 @@
         }
       }
 
-      // --- UX/UI Upgrades & Payment Form ---
+    // --- UX/UI Upgrades & Payment Form ---
       let selectedPaymentPlan = "annual"; // 'monthly' ($29.99) or 'annual' ($239.88)
+
+      // Cross-tab Synchronization Listener
+      window.addEventListener("storage", (e) => {
+        if (e.key === "linguist_user") {
+          try {
+            currentUser = e.newValue ? JSON.parse(e.newValue) : null;
+            currentUserId = currentUser
+              ? currentUser.id
+              : "00000000-0000-0000-0000-000000000001";
+            updateUserNavUI(false, false);
+            updateDailyTurnUI();
+          } catch (err) {}
+        }
+      });
 
       function selectPaymentPlan(plan) {
         selectedPaymentPlan = plan === "monthly" ? "monthly" : "annual";

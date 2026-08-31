@@ -255,13 +255,20 @@ def login_view(request):
         request.session["user_email"] = user_email
         request.session["username"] = user_display
 
+        is_allowed, today_turns, plan = check_user_daily_turn_limit(app_user.id)
+        daily_limit = 5 if plan.lower() == "free" else None
+        remaining_turns = max(0, 5 - today_turns) if plan.lower() == "free" else None
+
         user_data = {
             "id": str(app_user.id),
             "username": user_display,
             "email": user_email,
             "proficiency_level": app_user.proficiency_level or "Beginner",
             "target_language": app_user.target_language or "English",
-            "subscription_plan": app_user.subscription_plan or "Free"
+            "subscription_plan": app_user.subscription_plan or "Free",
+            "today_turns": today_turns,
+            "daily_limit": daily_limit,
+            "remaining_turns": remaining_turns
         }
 
         if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -482,16 +489,23 @@ class StartSessionView(View):
                 except Exception:
                     pass
 
-            user_id = data.get('user_id') or request.session.get('user_id')
-            if not user_id:
-                first_u = AppUser.objects.first()
-                if first_u:
-                    user_id = str(first_u.id)
+            # Resolve user_id: first from body, then session, then header
+            user_id = data.get('user_id') or request.session.get('supabase_user_id') or request.session.get('user_id') or request.headers.get('X-User-ID')
 
+            app_user = None
+            if user_id and str(user_id) != "00000000-0000-0000-0000-000000000001":
+                app_user = AppUser.objects.filter(id=user_id).first()
+
+            if not app_user:
+                session_uid = request.session.get('supabase_user_id')
+                if session_uid:
+                    app_user = AppUser.objects.filter(id=session_uid).first()
+
+            if not app_user:
+                return JsonResponse({"error": "Authenticated user required to start session"}, status=401)
+
+            user_id = str(app_user.id)
             raw_scenario_id = data.get("scenario_id")
-
-            if not user_id:
-                return JsonResponse({"error": "user_id is required"}, status=400)
 
             # Resolve scenario ID
             scenario_id = None
@@ -577,8 +591,19 @@ class SubmitResponseView(View):
             except LearningSession.DoesNotExist:
                 return JsonResponse({"error": "Session not found"}, status=404)
 
+            # Resolve active user for this interaction
+            auth_user_id = request.session.get("supabase_user_id") or request.headers.get("X-User-ID")
+            user_to_check = session.user_id
+            if auth_user_id and str(auth_user_id) != "00000000-0000-0000-0000-000000000001":
+                matched_user = AppUser.objects.filter(id=auth_user_id).first()
+                if matched_user:
+                    user_to_check = str(matched_user.id)
+                    if str(session.user_id) != user_to_check:
+                        session.user_id = user_to_check
+                        session.save(update_fields=['user_id'])
+
             # UC12: Check daily turn limit for Free Tier users
-            is_allowed, today_turns, plan = check_user_daily_turn_limit(session.user_id)
+            is_allowed, today_turns, plan = check_user_daily_turn_limit(user_to_check)
             if not is_allowed:
                 return JsonResponse({
                     "error": "Daily turn limit reached. Free Tier users are restricted to 5 turns per day.",
@@ -592,7 +617,7 @@ class SubmitResponseView(View):
             except Scenario.DoesNotExist:
                 return JsonResponse({"error": "Associated scenario not found"}, status=404)
 
-            app_user = AppUser.objects.filter(id=session.user_id).first()
+            app_user = AppUser.objects.filter(id=user_to_check).first()
             user_level = app_user.proficiency_level if (app_user and app_user.proficiency_level) else "Beginner"
             target_lang = app_user.target_language if (app_user and app_user.target_language) else "English"
 
@@ -679,8 +704,19 @@ class SubmitAudioResponseView(View):
             except LearningSession.DoesNotExist:
                 return JsonResponse({"error": "Session not found"}, status=404)
 
+            # Resolve active user for this interaction
+            auth_user_id = request.session.get("supabase_user_id") or request.headers.get("X-User-ID")
+            user_to_check = session.user_id
+            if auth_user_id and str(auth_user_id) != "00000000-0000-0000-0000-000000000001":
+                matched_user = AppUser.objects.filter(id=auth_user_id).first()
+                if matched_user:
+                    user_to_check = str(matched_user.id)
+                    if str(session.user_id) != user_to_check:
+                        session.user_id = user_to_check
+                        session.save(update_fields=['user_id'])
+
             # UC12: Check daily turn limit for Free Tier users
-            is_allowed, today_turns, plan = check_user_daily_turn_limit(session.user_id)
+            is_allowed, today_turns, plan = check_user_daily_turn_limit(user_to_check)
             if not is_allowed:
                 return JsonResponse({
                     "error": "Daily turn limit reached. Free Tier users are restricted to 5 turns per day.",
