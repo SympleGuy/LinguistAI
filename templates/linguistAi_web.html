@@ -2356,7 +2356,6 @@
           <button
             id="navbar-signin"
             class="btn-signin"
-            style="display: none"
             onclick="showPage('login')"
           >
             Sign in
@@ -4656,20 +4655,14 @@
 
         if (currentUser) {
           if (signInBtn) signInBtn.style.display = "none";
-          if (signOutBtn)
-            signOutBtn.style.display = isAuthPage ? "none" : "inline-flex";
+          if (signOutBtn) signOutBtn.style.display = isAuthPage ? "none" : "inline-flex";
           if (tryBtn) tryBtn.style.display = "none";
           if (innerNav) innerNav.style.display = isAuthPage ? "none" : "flex";
         } else {
-          if (signInBtn)
-            signInBtn.style.display =
-              isLanding || isAuthPage ? "inline-flex" : "none";
+          if (signInBtn) signInBtn.style.display = isAuthPage ? "none" : "inline-flex";
           if (signOutBtn) signOutBtn.style.display = "none";
-          if (tryBtn)
-            tryBtn.style.display =
-              isLanding || isAuthPage ? "inline-flex" : "inline-flex";
-          if (innerNav)
-            innerNav.style.display = isLanding || isAuthPage ? "none" : "flex";
+          if (tryBtn) tryBtn.style.display = isAuthPage ? "none" : "inline-flex";
+          if (innerNav) innerNav.style.display = "none";
         }
       }
 
