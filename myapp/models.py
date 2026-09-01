@@ -19,6 +19,9 @@ class User(models.Model):
     proficiency_level = models.CharField(blank=True, max_length=255, null=True)
     subscription_plan = models.CharField(blank=True, max_length=255, null=True)
     role = models.CharField(blank=True, max_length=50, default='user', choices=ROLE_CHOICES)
+    daily_turn_limit = models.IntegerField(default=5, null=True, blank=True)
+    daily_turns_used = models.IntegerField(default=0)
+    last_turn_reset_date = models.DateField(blank=True, null=True)
     created_at = models.DateTimeField(blank=True, null=True)
 
 

@@ -504,14 +504,15 @@ class AdminUsersApiView(AdminRequiredMixin, View):
         users_data = []
 
         for u in users_page:
-            # Look up sessions for this user
-            user_session_ids = list(LearningSession.objects.filter(user_id=u.id).values_list('id', flat=True))
-            today_turns = InteractionLog.objects.filter(
-                session_id__in=user_session_ids,
-                created_at__date=today
-            ).count()
+            # Check date rollover
+            turns_used = u.daily_turns_used or 0
+            if u.last_turn_reset_date != today:
+                turns_used = 0
 
-            sessions_count = len(user_session_ids)
+            sessions_count = LearningSession.objects.filter(user_id=u.id).count()
+            plan_str = (u.subscription_plan or "Free").strip()
+            is_vip = plan_str.upper() in ("VIP", "PRO")
+            limit_val = None if is_vip else (u.daily_turn_limit if u.daily_turn_limit is not None else 5)
 
             users_data.append({
                 "id": str(u.id),
@@ -520,9 +521,10 @@ class AdminUsersApiView(AdminRequiredMixin, View):
                 "role": getattr(u, 'role', 'user') or 'user',
                 "target_language": u.target_language or "English",
                 "proficiency_level": u.proficiency_level or "Beginner",
-                "subscription_plan": (u.subscription_plan or "Free").upper() if (u.subscription_plan or "").upper() == "VIP" else "Free",
+                "subscription_plan": "VIP" if is_vip else "Free",
                 "sessions_count": sessions_count,
-                "today_turns": today_turns,
+                "today_turns": turns_used,
+                "daily_turn_limit": limit_val,
                 "created_at": u.created_at.isoformat() if u.created_at else None
             })
 
@@ -550,6 +552,7 @@ class AdminUsersApiView(AdminRequiredMixin, View):
         proficiency_level = data.get('proficiency_level', 'Beginner')
         subscription_plan = data.get('subscription_plan', 'Free')
         role = data.get('role', 'user')
+        daily_turn_limit = data.get('daily_turn_limit', 5)
 
         if not email and not username:
             return JsonResponse({"error": "Username or email is required."}, status=400)
@@ -566,6 +569,9 @@ class AdminUsersApiView(AdminRequiredMixin, View):
             proficiency_level=proficiency_level,
             subscription_plan=subscription_plan,
             role=role,
+            daily_turn_limit=int(daily_turn_limit) if daily_turn_limit is not None else 5,
+            daily_turns_used=0,
+            last_turn_reset_date=timezone.now().date(),
             created_at=timezone.now()
         )
 
@@ -599,6 +605,11 @@ class AdminUserDetailApiView(AdminRequiredMixin, View):
                 "overall_score": s.overall_score
             })
 
+        today = timezone.now().date()
+        turns_used = user.daily_turns_used or 0
+        if user.last_turn_reset_date != today:
+            turns_used = 0
+
         return JsonResponse({
             "user": {
                 "id": str(user.id),
@@ -608,6 +619,8 @@ class AdminUserDetailApiView(AdminRequiredMixin, View):
                 "target_language": user.target_language,
                 "proficiency_level": user.proficiency_level,
                 "subscription_plan": user.subscription_plan,
+                "daily_turns_used": turns_used,
+                "daily_turn_limit": user.daily_turn_limit,
                 "created_at": user.created_at.isoformat() if user.created_at else None
             },
             "recent_sessions": sessions_data
@@ -635,6 +648,11 @@ class AdminUserDetailApiView(AdminRequiredMixin, View):
             user.subscription_plan = data['subscription_plan']
         if 'role' in data:
             user.role = data['role']
+        if 'daily_turn_limit' in data:
+            val = data['daily_turn_limit']
+            user.daily_turn_limit = int(val) if val is not None and str(val).isdigit() else None
+        if 'daily_turns_used' in data:
+            user.daily_turns_used = int(data['daily_turns_used'])
         if 'password' in data and data['password']:
             user.password_hash = make_password(data['password'])
 
@@ -665,21 +683,23 @@ class AdminUserDetailApiView(AdminRequiredMixin, View):
 class AdminUserResetTurnsApiView(AdminRequiredMixin, View):
     """
     POST /api/admin/users/<uuid:user_id>/reset-turns/
-    Clears today's interaction logs for this learner to reset daily turn count.
+    Resets user's daily_turns_used back to 0 without deleting history logs.
     """
     def post(self, request, user_id):
+        user = AppUser.objects.filter(id=user_id).first()
+        if not user:
+            return JsonResponse({"error": "User not found"}, status=404)
+
         today = timezone.now().date()
-        user_session_ids = list(LearningSession.objects.filter(user_id=user_id).values_list('id', flat=True))
-        deleted_count, _ = InteractionLog.objects.filter(
-            session_id__in=user_session_ids,
-            created_at__date=today
-        ).delete()
+        user.daily_turns_used = 0
+        user.last_turn_reset_date = today
+        user.save(update_fields=['daily_turns_used', 'last_turn_reset_date'])
 
         invalidate_admin_cache()
 
         return JsonResponse({
             "status": "success",
-            "message": f"Daily turn count reset successfully. ({deleted_count} turn logs cleared for today)"
+            "message": f"Daily turn count for '{user.username}' has been reset to 0/{user.daily_turn_limit or 5}."
         })
 
 

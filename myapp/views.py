@@ -258,9 +258,8 @@ def login_view(request):
         request.session["username"] = user_display
         request.session["role"] = app_user.role or "user"
 
-        is_allowed, today_turns, plan = check_user_daily_turn_limit(app_user.id)
-        daily_limit = 5 if plan.lower() == "free" else None
-        remaining_turns = max(0, 5 - today_turns) if plan.lower() == "free" else None
+        is_allowed, today_turns, plan, daily_limit = check_user_daily_turn_limit(app_user.id)
+        remaining_turns = max(0, daily_limit - today_turns) if daily_limit is not None else None
 
         user_data = {
             "id": str(app_user.id),
@@ -333,9 +332,8 @@ def api_me(request):
     user_email = app_user.email or app_user.username
     user_display = app_user.username or user_email
 
-    is_allowed, today_turns, plan = check_user_daily_turn_limit(app_user.id)
-    daily_limit = 5 if plan.lower() == "free" else None
-    remaining_turns = max(0, 5 - today_turns) if plan.lower() == "free" else None
+    is_allowed, today_turns, plan, daily_limit = check_user_daily_turn_limit(app_user.id)
+    remaining_turns = max(0, daily_limit - today_turns) if daily_limit is not None else None
 
     return JsonResponse({
         "authenticated": True,
@@ -629,25 +627,55 @@ class StartSessionView(View):
 
 def check_user_daily_turn_limit(user_id):
     """
-    UC12: Restrict 'Free Tier' users to maximum 5 conversational turns per day.
-    Returns tuple: (is_allowed, today_turn_count, plan_name)
+    UC12: Manage daily turn limits directly via AppUser database fields.
+    - Synchronizes with DB fields: daily_turn_limit, daily_turns_used, last_turn_reset_date
+    - If new calendar day, resets daily_turns_used to 0.
+    Returns tuple: (is_allowed, today_turn_count, plan_name, daily_limit)
     """
-    app_user = AppUser.objects.filter(id=user_id).first()
-    plan = (app_user.subscription_plan if (app_user and app_user.subscription_plan) else "Free").strip()
+    if not user_id:
+        return True, 0, "Free", 5
 
-    if plan.lower() != "free":
-        return True, 0, plan
+    app_user = AppUser.objects.filter(id=user_id).first()
+    if not app_user:
+        return True, 0, "Free", 5
+
+    plan = (app_user.subscription_plan or "Free").strip()
+    is_vip = plan.upper() in ("VIP", "PRO")
+
+    if is_vip:
+        return True, app_user.daily_turns_used or 0, plan, None
 
     today = timezone.now().date()
-    user_sessions = LearningSession.objects.filter(user_id=user_id).values_list('id', flat=True)
-    today_turns = InteractionLog.objects.filter(
-        session_id__in=user_sessions,
-        created_at__date=today
-    ).count()
+    # Check if date has changed -> auto reset daily count
+    if app_user.last_turn_reset_date != today:
+        app_user.daily_turns_used = 0
+        app_user.last_turn_reset_date = today
+        app_user.save(update_fields=['daily_turns_used', 'last_turn_reset_date'])
 
-    if today_turns >= 5:
-        return False, today_turns, plan
-    return True, today_turns, plan
+    limit = app_user.daily_turn_limit if app_user.daily_turn_limit is not None else 5
+    turns_used = app_user.daily_turns_used or 0
+
+    if turns_used >= limit:
+        return False, turns_used, plan, limit
+
+    return True, turns_used, plan, limit
+
+
+def increment_user_daily_turn(user_id):
+    """Increment user's daily_turns_used in database."""
+    if not user_id:
+        return
+    app_user = AppUser.objects.filter(id=user_id).first()
+    if not app_user:
+        return
+    today = timezone.now().date()
+    if app_user.last_turn_reset_date != today:
+        app_user.daily_turns_used = 1
+        app_user.last_turn_reset_date = today
+    else:
+        app_user.daily_turns_used = (app_user.daily_turns_used or 0) + 1
+    app_user.save(update_fields=['daily_turns_used', 'last_turn_reset_date'])
+
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -679,13 +707,13 @@ class SubmitResponseView(View):
                         session.save(update_fields=['user_id'])
 
             # UC12: Check daily turn limit for Free Tier users
-            is_allowed, today_turns, plan = check_user_daily_turn_limit(user_to_check)
+            is_allowed, today_turns, plan, daily_limit = check_user_daily_turn_limit(user_to_check)
             if not is_allowed:
                 return JsonResponse({
-                    "error": "Daily turn limit reached. Free Tier users are restricted to 5 turns per day.",
+                    "error": f"Daily turn limit reached. You have used {today_turns}/{daily_limit} turns for today.",
                     "limit_reached": True,
                     "turns_today": today_turns,
-                    "daily_limit": 5
+                    "daily_limit": daily_limit
                 }, status=403)
 
             try:
@@ -736,6 +764,9 @@ class SubmitResponseView(View):
                 created_at=timezone.now()
             )
 
+            # Increment user daily turn count in database
+            increment_user_daily_turn(user_to_check)
+
             g_score = detailed_feedback.get("grammar_score", 85)
             p_score = detailed_feedback.get("pronunciation_score", 80)
             session.overall_score = round((g_score + p_score) / 2)
@@ -762,7 +793,7 @@ class SubmitResponseView(View):
                 "feedback": detailed_feedback,
                 "created_at": interaction.created_at.isoformat() if interaction.created_at else None,
                 "turns_today": today_turns + 1,
-                "daily_limit": 5 if plan.lower() == "free" else None
+                "daily_limit": daily_limit
             })
         except json.JSONDecodeError:
             return JsonResponse({"error": "Invalid JSON"}, status=400)
@@ -792,13 +823,13 @@ class SubmitAudioResponseView(View):
                         session.save(update_fields=['user_id'])
 
             # UC12: Check daily turn limit for Free Tier users
-            is_allowed, today_turns, plan = check_user_daily_turn_limit(user_to_check)
+            is_allowed, today_turns, plan, daily_limit = check_user_daily_turn_limit(user_to_check)
             if not is_allowed:
                 return JsonResponse({
-                    "error": "Daily turn limit reached. Free Tier users are restricted to 5 turns per day.",
+                    "error": f"Daily turn limit reached. You have used {today_turns}/{daily_limit} turns for today.",
                     "limit_reached": True,
                     "turns_today": today_turns,
-                    "daily_limit": 5
+                    "daily_limit": daily_limit
                 }, status=403)
 
             audio_file = request.FILES.get("audio")
@@ -868,6 +899,9 @@ class SubmitAudioResponseView(View):
                 created_at=timezone.now()
             )
 
+            # Increment user daily turn count in database
+            increment_user_daily_turn(user_to_check)
+
             g_score = detailed_feedback.get("grammar_score", 85)
             p_score = detailed_feedback.get("pronunciation_score", 80)
             session.overall_score = round((g_score + p_score) / 2)
@@ -895,7 +929,7 @@ class SubmitAudioResponseView(View):
                 "feedback": detailed_feedback,
                 "created_at": interaction.created_at.isoformat() if interaction.created_at else None,
                 "turns_today": today_turns + 1,
-                "daily_limit": 5 if plan.lower() == "free" else None
+                "daily_limit": daily_limit
             })
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)

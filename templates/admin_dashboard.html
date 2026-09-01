@@ -1374,8 +1374,8 @@
             <div class="row g-2 mb-3">
               <div class="col-6">
                 <label class="form-label text-dim small">Subscription Plan</label>
-                <select class="form-select form-select-custom" id="userFormPlan">
-                  <option value="Free">Free Tier (5 turns/day)</option>
+                <select class="form-select form-select-custom" id="userFormPlan" onchange="togglePlanLimitField()">
+                  <option value="Free">Free Tier</option>
                   <option value="VIP">VIP Tier (Unlimited Practice)</option>
                 </select>
               </div>
@@ -1385,6 +1385,18 @@
                   <option value="user">Learner / User</option>
                   <option value="admin">Administrator</option>
                 </select>
+              </div>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-6">
+                <label class="form-label text-dim small">Daily Turn Limit</label>
+                <input type="number" class="form-control form-control-custom" id="userFormDailyLimit" value="5" min="1" max="500">
+                <small class="text-dim font-mono" style="font-size: 0.7rem;">Free default: 5 / VIP: Unlimited</small>
+              </div>
+              <div class="col-6">
+                <label class="form-label text-dim small">Turns Used Today</label>
+                <input type="number" class="form-control form-control-custom" id="userFormTurnsUsed" value="0" min="0">
+                <small class="text-dim font-mono" style="font-size: 0.7rem;">Today's usage count</small>
               </div>
             </div>
           </form>
@@ -2012,17 +2024,17 @@
             <td><span class="status-badge ${(u.subscription_plan || '').toUpperCase() === 'VIP' ? 'badge-vip' : 'badge-free'}">${u.subscription_plan || 'Free'}</span></td>
             <td><span class="fw-bold font-mono">${u.sessions_count}</span></td>
             <td>
-              <span class="badge ${u.today_turns >= 5 && (u.subscription_plan || '').toUpperCase() !== 'VIP' ? 'bg-danger' : 'bg-secondary'} font-mono">
-                ${u.today_turns} / ${(u.subscription_plan || '').toUpperCase() === 'VIP' ? '∞' : '5'}
+              <span class="badge ${(u.today_turns >= (u.daily_turn_limit || 5) && (u.subscription_plan || '').toUpperCase() !== 'VIP') ? 'bg-danger' : 'bg-secondary'} font-mono">
+                ${u.today_turns} / ${(u.subscription_plan || '').toUpperCase() === 'VIP' ? '∞' : (u.daily_turn_limit !== null && u.daily_turn_limit !== undefined ? u.daily_turn_limit : 5)}
               </span>
             </td>
             <td><small class="text-dim font-mono">${u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</small></td>
             <td class="text-end">
               <div class="btn-group btn-group-sm">
-                <button class="btn btn-subtle p-1 px-2" title="Edit Profile, Role & Plan" onclick='editUserModal(${JSON.stringify(u)})'>
+                <button class="btn btn-subtle p-1 px-2" title="Edit Profile, Role, Plan & Limits" onclick='editUserModal(${JSON.stringify(u)})'>
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-subtle p-1 px-2 text-warning" title="Reset Today's Turn Limit" onclick="resetUserTurns('${u.id}', '${u.username}')">
+                <button class="btn btn-subtle p-1 px-2 text-warning" title="Reset Today's Turn Limit to 0" onclick="resetUserTurns('${u.id}', '${u.username}')">
                   <i class="bi bi-arrow-counterclockwise"></i>
                 </button>
                 <button class="btn btn-subtle p-1 px-2 text-danger" title="Delete User" onclick="deleteUser('${u.id}', '${u.username}')">
@@ -2037,6 +2049,18 @@
         renderPaginationButtons('userPaginationButtons', data.page, data.total_pages, loadUsersData);
       } catch (e) {
         console.error('Error loading users:', e);
+      }
+    }
+
+    function togglePlanLimitField() {
+      const plan = document.getElementById('userFormPlan').value;
+      const limitInput = document.getElementById('userFormDailyLimit');
+      if (plan === 'VIP') {
+        limitInput.disabled = true;
+        limitInput.placeholder = 'Unlimited';
+      } else {
+        limitInput.disabled = false;
+        if (!limitInput.value) limitInput.value = 5;
       }
     }
 
@@ -2067,6 +2091,9 @@
       document.getElementById('userFormLevel').value = 'Beginner';
       document.getElementById('userFormPlan').value = 'Free';
       document.getElementById('userFormRole').value = 'user';
+      document.getElementById('userFormDailyLimit').value = 5;
+      document.getElementById('userFormDailyLimit').disabled = false;
+      document.getElementById('userFormTurnsUsed').value = 0;
       showModal('userModal');
     }
 
@@ -2081,6 +2108,9 @@
       document.getElementById('userFormLevel').value = user.proficiency_level;
       document.getElementById('userFormPlan').value = user.subscription_plan || 'Free';
       document.getElementById('userFormRole').value = user.role || 'user';
+      document.getElementById('userFormDailyLimit').value = user.daily_turn_limit !== null && user.daily_turn_limit !== undefined ? user.daily_turn_limit : 5;
+      document.getElementById('userFormTurnsUsed').value = user.today_turns || 0;
+      togglePlanLimitField();
       showModal('userModal');
     }
 
@@ -2093,13 +2123,24 @@
       const proficiency_level = document.getElementById('userFormLevel').value;
       const subscription_plan = document.getElementById('userFormPlan').value;
       const role = document.getElementById('userFormRole').value;
+      const daily_turn_limit = subscription_plan === 'VIP' ? null : parseInt(document.getElementById('userFormDailyLimit').value) || 5;
+      const daily_turns_used = parseInt(document.getElementById('userFormTurnsUsed').value) || 0;
 
       if (!username && !email) {
         showToast('Please enter a username or email', 'error');
         return;
       }
 
-      const payload = { username, email, target_language, proficiency_level, subscription_plan, role };
+      const payload = {
+        username,
+        email,
+        target_language,
+        proficiency_level,
+        subscription_plan,
+        role,
+        daily_turn_limit,
+        daily_turns_used
+      };
       if (password) payload.password = password;
 
       try {
