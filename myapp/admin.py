@@ -3,6 +3,10 @@ from django.utils.html import format_html
 import json
 from .models import User as AppUser, Scenario, LearningSession, InteractionLog, VocabularyCard
 
+admin.site.site_header = "LinguistAI Native Admin"
+admin.site.site_title = "LinguistAI Admin"
+admin.site.index_title = "LinguistAI Database & Models Management"
+
 
 @admin.register(AppUser)
 class UserAdmin(admin.ModelAdmin):
