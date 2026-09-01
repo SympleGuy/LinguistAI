@@ -429,22 +429,28 @@ class AdminAnalyticsApiView(AdminRequiredMixin, View):
             .annotate(c=Count('id'))
         )
 
-        # Top Scenarios leaderboard
-        scenario_stats = []
-        scenarios_qs = Scenario.objects.all()[:10]
-        for sc in scenarios_qs:
-            sc_sessions = LearningSession.objects.filter(scenario_id=sc.id)
-            sc_count = sc_sessions.count()
-            sc_avg = sc_sessions.filter(overall_score__isnull=False).aggregate(avg=Avg('overall_score'))['avg']
-            scenario_stats.append({
-                "id": sc.id,
-                "title": sc.title,
-                "sessions_count": sc_count,
-                "avg_score": round(sc_avg or 0, 1)
-            })
+        # Top Scenarios leaderboard (Single Grouped Batch Query)
+        session_stats_agg = list(
+            LearningSession.objects.values('scenario_id')
+            .annotate(
+                sessions_count=Count('id'),
+                avg_score=Avg('overall_score')
+            ).order_by('-sessions_count')[:6]
+        )
 
-        scenario_stats.sort(key=lambda x: x['sessions_count'], reverse=True)
-        scenario_stats = scenario_stats[:6]
+        scenario_ids = [s['scenario_id'] for s in session_stats_agg if s.get('scenario_id')]
+        scenarios_title_map = {sc.id: sc.title for sc in Scenario.objects.filter(id__in=scenario_ids)}
+
+        scenario_stats = []
+        for s in session_stats_agg:
+            sc_id = s.get('scenario_id')
+            if sc_id in scenarios_title_map:
+                scenario_stats.append({
+                    "id": sc_id,
+                    "title": scenarios_title_map[sc_id],
+                    "sessions_count": s['sessions_count'],
+                    "avg_score": round(s['avg_score'] or 0, 1)
+                })
 
         result = {
             "timeline": timeline_data,
@@ -713,12 +719,28 @@ class AdminScenariosApiView(AdminRequiredMixin, View):
     POST /api/admin/scenarios/ - Create new scenario
     """
     def get(self, request):
-        scenarios = Scenario.objects.all().order_by('id')
-        data = []
+        cached = get_cached("scenarios_list", ttl_seconds=60)
+        if cached:
+            return JsonResponse(cached)
 
+        scenarios = list(Scenario.objects.all().order_by('id'))
+
+        # Single Grouped Batch Query for all scenario stats
+        stats_map = {}
+        for item in LearningSession.objects.values('scenario_id').annotate(
+            count=Count('id'),
+            avg_score=Avg('overall_score')
+        ):
+            stats_map[item['scenario_id']] = {
+                'count': item['count'],
+                'avg_score': round(item['avg_score'] or 0, 1)
+            }
+
+        data = []
         for s in scenarios:
-            sessions_count = LearningSession.objects.filter(scenario_id=s.id).count()
-            avg_score = LearningSession.objects.filter(scenario_id=s.id, overall_score__isnull=False).aggregate(avg=Avg('overall_score'))['avg']
+            st = stats_map.get(s.id, {'count': 0, 'avg_score': 0})
+            sessions_count = st['count']
+            avg_score = st['avg_score']
 
             # Parse prompt JSON or text
             emoji = "💬"
@@ -749,10 +771,12 @@ class AdminScenariosApiView(AdminRequiredMixin, View):
                 "description": getattr(s, 'description', '') or s.title,
                 "video_url": s.video_url,
                 "sessions_count": sessions_count,
-                "avg_score": round(avg_score or 0, 1)
+                "avg_score": avg_score
             })
 
-        return JsonResponse({"scenarios": data})
+        response_data = {"scenarios": data}
+        set_cached("scenarios_list", response_data, ttl_seconds=60)
+        return JsonResponse(response_data)
 
     def post(self, request):
         try:

@@ -2300,56 +2300,71 @@
     // ─────────────────────────────────────────────────────────────────
     // 3. SCENARIOS STUDIO CRUD & AI SIMULATOR
     // ─────────────────────────────────────────────────────────────────
+    function renderScenariosGrid(scenarios) {
+      const grid = document.getElementById('scenariosGrid');
+      if (!grid) return;
+      if (!scenarios || !scenarios.length) {
+        grid.innerHTML = `
+          <div class="col-12 text-center py-5">
+            <p class="text-dim">No practice scenarios configured.</p>
+            <button class="btn btn-glow" onclick="seedScenariosTrigger()">Seed Default Scenarios</button>
+          </div>
+        `;
+        return;
+      }
+
+      grid.innerHTML = scenarios.map(s => `
+        <div class="col-12 col-md-6 col-xl-4">
+          <div class="glass-card h-100 d-flex flex-column justify-content-between">
+            <div>
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <span class="fs-3">${s.emoji || '💬'}</span>
+                <div class="d-flex gap-1">
+                  <span class="status-badge badge-lang">${s.lang}</span>
+                  <span class="status-badge badge-cefr">${s.cefr}</span>
+                </div>
+              </div>
+              <h3 class="h6 mb-1 text-main fw-bold">${s.title}</h3>
+              <small class="text-dim d-block mb-3" style="font-size: 0.8rem;">${s.description || 'No description'}</small>
+              
+              <div class="p-2 rounded mb-3 font-mono text-dim" style="background: var(--bg-surface-elevated); font-size: 0.72rem; max-height: 70px; overflow: hidden; text-overflow: ellipsis;">
+                ${s.prompt ? s.prompt.slice(0, 110) + '...' : 'No prompt set'}
+              </div>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between pt-2 border-top border-subtle">
+              <small class="text-dim font-mono"><i class="bi bi-play-circle me-1"></i>${s.sessions_count} plays (${s.avg_score}%)</small>
+              <div class="btn-group btn-group-sm">
+                <button class="btn btn-subtle p-1 px-2" title="Edit Scenario" onclick='openEditScenarioModal(${JSON.stringify(s)})'>
+                  <i class="bi bi-pencil"></i>
+                </button>
+                <button class="btn btn-subtle p-1 px-2 text-danger" title="Delete Scenario" onclick="deleteScenario(${s.id}, '${s.title}')">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
     async function loadScenariosData() {
+      // 1. SWR Instant render from localStorage
+      try {
+        const cached = localStorage.getItem('linguist_admin_scenarios');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          renderScenariosGrid(parsed);
+        }
+      } catch (e) {}
+
+      // 2. Background fresh fetch
       try {
         const res = await fetch('/api/admin/scenarios/');
         if (!res.ok) return;
         const data = await res.json();
-
-        const grid = document.getElementById('scenariosGrid');
-        if (!data.scenarios.length) {
-          grid.innerHTML = `
-            <div class="col-12 text-center py-5">
-              <p class="text-dim">No practice scenarios configured.</p>
-              <button class="btn btn-glow" onclick="seedScenariosTrigger()">Seed Default Scenarios</button>
-            </div>
-          `;
-          return;
-        }
-
-        grid.innerHTML = data.scenarios.map(s => `
-          <div class="col-12 col-md-6 col-xl-4">
-            <div class="glass-card h-100 d-flex flex-column justify-content-between">
-              <div>
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                  <span class="fs-3">${s.emoji || '💬'}</span>
-                  <div class="d-flex gap-1">
-                    <span class="status-badge badge-lang">${s.lang}</span>
-                    <span class="status-badge badge-cefr">${s.cefr}</span>
-                  </div>
-                </div>
-                <h3 class="h6 mb-1 text-main fw-bold">${s.title}</h3>
-                <small class="text-dim d-block mb-3" style="font-size: 0.8rem;">${s.description || 'No description'}</small>
-                
-                <div class="p-2 rounded mb-3 font-mono text-dim" style="background: var(--bg-surface-elevated); font-size: 0.72rem; max-height: 70px; overflow: hidden; text-overflow: ellipsis;">
-                  ${s.prompt ? s.prompt.slice(0, 110) + '...' : 'No prompt set'}
-                </div>
-              </div>
-
-              <div class="d-flex align-items-center justify-content-between pt-2 border-top border-subtle">
-                <small class="text-dim font-mono"><i class="bi bi-play-circle me-1"></i>${s.sessions_count} plays (${s.avg_score}%)</small>
-                <div class="btn-group btn-group-sm">
-                  <button class="btn btn-subtle p-1 px-2" title="Edit Scenario" onclick='openEditScenarioModal(${JSON.stringify(s)})'>
-                    <i class="bi bi-pencil"></i>
-                  </button>
-                  <button class="btn btn-subtle p-1 px-2 text-danger" title="Delete Scenario" onclick="deleteScenario(${s.id}, '${s.title}')">
-                    <i class="bi bi-trash"></i>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `).join('');
+        renderScenariosGrid(data.scenarios);
+        localStorage.setItem('linguist_admin_scenarios', JSON.stringify(data.scenarios));
       } catch (e) {
         console.error('Error loading scenarios:', e);
       }
