@@ -768,1331 +768,1345 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   {% if is_authenticated_admin %}
   <div id="adminLoginGate" style="display: none;">
-  {% else %}
-  <div id="adminLoginGate">
-  {% endif %}
-    <div class="admin-gate-card">
-      <div class="admin-gate-logo">
-        <i class="bi bi-shield-lock-fill"></i>
-      </div>
-      <h2 class="h4 mb-1 fw-bold">Admin Security Gate</h2>
-      <p class="text-dim mb-4 small">LinguistAI Telemetry & Master Control Portal</p>
-
-      <div id="gateAlert" class="alert alert-danger py-2 small d-none" role="alert"></div>
-
-      <form id="adminLoginForm" onsubmit="handleAdminLogin(event)">
-        <div class="mb-3 text-start">
-          <label class="form-label small text-dim fw-bold">Admin Email / Username</label>
-          <div class="search-input-wrap">
-            <span class="search-icon"><i class="bi bi-person-fill"></i></span>
-            <input type="text" id="gateEmail" placeholder="admin@gmail.com" required autocomplete="username">
-          </div>
+    {% else %}
+    <div id="adminLoginGate">
+      {% endif %}
+      <div class="admin-gate-card">
+        <div class="admin-gate-logo">
+          <i class="bi bi-shield-lock-fill"></i>
         </div>
+        <h2 class="h4 mb-1 fw-bold">Admin Security Gate</h2>
+        <p class="text-dim mb-4 small">LinguistAI Telemetry & Master Control Portal</p>
 
-        <div class="mb-4 text-start">
-          <label class="form-label small text-dim fw-bold">Master Password</label>
-          <div class="search-input-wrap">
-            <span class="search-icon"><i class="bi bi-key-fill"></i></span>
-            <input type="password" id="gatePassword" placeholder="••••••••" required autocomplete="current-password">
+        <div id="gateAlert" class="alert alert-danger py-2 small d-none" role="alert"></div>
+
+        <form id="adminLoginForm" onsubmit="handleAdminLogin(event)">
+          <div class="mb-3 text-start">
+            <label class="form-label small text-dim fw-bold">Admin Email / Username</label>
+            <div class="search-input-wrap">
+              <span class="search-icon"><i class="bi bi-person-fill"></i></span>
+              <input type="text" id="gateEmail" placeholder="admin@gmail.com" required autocomplete="username">
+            </div>
           </div>
+
+          <div class="mb-4 text-start">
+            <label class="form-label small text-dim fw-bold">Master Password</label>
+            <div class="search-input-wrap">
+              <span class="search-icon"><i class="bi bi-key-fill"></i></span>
+              <input type="password" id="gatePassword" placeholder="••••••••" required autocomplete="current-password">
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-glow w-100 py-2 justify-content-center" id="btnGateSubmit">
+            <i class="bi bi-box-arrow-in-right me-1"></i>Authenticate & Enter
+          </button>
+        </form>
+
+        <div class="mt-4 pt-3 border-top border-subtle d-flex justify-content-between">
+          <a href="/" class="text-dim small text-decoration-none hover-white"><i
+              class="bi bi-arrow-left me-1"></i>Learner
+            App</a>
+          <a href="/admin/" target="_blank" class="text-dim small text-decoration-none hover-white">Django Admin <i
+              class="bi bi-box-arrow-up-right ms-1"></i></a>
         </div>
-
-        <button type="submit" class="btn btn-glow w-100 py-2 justify-content-center" id="btnGateSubmit">
-          <i class="bi bi-box-arrow-in-right me-1"></i>Authenticate & Enter
-        </button>
-      </form>
-
-      <div class="mt-4 pt-3 border-top border-subtle d-flex justify-content-between">
-        <a href="/" class="text-dim small text-decoration-none hover-white"><i class="bi bi-arrow-left me-1"></i>Learner
-          App</a>
-        <a href="/admin/" target="_blank" class="text-dim small text-decoration-none hover-white">Django Admin <i
-            class="bi bi-box-arrow-up-right ms-1"></i></a>
       </div>
     </div>
-  </div>
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- MAIN ADMIN APP CONTAINER                                        -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  {% if is_authenticated_admin %}
-  <div id="adminAppContainer" class="d-flex w-100">
-  {% else %}
-  <div id="adminAppContainer" class="d-flex w-100" style="display: none !important;">
-  {% endif %}
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    <!-- MAIN ADMIN APP CONTAINER                                        -->
+    <!-- ═══════════════════════════════════════════════════════════════ -->
+    {% if is_authenticated_admin %}
+    <div id="adminAppContainer" class="d-flex w-100">
+      {% else %}
+      <div id="adminAppContainer" class="d-flex w-100" style="display: none !important;">
+        {% endif %}
 
-    <!-- Backdrop for mobile drawer -->
-    <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
+        <!-- Backdrop for mobile drawer -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
 
-    <!-- Sidebar -->
-    <aside class="admin-sidebar" id="adminSidebar">
-      <div class="brand-header">
-        <div class="brand-icon-box">
-          <i class="bi bi-translate"></i>
-        </div>
-        <div class="brand-title-wrap">
-          <div class="brand-title">LinguistAI</div>
-          <div class="admin-badge-pill"><i class="bi bi-shield-lock-fill"></i> Master Admin</div>
-        </div>
-      </div>
-
-      <nav class="sidebar-nav">
-        <div class="nav-section-label">Telemetry & Insights</div>
-        <a class="admin-nav-item active" onclick="switchSection('overview')">
-          <i class="bi bi-grid-1x2-fill"></i>
-          <span>Overview & KPIs</span>
-        </a>
-        <a class="admin-nav-item" onclick="switchSection('users')">
-          <i class="bi bi-people-fill"></i>
-          <span>Learners & Users</span>
-          <span class="nav-count-badge" id="navUserBadge">-</span>
-        </a>
-        <a class="admin-nav-item" onclick="switchSection('scenarios')">
-          <i class="bi bi-chat-square-quote-fill"></i>
-          <span>Scenario Studio</span>
-          <span class="nav-count-badge" id="navScenarioBadge">-</span>
-        </a>
-
-        <div class="nav-section-label">Learning Data</div>
-        <a class="admin-nav-item" onclick="switchSection('sessions')">
-          <i class="bi bi-clock-history"></i>
-          <span>Session Replays</span>
-        </a>
-        <a class="admin-nav-item" onclick="switchSection('flashcards')">
-          <i class="bi bi-card-checklist"></i>
-          <span>Vocab & Anki SM-2</span>
-        </a>
-
-        <div class="nav-section-label">Infrastructure</div>
-        <a class="admin-nav-item" onclick="switchSection('maintenance')">
-          <i class="bi bi-cpu-fill"></i>
-          <span>System & Storage</span>
-        </a>
-        <a href="/admin/" target="_blank" class="admin-nav-item text-secondary">
-          <i class="bi bi-box-arrow-up-right"></i>
-          <span>Django Native Admin</span>
-        </a>
-        <a href="/dashboard/" class="admin-nav-item text-secondary">
-          <i class="bi bi-arrow-left-circle"></i>
-          <span>Learner Web App</span>
-        </a>
-      </nav>
-
-      <!-- Sidebar Footer -->
-      <div class="p-3 border-top border-subtle">
-        <div class="d-flex align-items-center justify-content-between mb-2">
-          <div class="d-flex align-items-center gap-2">
-            <div class="rounded-circle bg-success" style="width: 8px; height: 8px;"></div>
-            <small class="text-dim" style="font-size: 0.75rem;">System Online</small>
-          </div>
-          <button class="btn btn-sm btn-subtle p-1 px-2" onclick="toggleTheme()" title="Toggle Theme">
-            <i class="bi bi-moon-stars" id="themeIcon"></i>
-          </button>
-        </div>
-        <button class="btn btn-sm btn-subtle w-100 text-danger justify-content-center" onclick="handleAdminLogout()">
-          <i class="bi bi-box-arrow-right me-1"></i>Exit Admin Session
-        </button>
-      </div>
-    </aside>
-
-    <!-- Main Content Area -->
-    <main class="admin-main">
-      <!-- Topbar -->
-      <header class="admin-topbar">
-        <div class="topbar-left">
-          <button class="btn btn-subtle d-lg-none" onclick="toggleSidebar()">
-            <i class="bi bi-list"></i>
-          </button>
-          <h1 class="page-title mb-0" id="currentSectionTitle">Platform Overview</h1>
-        </div>
-
-        <div class="topbar-right">
-          <div class="text-dim d-none d-md-block font-mono" style="font-size: 0.8rem;">
-            <i class="bi bi-clock me-1 text-primary"></i><span id="liveClock">Loading clock...</span>
-          </div>
-          <button class="btn btn-subtle" onclick="refreshCurrentSection()" title="Refresh Telemetry Data">
-            <i class="bi bi-arrow-clockwise me-1" id="refreshIcon"></i>Refresh
-          </button>
-        </div>
-      </header>
-
-      <div class="admin-content">
-
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <!-- SECTION 1: OVERVIEW & KPIS                                -->
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <section id="section-overview" class="view-section active">
-          <!-- Top Metric Cards -->
-          <div class="row g-3 mb-4">
-            <div class="col-6 col-xl-3">
-              <div class="glass-card metric-card">
-                <div class="metric-header">
-                  <span class="metric-label">Total Learners</span>
-                  <div class="metric-icon-box" style="background: rgba(99, 102, 241, 0.15); color: var(--primary);">
-                    <i class="bi bi-people-fill"></i>
-                  </div>
-                </div>
-                <div class="metric-val-large" id="kpiTotalUsers">-</div>
-                <div class="metric-footer">
-                  <span class="status-badge badge-vip" id="kpiProCount">- VIP</span>
-                  <span class="status-badge badge-free" id="kpiFreeCount">- Free</span>
-                </div>
-              </div>
+        <!-- Sidebar -->
+        <aside class="admin-sidebar" id="adminSidebar">
+          <div class="brand-header">
+            <div class="brand-icon-box">
+              <i class="bi bi-translate"></i>
             </div>
-
-            <div class="col-6 col-xl-3">
-              <div class="glass-card metric-card">
-                <div class="metric-header">
-                  <span class="metric-label">Active Today</span>
-                  <div class="metric-icon-box"
-                    style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald);">
-                    <i class="bi bi-lightning-charge-fill"></i>
-                  </div>
-                </div>
-                <div class="metric-val-large" id="kpiActiveToday">-</div>
-                <div class="metric-footer text-dim">
-                  <span id="kpiNew7d" class="text-success fw-bold">+0 new</span> this week
-                </div>
-              </div>
-            </div>
-
-            <div class="col-6 col-xl-3">
-              <div class="glass-card metric-card">
-                <div class="metric-header">
-                  <span class="metric-label">Practice Sessions</span>
-                  <div class="metric-icon-box" style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">
-                    <i class="bi bi-chat-dots-fill"></i>
-                  </div>
-                </div>
-                <div class="metric-val-large" id="kpiTotalSessions">-</div>
-                <div class="metric-footer">
-                  <span id="kpiTotalTurns" class="fw-semibold text-main">- turns</span> recorded
-                </div>
-              </div>
-            </div>
-
-            <div class="col-6 col-xl-3">
-              <div class="glass-card metric-card">
-                <div class="metric-header">
-                  <span class="metric-label">Avg Fluency Score</span>
-                  <div class="metric-icon-box"
-                    style="background: rgba(245, 158, 11, 0.15); color: var(--accent-amber);">
-                    <i class="bi bi-award-fill"></i>
-                  </div>
-                </div>
-                <div class="metric-val-large" id="kpiAvgScore">-</div>
-                <div class="metric-footer">
-                  <span>Grammar: <b id="kpiGrammarAvg" class="text-main">-</b>%</span>
-                  <span class="ms-1">Pron: <b id="kpiPronAvg" class="text-main">-</b>%</span>
-                </div>
-              </div>
+            <div class="brand-title-wrap">
+              <div class="brand-title">LinguistAI</div>
+              <div class="admin-badge-pill"><i class="bi bi-shield-lock-fill"></i> Master Admin</div>
             </div>
           </div>
 
-          <!-- Charts Row 1: Timeline and CEFR Breakdown -->
-          <div class="row g-4 mb-4">
-            <div class="col-12 col-lg-8">
-              <div class="glass-card h-100">
-                <div class="d-flex align-items-center justify-content-between mb-3">
-                  <div>
-                    <h3 class="h6 mb-0 fw-bold">Platform Activity Timeline</h3>
-                    <small class="text-dim">Sessions and AI conversational turns progression</small>
-                  </div>
-                  <div class="btn-group btn-group-sm">
-                    <button class="btn btn-subtle active" onclick="loadAnalyticsData(7, this)">7D</button>
-                    <button class="btn btn-subtle" onclick="loadAnalyticsData(14, this)">14D</button>
-                    <button class="btn btn-subtle" onclick="loadAnalyticsData(30, this)">30D</button>
-                  </div>
-                </div>
-                <div style="height: 270px; position: relative;">
-                  <canvas id="timelineChart"></canvas>
-                </div>
-              </div>
-            </div>
+          <nav class="sidebar-nav">
+            <div class="nav-section-label">Telemetry & Insights</div>
+            <a class="admin-nav-item active" onclick="switchSection('overview')">
+              <i class="bi bi-grid-1x2-fill"></i>
+              <span>Overview & KPIs</span>
+            </a>
+            <a class="admin-nav-item" onclick="switchSection('users')">
+              <i class="bi bi-people-fill"></i>
+              <span>Learners & Users</span>
+              <span class="nav-count-badge" id="navUserBadge">-</span>
+            </a>
+            <a class="admin-nav-item" onclick="switchSection('scenarios')">
+              <i class="bi bi-chat-square-quote-fill"></i>
+              <span>Scenario Studio</span>
+              <span class="nav-count-badge" id="navScenarioBadge">-</span>
+            </a>
 
-            <div class="col-12 col-lg-4">
-              <div class="glass-card h-100">
-                <h3 class="h6 mb-1 fw-bold">CEFR Level Distribution</h3>
-                <small class="text-dim d-block mb-3">Learners categorized by proficiency</small>
-                <div style="height: 240px; position: relative;">
-                  <canvas id="cefrChart"></canvas>
-                </div>
+            <div class="nav-section-label">Learning Data</div>
+            <a class="admin-nav-item" onclick="switchSection('sessions')">
+              <i class="bi bi-clock-history"></i>
+              <span>Session Replays</span>
+            </a>
+            <a class="admin-nav-item" onclick="switchSection('flashcards')">
+              <i class="bi bi-card-checklist"></i>
+              <span>Vocab & Anki SM-2</span>
+            </a>
+
+            <div class="nav-section-label">Infrastructure</div>
+            <a class="admin-nav-item" onclick="switchSection('maintenance')">
+              <i class="bi bi-cpu-fill"></i>
+              <span>System & Storage</span>
+            </a>
+            <a href="/admin/" target="_blank" class="admin-nav-item text-secondary">
+              <i class="bi bi-box-arrow-up-right"></i>
+              <span>Django Native Admin</span>
+            </a>
+            <a href="/dashboard/" class="admin-nav-item text-secondary">
+              <i class="bi bi-arrow-left-circle"></i>
+              <span>Learner Web App</span>
+            </a>
+          </nav>
+
+          <!-- Sidebar Footer -->
+          <div class="p-3 border-top border-subtle">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-success" style="width: 8px; height: 8px;"></div>
+                <small class="text-dim" style="font-size: 0.75rem;">System Online</small>
               </div>
+              <button class="btn btn-sm btn-subtle p-1 px-2" onclick="toggleTheme()" title="Toggle Theme">
+                <i class="bi bi-moon-stars" id="themeIcon"></i>
+              </button>
             </div>
+            <button class="btn btn-sm btn-subtle w-100 text-danger justify-content-center"
+              onclick="handleAdminLogout()">
+              <i class="bi bi-box-arrow-right me-1"></i>Exit Admin Session
+            </button>
           </div>
+        </aside>
 
-          <!-- Charts Row 2: Target Languages & Top Scenarios -->
-          <div class="row g-4">
-            <div class="col-12 col-lg-5">
-              <div class="glass-card h-100">
-                <h3 class="h6 mb-1 fw-bold">Target Languages</h3>
-                <small class="text-dim d-block mb-3">Popularity among registered learners</small>
-                <div style="height: 220px; position: relative;">
-                  <canvas id="languageChart"></canvas>
-                </div>
-              </div>
+        <!-- Main Content Area -->
+        <main class="admin-main">
+          <!-- Topbar -->
+          <header class="admin-topbar">
+            <div class="topbar-left">
+              <button class="btn btn-subtle d-lg-none" onclick="toggleSidebar()">
+                <i class="bi bi-list"></i>
+              </button>
+              <h1 class="page-title mb-0" id="currentSectionTitle">Platform Overview</h1>
             </div>
 
-            <div class="col-12 col-lg-7">
-              <div class="glass-card h-100">
-                <h3 class="h6 mb-1 fw-bold">Top Practice Scenarios</h3>
-                <small class="text-dim d-block mb-3">Most active conversational scenarios</small>
+            <div class="topbar-right">
+              <div class="text-dim d-none d-md-block font-mono" style="font-size: 0.8rem;">
+                <i class="bi bi-clock me-1 text-primary"></i><span id="liveClock">Loading clock...</span>
+              </div>
+              <button class="btn btn-subtle" onclick="refreshCurrentSection()" title="Refresh Telemetry Data">
+                <i class="bi bi-arrow-clockwise me-1" id="refreshIcon"></i>Refresh
+              </button>
+            </div>
+          </header>
+
+          <div class="admin-content">
+
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <!-- SECTION 1: OVERVIEW & KPIS                                -->
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <section id="section-overview" class="view-section active">
+              <!-- Top Metric Cards -->
+              <div class="row g-3 mb-4">
+                <div class="col-6 col-xl-3">
+                  <div class="glass-card metric-card">
+                    <div class="metric-header">
+                      <span class="metric-label">Total Learners</span>
+                      <div class="metric-icon-box" style="background: rgba(99, 102, 241, 0.15); color: var(--primary);">
+                        <i class="bi bi-people-fill"></i>
+                      </div>
+                    </div>
+                    <div class="metric-val-large" id="kpiTotalUsers">-</div>
+                    <div class="metric-footer">
+                      <span class="status-badge badge-vip" id="kpiProCount">- VIP</span>
+                      <span class="status-badge badge-free" id="kpiFreeCount">- Free</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-xl-3">
+                  <div class="glass-card metric-card">
+                    <div class="metric-header">
+                      <span class="metric-label">Active Today</span>
+                      <div class="metric-icon-box"
+                        style="background: rgba(16, 185, 129, 0.15); color: var(--accent-emerald);">
+                        <i class="bi bi-lightning-charge-fill"></i>
+                      </div>
+                    </div>
+                    <div class="metric-val-large" id="kpiActiveToday">-</div>
+                    <div class="metric-footer text-dim">
+                      <span id="kpiNew7d" class="text-success fw-bold">+0 new</span> this week
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-xl-3">
+                  <div class="glass-card metric-card">
+                    <div class="metric-header">
+                      <span class="metric-label">Practice Sessions</span>
+                      <div class="metric-icon-box"
+                        style="background: rgba(6, 182, 212, 0.15); color: var(--accent-cyan);">
+                        <i class="bi bi-chat-dots-fill"></i>
+                      </div>
+                    </div>
+                    <div class="metric-val-large" id="kpiTotalSessions">-</div>
+                    <div class="metric-footer">
+                      <span id="kpiTotalTurns" class="fw-semibold text-main">- turns</span> recorded
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-6 col-xl-3">
+                  <div class="glass-card metric-card">
+                    <div class="metric-header">
+                      <span class="metric-label">Avg Fluency Score</span>
+                      <div class="metric-icon-box"
+                        style="background: rgba(245, 158, 11, 0.15); color: var(--accent-amber);">
+                        <i class="bi bi-award-fill"></i>
+                      </div>
+                    </div>
+                    <div class="metric-val-large" id="kpiAvgScore">-</div>
+                    <div class="metric-footer">
+                      <span>Grammar: <b id="kpiGrammarAvg" class="text-main">-</b>%</span>
+                      <span class="ms-1">Pron: <b id="kpiPronAvg" class="text-main">-</b>%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Charts Row 1: Timeline and CEFR Breakdown -->
+              <div class="row g-4 mb-4">
+                <div class="col-12 col-lg-8">
+                  <div class="glass-card h-100">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                      <div>
+                        <h3 class="h6 mb-0 fw-bold">Platform Activity Timeline</h3>
+                        <small class="text-dim">Sessions and AI conversational turns progression</small>
+                      </div>
+                      <div class="btn-group btn-group-sm">
+                        <button class="btn btn-subtle active" onclick="loadAnalyticsData(7, this)">7D</button>
+                        <button class="btn btn-subtle" onclick="loadAnalyticsData(14, this)">14D</button>
+                        <button class="btn btn-subtle" onclick="loadAnalyticsData(30, this)">30D</button>
+                      </div>
+                    </div>
+                    <div style="height: 270px; position: relative;">
+                      <canvas id="timelineChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12 col-lg-4">
+                  <div class="glass-card h-100">
+                    <h3 class="h6 mb-1 fw-bold">CEFR Level Distribution</h3>
+                    <small class="text-dim d-block mb-3">Learners categorized by proficiency</small>
+                    <div style="height: 240px; position: relative;">
+                      <canvas id="cefrChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Charts Row 2: Target Languages & Top Scenarios -->
+              <div class="row g-4">
+                <div class="col-12 col-lg-5">
+                  <div class="glass-card h-100">
+                    <h3 class="h6 mb-1 fw-bold">Target Languages</h3>
+                    <small class="text-dim d-block mb-3">Popularity among registered learners</small>
+                    <div style="height: 220px; position: relative;">
+                      <canvas id="languageChart"></canvas>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="col-12 col-lg-7">
+                  <div class="glass-card h-100">
+                    <h3 class="h6 mb-1 fw-bold">Top Practice Scenarios</h3>
+                    <small class="text-dim d-block mb-3">Most active conversational scenarios</small>
+                    <div class="table-responsive">
+                      <table class="custom-table">
+                        <thead>
+                          <tr>
+                            <th>Scenario</th>
+                            <th>Sessions</th>
+                            <th>Avg Score</th>
+                          </tr>
+                        </thead>
+                        <tbody id="topScenariosTableBody">
+                          <tr>
+                            <td colspan="3" class="text-center text-dim py-4">Loading top scenarios...</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <!-- SECTION 2: LEARNERS & USERS                                 -->
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <section id="section-users" class="view-section">
+              <div class="glass-card mb-4">
+                <div class="row g-3 align-items-center">
+                  <div class="col-12 col-md-4">
+                    <div class="search-input-wrap">
+                      <span class="search-icon"><i class="bi bi-search"></i></span>
+                      <input type="text" id="userSearchInput" placeholder="Search by name, email, or ID..."
+                        oninput="debounceUserSearch()">
+                    </div>
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <select class="form-select form-select-custom w-100" id="userPlanFilter"
+                      onchange="loadUsersData(1)">
+                      <option value="all">All Plans</option>
+                      <option value="free">Free Tier</option>
+                      <option value="vip">VIP Tier</option>
+                    </select>
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <select class="form-select form-select-custom w-100" id="userRoleFilter"
+                      onchange="loadUsersData(1)">
+                      <option value="all">All Roles</option>
+                      <option value="user">Learners</option>
+                      <option value="admin">Admins</option>
+                    </select>
+                  </div>
+                  <div class="col-6 col-md-2">
+                    <select class="form-select form-select-custom w-100" id="userLangFilter"
+                      onchange="loadUsersData(1)">
+                      <option value="all">All Languages</option>
+                      <option value="English">English</option>
+                      <option value="Spanish">Spanish</option>
+                      <option value="French">French</option>
+                      <option value="German">German</option>
+                      <option value="Japanese">Japanese</option>
+                      <option value="Chinese">Chinese</option>
+                      <option value="Korean">Korean</option>
+                      <option value="Vietnamese">Vietnamese</option>
+                    </select>
+                  </div>
+                  <div class="col-12 col-md-2 text-md-end">
+                    <button class="btn btn-glow w-100" onclick="openNewUserModal()">
+                      <i class="bi bi-plus-lg me-1"></i>New Learner
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="glass-card">
                 <div class="table-responsive">
                   <table class="custom-table">
                     <thead>
                       <tr>
-                        <th>Scenario</th>
+                        <th>Learner</th>
+                        <th>Role</th>
+                        <th>Target Language</th>
+                        <th>CEFR Level</th>
+                        <th>Subscription</th>
                         <th>Sessions</th>
-                        <th>Avg Score</th>
+                        <th>Turns Today</th>
+                        <th>Registered</th>
+                        <th class="text-end">Actions</th>
                       </tr>
                     </thead>
-                    <tbody id="topScenariosTableBody">
+                    <tbody id="usersTableBody">
                       <tr>
-                        <td colspan="3" class="text-center text-dim py-4">Loading top scenarios...</td>
+                        <td colspan="9" class="text-center text-dim py-5">Loading users list...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="d-flex align-items-center justify-content-between mt-4">
+                  <small class="text-dim font-mono" id="userPaginationInfo">Showing 0 of 0 users</small>
+                  <div class="btn-group btn-group-sm" id="userPaginationButtons"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <!-- SECTION 3: SCENARIO STUDIO                                  -->
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <section id="section-scenarios" class="view-section">
+              <div class="glass-card mb-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                  <div>
+                    <h2 class="h5 mb-1 fw-bold">Scenario Studio & AI Personas</h2>
+                    <p class="text-dim mb-0" style="font-size: 0.85rem;">Manage conversation prompts, categories, and
+                      test
+                      AI responses in real-time.</p>
+                  </div>
+                  <div class="d-flex gap-2">
+                    <button class="btn btn-subtle" onclick="seedScenariosTrigger()">
+                      <i class="bi bi-database-fill-down me-1"></i>Seed Defaults
+                    </button>
+                    <button class="btn btn-glow" onclick="openCreateScenarioModal()">
+                      <i class="bi bi-plus-circle-fill me-1"></i>Create Scenario
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="row g-4" id="scenariosGrid">
+                <!-- Scenario Cards Injected Here -->
+              </div>
+            </section>
+
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <!-- SECTION 4: SESSION REPLAYS & INSPECTOR                     -->
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <section id="section-sessions" class="view-section">
+              <div class="glass-card mb-4">
+                <div class="d-flex align-items-center justify-content-between">
+                  <div>
+                    <h2 class="h5 mb-1 fw-bold">Learning Sessions & Conversation Inspector</h2>
+                    <p class="text-dim mb-0" style="font-size: 0.85rem;">Inspect audio logs, transcripts, and granular
+                      grammar/pronunciation feedback for any learner session.</p>
+                  </div>
+                  <button class="btn btn-subtle" onclick="loadSessionsData(1)">
+                    <i class="bi bi-arrow-clockwise me-1"></i>Refresh Sessions
+                  </button>
+                </div>
+              </div>
+
+              <div class="glass-card">
+                <div class="table-responsive">
+                  <table class="custom-table">
+                    <thead>
+                      <tr>
+                        <th>Session ID</th>
+                        <th>Learner</th>
+                        <th>Scenario</th>
+                        <th>Score</th>
+                        <th>Turns</th>
+                        <th>Started At</th>
+                        <th class="text-end">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody id="sessionsTableBody">
+                      <tr>
+                        <td colspan="7" class="text-center text-dim py-5">Loading sessions...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between mt-4">
+                  <small class="text-dim font-mono" id="sessionPaginationInfo">Showing 0 of 0 sessions</small>
+                  <div class="btn-group btn-group-sm" id="sessionPaginationButtons"></div>
+                </div>
+              </div>
+            </section>
+
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <!-- SECTION 5: FLASHCARDS & VOCABULARY                         -->
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <section id="section-flashcards" class="view-section">
+              <div class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                  <div class="glass-card metric-card">
+                    <span class="metric-label">Total Vocabulary Cards</span>
+                    <div class="metric-val-large" id="fcTotalCards">-</div>
+                    <small class="text-dim">Saved vocabulary terms</small>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="glass-card metric-card">
+                    <span class="metric-label">Due for Review</span>
+                    <div class="metric-val-large" id="fcDueCards" style="color: var(--accent-amber);">-</div>
+                    <small class="text-dim">Spaced repetition queue</small>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="glass-card metric-card">
+                    <span class="metric-label">Avg Ease Factor</span>
+                    <div class="metric-val-large" id="fcAvgEase">-</div>
+                    <small class="text-dim">SuperMemo-2 retention</small>
+                  </div>
+                </div>
+                <div class="col-6 col-md-3">
+                  <div class="glass-card metric-card">
+                    <span class="metric-label">Avg Repetitions</span>
+                    <div class="metric-val-large" id="fcAvgReps">-</div>
+                    <small class="text-dim">Reviews completed</small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="glass-card">
+                <h3 class="h6 mb-3 fw-bold">Recent Vocabulary Cards</h3>
+                <div class="table-responsive">
+                  <table class="custom-table">
+                    <thead>
+                      <tr>
+                        <th>Word / Term</th>
+                        <th>Translation</th>
+                        <th>Language</th>
+                        <th>Learner</th>
+                        <th>Reps</th>
+                        <th>Interval (Days)</th>
+                        <th>Ease Factor</th>
+                        <th>Next Review</th>
+                      </tr>
+                    </thead>
+                    <tbody id="flashcardsTableBody">
+                      <tr>
+                        <td colspan="8" class="text-center text-dim py-5">Loading vocabulary cards...</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
               </div>
-            </div>
-          </div>
-        </section>
+            </section>
 
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <!-- SECTION 2: LEARNERS & USERS                                 -->
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <section id="section-users" class="view-section">
-          <div class="glass-card mb-4">
-            <div class="row g-3 align-items-center">
-              <div class="col-12 col-md-4">
-                <div class="search-input-wrap">
-                  <span class="search-icon"><i class="bi bi-search"></i></span>
-                  <input type="text" id="userSearchInput" placeholder="Search by name, email, or ID..."
-                    oninput="debounceUserSearch()">
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <!-- SECTION 6: SYSTEM, AI & MAINTENANCE                        -->
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <section id="section-maintenance" class="view-section">
+              <div class="row g-4 mb-4">
+                <!-- AI Services Matrix -->
+                <div class="col-12 col-lg-6">
+                  <div class="glass-card h-100">
+                    <h2 class="h6 mb-1 fw-bold">AI Pipeline & Provider Matrix</h2>
+                    <p class="text-dim mb-3" style="font-size: 0.82rem;">Current status of AI providers and fallback
+                      architecture.</p>
+
+                    <div class="d-flex flex-column gap-3" id="aiServiceMatrix">
+                      <div class="d-flex align-items-center justify-content-between p-3 rounded"
+                        style="background: var(--bg-surface-elevated);">
+                        <div class="d-flex align-items-center gap-3">
+                          <i class="bi bi-robot fs-4 text-primary"></i>
+                          <div>
+                            <div class="fw-bold">Conversational LLM Engine</div>
+                            <small class="text-dim font-mono" id="aiLlmLabel">Gemini 2.0 Flash</small>
+                          </div>
+                        </div>
+                        <span class="status-badge badge-vip" id="aiLlmStatus"><i
+                            class="bi bi-check-circle-fill"></i>Active</span>
+                      </div>
+
+                      <div class="d-flex align-items-center justify-content-between p-3 rounded"
+                        style="background: var(--bg-surface-elevated);">
+                        <div class="d-flex align-items-center gap-3">
+                          <i class="bi bi-mic-fill fs-4" style="color: var(--accent-cyan);"></i>
+                          <div>
+                            <div class="fw-bold">Speech-to-Text (STT) Transcription</div>
+                            <small class="text-dim font-mono">Gemini Multimodal Audio / Whisper</small>
+                          </div>
+                        </div>
+                        <span class="status-badge badge-vip"><i class="bi bi-check-circle-fill"></i>Active</span>
+                      </div>
+
+                      <div class="d-flex align-items-center justify-content-between p-3 rounded"
+                        style="background: var(--bg-surface-elevated);">
+                        <div class="d-flex align-items-center gap-3">
+                          <i class="bi bi-soundwave fs-4 text-warning"></i>
+                          <div>
+                            <div class="fw-bold">Text-to-Speech (TTS) Voice Synthesis</div>
+                            <small class="text-dim font-mono" id="aiTtsLabel">ElevenLabs Multilingual v2</small>
+                          </div>
+                        </div>
+                        <span class="status-badge badge-vip" id="aiTtsStatus"><i
+                            class="bi bi-check-circle-fill"></i>Active</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Storage & Cleanup Controls -->
+                <div class="col-12 col-lg-6">
+                  <div class="glass-card h-100">
+                    <h2 class="h6 mb-1 fw-bold">Audio Storage & Disk Management</h2>
+                    <p class="text-dim mb-3" style="font-size: 0.82rem;">Manage recorded speech cache and 30-day garbage
+                      collection.</p>
+
+                    <div class="p-3 rounded mb-3" style="background: var(--bg-surface-elevated);">
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-dim">Total Audio Recordings:</span>
+                        <span class="fw-bold font-mono" id="maintAudioFilesCount">-</span>
+                      </div>
+                      <div class="d-flex justify-content-between mb-2">
+                        <span class="text-dim">Disk Space Occupied:</span>
+                        <span class="fw-bold font-mono text-warning" id="maintAudioMb">- MB</span>
+                      </div>
+                      <div class="d-flex justify-content-between">
+                        <span class="text-dim">Media Root:</span>
+                        <small class="font-mono text-dim" id="maintMediaPath" style="font-size: 0.75rem;">/media</small>
+                      </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                      <button class="btn btn-subtle flex-grow-1" onclick="runAudioCleanup()" id="btnAudioCleanup">
+                        <i class="bi bi-trash3-fill me-1 text-danger"></i>Run Audio GC (30d+ Cleanup)
+                      </button>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div class="col-6 col-md-2">
-                <select class="form-select form-select-custom w-100" id="userPlanFilter" onchange="loadUsersData(1)">
-                  <option value="all">All Plans</option>
-                  <option value="free">Free Tier</option>
-                  <option value="vip">VIP Tier</option>
-                </select>
+
+              <!-- Data Export Tools -->
+              <div class="glass-card">
+                <h2 class="h6 mb-1 fw-bold">Data Backup & Export Tools</h2>
+                <p class="text-dim mb-3" style="font-size: 0.82rem;">Download platform datasets as structured JSON
+                  backups.
+                </p>
+
+                <div class="d-flex flex-wrap gap-2">
+                  <a href="/api/admin/export/users/" class="btn btn-subtle">
+                    <i class="bi bi-download me-1 text-primary"></i>Export Users (JSON)
+                  </a>
+                  <a href="/api/admin/export/scenarios/" class="btn btn-subtle">
+                    <i class="bi bi-download me-1 text-success"></i>Export Scenarios (JSON)
+                  </a>
+                  <a href="/api/admin/export/sessions/" class="btn btn-subtle">
+                    <i class="bi bi-download me-1 text-warning"></i>Export Learning Sessions (JSON)
+                  </a>
+                  <a href="/api/admin/export/flashcards/" class="btn btn-subtle">
+                    <i class="bi bi-download me-1 text-info"></i>Export Flashcards (JSON)
+                  </a>
+                </div>
               </div>
-              <div class="col-6 col-md-2">
-                <select class="form-select form-select-custom w-100" id="userRoleFilter" onchange="loadUsersData(1)">
-                  <option value="all">All Roles</option>
-                  <option value="user">Learners</option>
-                  <option value="admin">Admins</option>
-                </select>
-              </div>
-              <div class="col-6 col-md-2">
-                <select class="form-select form-select-custom w-100" id="userLangFilter" onchange="loadUsersData(1)">
-                  <option value="all">All Languages</option>
-                  <option value="English">English</option>
-                  <option value="Spanish">Spanish</option>
-                  <option value="French">French</option>
-                  <option value="German">German</option>
-                  <option value="Japanese">Japanese</option>
-                  <option value="Chinese">Chinese</option>
-                  <option value="Korean">Korean</option>
-                  <option value="Vietnamese">Vietnamese</option>
-                </select>
-              </div>
-              <div class="col-12 col-md-2 text-md-end">
-                <button class="btn btn-glow w-100" onclick="openNewUserModal()">
-                  <i class="bi bi-plus-lg me-1"></i>New Learner
-                </button>
-              </div>
+            </section>
+
+          </div>
+        </main>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- MODALS (PROPERLY MANAGED WITH BOOTSTRAP 5)                      -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+
+      <!-- Modal: Add / Edit User -->
+      <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content modal-content-custom">
+            <div class="modal-header modal-header-custom">
+              <h5 class="modal-title h6 mb-0 fw-bold" id="userModalTitle">Learner Profile</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body modal-body-custom">
+              <form id="userForm" onsubmit="event.preventDefault(); saveUserForm();">
+                <input type="hidden" id="userFormId">
+                <div class="mb-3">
+                  <label class="form-label text-dim small">Username</label>
+                  <input type="text" class="form-control form-control-custom" id="userFormUsername" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label text-dim small">Email Address</label>
+                  <input type="email" class="form-control form-control-custom" id="userFormEmail" required>
+                </div>
+                <div class="mb-3" id="userFormPasswordWrap">
+                  <label class="form-label text-dim small">Password <span class="text-dim" id="pwdHint">(leave blank to
+                      keep
+                      existing)</span></label>
+                  <input type="password" class="form-control form-control-custom" id="userFormPassword"
+                    placeholder="••••••••">
+                </div>
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <label class="form-label text-dim small">Target Language</label>
+                    <select class="form-select form-select-custom" id="userFormLang">
+                      <option value="English">English</option>
+                      <option value="Spanish">Spanish</option>
+                      <option value="French">French</option>
+                      <option value="German">German</option>
+                      <option value="Japanese">Japanese</option>
+                      <option value="Chinese">Chinese</option>
+                      <option value="Korean">Korean</option>
+                      <option value="Vietnamese">Vietnamese</option>
+                    </select>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label text-dim small">CEFR Proficiency</label>
+                    <select class="form-select form-select-custom" id="userFormLevel">
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="row g-2 mb-3">
+                  <div class="col-6">
+                    <label class="form-label text-dim small">Subscription Plan</label>
+                    <select class="form-select form-select-custom" id="userFormPlan" onchange="togglePlanLimitField()">
+                      <option value="Free">Free Tier</option>
+                      <option value="VIP">VIP Tier (Unlimited Practice)</option>
+                    </select>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label text-dim small">System Role</label>
+                    <select class="form-select form-select-custom" id="userFormRole">
+                      <option value="user">Learner / User</option>
+                      <option value="admin">Administrator</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- VIP Unlimited Banner -->
+                <div id="userFormVipBanner" class="mb-3 d-none">
+                  <div class="p-3 rounded small text-warning font-mono d-flex align-items-center gap-2"
+                    style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25);">
+                    <i class="bi bi-gem fs-5"></i>
+                    <div>
+                      <div class="fw-bold">VIP Tier Activated</div>
+                      <div class="text-dim" style="font-size: 0.75rem;">Unlimited conversational practice enabled. No
+                        daily
+                        turn limits.</div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Free Tier Limit Fields -->
+                <div class="row g-2 mb-3" id="userFormLimitFields">
+                  <div class="col-6">
+                    <label class="form-label text-dim small">Daily Turn Limit</label>
+                    <input type="number" class="form-control form-control-custom" id="userFormDailyLimit" value="5"
+                      min="1" max="500">
+                    <small class="text-dim font-mono" style="font-size: 0.7rem;">Free default: 5 turns/day</small>
+                  </div>
+                  <div class="col-6">
+                    <label class="form-label text-dim small">Turns Used Today</label>
+                    <input type="number" class="form-control form-control-custom" id="userFormTurnsUsed" value="0"
+                      min="0">
+                    <small class="text-dim font-mono" style="font-size: 0.7rem;">Today's usage count</small>
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer modal-footer-custom">
+              <button type="button" class="btn btn-subtle" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-glow" onclick="saveUserForm()">Save Changes</button>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div class="glass-card">
-            <div class="table-responsive">
-              <table class="custom-table">
-                <thead>
-                  <tr>
-                    <th>Learner</th>
-                    <th>Role</th>
-                    <th>Target Language</th>
-                    <th>CEFR Level</th>
-                    <th>Subscription</th>
-                    <th>Sessions</th>
-                    <th>Turns Today</th>
-                    <th>Registered</th>
-                    <th class="text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody id="usersTableBody">
-                  <tr>
-                    <td colspan="9" class="text-center text-dim py-5">Loading users list...</td>
-                  </tr>
-                </tbody>
-              </table>
+      <!-- Modal: Create / Edit Scenario -->
+      <div class="modal fade" id="scenarioModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+          <div class="modal-content modal-content-custom">
+            <div class="modal-header modal-header-custom">
+              <h5 class="modal-title h6 mb-0 fw-bold" id="scenarioModalTitle">Create Scenario</h5>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
             </div>
+            <div class="modal-body modal-body-custom">
+              <form id="scenarioForm" onsubmit="event.preventDefault(); saveScenarioForm();">
+                <input type="hidden" id="scenarioFormId">
+                <div class="row g-3 mb-3">
+                  <div class="col-8">
+                    <label class="form-label text-dim small">Scenario Title</label>
+                    <input type="text" class="form-control form-control-custom" id="scenarioFormTitle"
+                      placeholder="e.g. Ordering at a French Bistro" required>
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label text-dim small">Emoji Icon</label>
+                    <input type="text" class="form-control form-control-custom" id="scenarioFormEmoji" placeholder="🥐"
+                      value="💬">
+                  </div>
+                </div>
+                <div class="row g-3 mb-3">
+                  <div class="col-4">
+                    <label class="form-label text-dim small">Category</label>
+                    <select class="form-select form-select-custom" id="scenarioFormCategory">
+                      <option value="Daily Life">Daily Life</option>
+                      <option value="Travel">Travel</option>
+                      <option value="Business">Business</option>
+                      <option value="Social">Social</option>
+                      <option value="Emergency">Emergency</option>
+                    </select>
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label text-dim small">CEFR Level</label>
+                    <select class="form-select form-select-custom" id="scenarioFormCefr">
+                      <option value="Beginner">Beginner</option>
+                      <option value="Intermediate">Intermediate</option>
+                      <option value="Advanced">Advanced</option>
+                    </select>
+                  </div>
+                  <div class="col-4">
+                    <label class="form-label text-dim small">Language</label>
+                    <select class="form-select form-select-custom" id="scenarioFormLang">
+                      <option value="English">English</option>
+                      <option value="Spanish">Spanish</option>
+                      <option value="French">French</option>
+                      <option value="German">German</option>
+                      <option value="Japanese">Japanese</option>
+                      <option value="Chinese">Chinese</option>
+                      <option value="Korean">Korean</option>
+                      <option value="Vietnamese">Vietnamese</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label text-dim small">Short Description</label>
+                  <textarea class="form-control form-control-custom" id="scenarioFormDesc" rows="2"
+                    placeholder="Describe the roleplay situation for the learner..."></textarea>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label text-dim small">AI System Prompt / Persona Instructions</label>
+                  <textarea class="form-control form-control-custom font-mono" id="scenarioFormPrompt" rows="4"
+                    placeholder="You are a friendly barista in Paris..."></textarea>
+                </div>
 
-            <!-- Pagination -->
-            <div class="d-flex align-items-center justify-content-between mt-4">
-              <small class="text-dim font-mono" id="userPaginationInfo">Showing 0 of 0 users</small>
-              <div class="btn-group btn-group-sm" id="userPaginationButtons"></div>
+                <!-- Live Prompt Simulator Box -->
+                <div class="p-3 rounded mb-3"
+                  style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle);">
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fw-bold small text-primary"><i class="bi bi-terminal me-1"></i>Live AI Persona
+                      Simulator</span>
+                    <button type="button" class="btn btn-sm btn-subtle" onclick="testScenarioPromptLive()">
+                      <i class="bi bi-play-fill me-1 text-success"></i>Test Prompt
+                    </button>
+                  </div>
+                  <div class="mb-2">
+                    <input type="text" class="form-control form-control-custom small" id="scenarioTestInput"
+                      placeholder="Simulate learner message (e.g. Hello! Can I have a croissant?)">
+                  </div>
+                  <div class="p-2 rounded small font-mono text-dim" id="scenarioTestResult"
+                    style="background: var(--bg-base); min-height: 48px;">
+                    AI simulation test results will appear here.
+                  </div>
+                </div>
+              </form>
+            </div>
+            <div class="modal-footer modal-footer-custom">
+              <button type="button" class="btn btn-subtle" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-glow" onclick="saveScenarioForm()">Save Scenario</button>
             </div>
           </div>
-        </section>
+        </div>
+      </div>
 
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <!-- SECTION 3: SCENARIO STUDIO                                  -->
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <section id="section-scenarios" class="view-section">
-          <div class="glass-card mb-4">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <!-- Modal: Session Replay Inspector -->
+      <div class="modal fade" id="sessionModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+          <div class="modal-content modal-content-custom">
+            <div class="modal-header modal-header-custom">
               <div>
-                <h2 class="h5 mb-1 fw-bold">Scenario Studio & AI Personas</h2>
-                <p class="text-dim mb-0" style="font-size: 0.85rem;">Manage conversation prompts, categories, and test
-                  AI responses in real-time.</p>
+                <h5 class="modal-title h6 mb-0 fw-bold" id="sessionInspectorTitle">Session Replay</h5>
+                <small class="text-dim" id="sessionInspectorSubtitle">Learner Details</small>
               </div>
-              <div class="d-flex gap-2">
-                <button class="btn btn-subtle" onclick="seedScenariosTrigger()">
-                  <i class="bi bi-database-fill-down me-1"></i>Seed Defaults
-                </button>
-                <button class="btn btn-glow" onclick="openCreateScenarioModal()">
-                  <i class="bi bi-plus-circle-fill me-1"></i>Create Scenario
-                </button>
-              </div>
+              <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                aria-label="Close"></button>
+            </div>
+            <div class="modal-body modal-body-custom" id="sessionInspectorTurns">
+              <!-- Session Turns Injected Here -->
             </div>
           </div>
-
-          <div class="row g-4" id="scenariosGrid">
-            <!-- Scenario Cards Injected Here -->
-          </div>
-        </section>
-
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <!-- SECTION 4: SESSION REPLAYS & INSPECTOR                     -->
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <section id="section-sessions" class="view-section">
-          <div class="glass-card mb-4">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <h2 class="h5 mb-1 fw-bold">Learning Sessions & Conversation Inspector</h2>
-                <p class="text-dim mb-0" style="font-size: 0.85rem;">Inspect audio logs, transcripts, and granular
-                  grammar/pronunciation feedback for any learner session.</p>
-              </div>
-              <button class="btn btn-subtle" onclick="loadSessionsData(1)">
-                <i class="bi bi-arrow-clockwise me-1"></i>Refresh Sessions
-              </button>
-            </div>
-          </div>
-
-          <div class="glass-card">
-            <div class="table-responsive">
-              <table class="custom-table">
-                <thead>
-                  <tr>
-                    <th>Session ID</th>
-                    <th>Learner</th>
-                    <th>Scenario</th>
-                    <th>Score</th>
-                    <th>Turns</th>
-                    <th>Started At</th>
-                    <th class="text-end">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="sessionsTableBody">
-                  <tr>
-                    <td colspan="7" class="text-center text-dim py-5">Loading sessions...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div class="d-flex align-items-center justify-content-between mt-4">
-              <small class="text-dim font-mono" id="sessionPaginationInfo">Showing 0 of 0 sessions</small>
-              <div class="btn-group btn-group-sm" id="sessionPaginationButtons"></div>
-            </div>
-          </div>
-        </section>
-
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <!-- SECTION 5: FLASHCARDS & VOCABULARY                         -->
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <section id="section-flashcards" class="view-section">
-          <div class="row g-3 mb-4">
-            <div class="col-6 col-md-3">
-              <div class="glass-card metric-card">
-                <span class="metric-label">Total Vocabulary Cards</span>
-                <div class="metric-val-large" id="fcTotalCards">-</div>
-                <small class="text-dim">Saved vocabulary terms</small>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="glass-card metric-card">
-                <span class="metric-label">Due for Review</span>
-                <div class="metric-val-large" id="fcDueCards" style="color: var(--accent-amber);">-</div>
-                <small class="text-dim">Spaced repetition queue</small>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="glass-card metric-card">
-                <span class="metric-label">Avg Ease Factor</span>
-                <div class="metric-val-large" id="fcAvgEase">-</div>
-                <small class="text-dim">SuperMemo-2 retention</small>
-              </div>
-            </div>
-            <div class="col-6 col-md-3">
-              <div class="glass-card metric-card">
-                <span class="metric-label">Avg Repetitions</span>
-                <div class="metric-val-large" id="fcAvgReps">-</div>
-                <small class="text-dim">Reviews completed</small>
-              </div>
-            </div>
-          </div>
-
-          <div class="glass-card">
-            <h3 class="h6 mb-3 fw-bold">Recent Vocabulary Cards</h3>
-            <div class="table-responsive">
-              <table class="custom-table">
-                <thead>
-                  <tr>
-                    <th>Word / Term</th>
-                    <th>Translation</th>
-                    <th>Language</th>
-                    <th>Learner</th>
-                    <th>Reps</th>
-                    <th>Interval (Days)</th>
-                    <th>Ease Factor</th>
-                    <th>Next Review</th>
-                  </tr>
-                </thead>
-                <tbody id="flashcardsTableBody">
-                  <tr>
-                    <td colspan="8" class="text-center text-dim py-5">Loading vocabulary cards...</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <!-- SECTION 6: SYSTEM, AI & MAINTENANCE                        -->
-        <!-- ═════════════════════════════════════════════════════════ -->
-        <section id="section-maintenance" class="view-section">
-          <div class="row g-4 mb-4">
-            <!-- AI Services Matrix -->
-            <div class="col-12 col-lg-6">
-              <div class="glass-card h-100">
-                <h2 class="h6 mb-1 fw-bold">AI Pipeline & Provider Matrix</h2>
-                <p class="text-dim mb-3" style="font-size: 0.82rem;">Current status of AI providers and fallback
-                  architecture.</p>
-
-                <div class="d-flex flex-column gap-3" id="aiServiceMatrix">
-                  <div class="d-flex align-items-center justify-content-between p-3 rounded"
-                    style="background: var(--bg-surface-elevated);">
-                    <div class="d-flex align-items-center gap-3">
-                      <i class="bi bi-robot fs-4 text-primary"></i>
-                      <div>
-                        <div class="fw-bold">Conversational LLM Engine</div>
-                        <small class="text-dim font-mono" id="aiLlmLabel">Gemini 2.0 Flash</small>
-                      </div>
-                    </div>
-                    <span class="status-badge badge-vip" id="aiLlmStatus"><i
-                        class="bi bi-check-circle-fill"></i>Active</span>
-                  </div>
-
-                  <div class="d-flex align-items-center justify-content-between p-3 rounded"
-                    style="background: var(--bg-surface-elevated);">
-                    <div class="d-flex align-items-center gap-3">
-                      <i class="bi bi-mic-fill fs-4" style="color: var(--accent-cyan);"></i>
-                      <div>
-                        <div class="fw-bold">Speech-to-Text (STT) Transcription</div>
-                        <small class="text-dim font-mono">Gemini Multimodal Audio / Whisper</small>
-                      </div>
-                    </div>
-                    <span class="status-badge badge-vip"><i class="bi bi-check-circle-fill"></i>Active</span>
-                  </div>
-
-                  <div class="d-flex align-items-center justify-content-between p-3 rounded"
-                    style="background: var(--bg-surface-elevated);">
-                    <div class="d-flex align-items-center gap-3">
-                      <i class="bi bi-soundwave fs-4 text-warning"></i>
-                      <div>
-                        <div class="fw-bold">Text-to-Speech (TTS) Voice Synthesis</div>
-                        <small class="text-dim font-mono" id="aiTtsLabel">ElevenLabs Multilingual v2</small>
-                      </div>
-                    </div>
-                    <span class="status-badge badge-vip" id="aiTtsStatus"><i
-                        class="bi bi-check-circle-fill"></i>Active</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Storage & Cleanup Controls -->
-            <div class="col-12 col-lg-6">
-              <div class="glass-card h-100">
-                <h2 class="h6 mb-1 fw-bold">Audio Storage & Disk Management</h2>
-                <p class="text-dim mb-3" style="font-size: 0.82rem;">Manage recorded speech cache and 30-day garbage
-                  collection.</p>
-
-                <div class="p-3 rounded mb-3" style="background: var(--bg-surface-elevated);">
-                  <div class="d-flex justify-content-between mb-2">
-                    <span class="text-dim">Total Audio Recordings:</span>
-                    <span class="fw-bold font-mono" id="maintAudioFilesCount">-</span>
-                  </div>
-                  <div class="d-flex justify-content-between mb-2">
-                    <span class="text-dim">Disk Space Occupied:</span>
-                    <span class="fw-bold font-mono text-warning" id="maintAudioMb">- MB</span>
-                  </div>
-                  <div class="d-flex justify-content-between">
-                    <span class="text-dim">Media Root:</span>
-                    <small class="font-mono text-dim" id="maintMediaPath" style="font-size: 0.75rem;">/media</small>
-                  </div>
-                </div>
-
-                <div class="d-flex gap-2">
-                  <button class="btn btn-subtle flex-grow-1" onclick="runAudioCleanup()" id="btnAudioCleanup">
-                    <i class="bi bi-trash3-fill me-1 text-danger"></i>Run Audio GC (30d+ Cleanup)
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Data Export Tools -->
-          <div class="glass-card">
-            <h2 class="h6 mb-1 fw-bold">Data Backup & Export Tools</h2>
-            <p class="text-dim mb-3" style="font-size: 0.82rem;">Download platform datasets as structured JSON backups.
-            </p>
-
-            <div class="d-flex flex-wrap gap-2">
-              <a href="/api/admin/export/users/" class="btn btn-subtle">
-                <i class="bi bi-download me-1 text-primary"></i>Export Users (JSON)
-              </a>
-              <a href="/api/admin/export/scenarios/" class="btn btn-subtle">
-                <i class="bi bi-download me-1 text-success"></i>Export Scenarios (JSON)
-              </a>
-              <a href="/api/admin/export/sessions/" class="btn btn-subtle">
-                <i class="bi bi-download me-1 text-warning"></i>Export Learning Sessions (JSON)
-              </a>
-              <a href="/api/admin/export/flashcards/" class="btn btn-subtle">
-                <i class="bi bi-download me-1 text-info"></i>Export Flashcards (JSON)
-              </a>
-            </div>
-          </div>
-        </section>
-
-      </div>
-    </main>
-  </div>
-
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- MODALS (PROPERLY MANAGED WITH BOOTSTRAP 5)                      -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-
-  <!-- Modal: Add / Edit User -->
-  <div class="modal fade" id="userModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-      <div class="modal-content modal-content-custom">
-        <div class="modal-header modal-header-custom">
-          <h5 class="modal-title h6 mb-0 fw-bold" id="userModalTitle">Learner Profile</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body modal-body-custom">
-          <form id="userForm" onsubmit="event.preventDefault(); saveUserForm();">
-            <input type="hidden" id="userFormId">
-            <div class="mb-3">
-              <label class="form-label text-dim small">Username</label>
-              <input type="text" class="form-control form-control-custom" id="userFormUsername" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label text-dim small">Email Address</label>
-              <input type="email" class="form-control form-control-custom" id="userFormEmail" required>
-            </div>
-            <div class="mb-3" id="userFormPasswordWrap">
-              <label class="form-label text-dim small">Password <span class="text-dim" id="pwdHint">(leave blank to keep
-                  existing)</span></label>
-              <input type="password" class="form-control form-control-custom" id="userFormPassword"
-                placeholder="••••••••">
-            </div>
-            <div class="row g-2 mb-3">
-              <div class="col-6">
-                <label class="form-label text-dim small">Target Language</label>
-                <select class="form-select form-select-custom" id="userFormLang">
-                  <option value="English">English</option>
-                  <option value="Spanish">Spanish</option>
-                  <option value="French">French</option>
-                  <option value="German">German</option>
-                  <option value="Japanese">Japanese</option>
-                  <option value="Chinese">Chinese</option>
-                  <option value="Korean">Korean</option>
-                  <option value="Vietnamese">Vietnamese</option>
-                </select>
-              </div>
-              <div class="col-6">
-                <label class="form-label text-dim small">CEFR Proficiency</label>
-                <select class="form-select form-select-custom" id="userFormLevel">
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                </select>
-              </div>
-            </div>
-            <div class="row g-2 mb-3">
-              <div class="col-6">
-                <label class="form-label text-dim small">Subscription Plan</label>
-                <select class="form-select form-select-custom" id="userFormPlan" onchange="togglePlanLimitField()">
-                  <option value="Free">Free Tier</option>
-                  <option value="VIP">VIP Tier (Unlimited Practice)</option>
-                </select>
-              </div>
-              <div class="col-6">
-                <label class="form-label text-dim small">System Role</label>
-                <select class="form-select form-select-custom" id="userFormRole">
-                  <option value="user">Learner / User</option>
-                  <option value="admin">Administrator</option>
-                </select>
-              </div>
-            </div>
-
-            <!-- VIP Unlimited Banner -->
-            <div id="userFormVipBanner" class="mb-3 d-none">
-              <div class="p-3 rounded small text-warning font-mono d-flex align-items-center gap-2"
-                style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25);">
-                <i class="bi bi-gem fs-5"></i>
-                <div>
-                  <div class="fw-bold">VIP Tier Activated</div>
-                  <div class="text-dim" style="font-size: 0.75rem;">Unlimited conversational practice enabled. No daily
-                    turn limits.</div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Free Tier Limit Fields -->
-            <div class="row g-2 mb-3" id="userFormLimitFields">
-              <div class="col-6">
-                <label class="form-label text-dim small">Daily Turn Limit</label>
-                <input type="number" class="form-control form-control-custom" id="userFormDailyLimit" value="5" min="1"
-                  max="500">
-                <small class="text-dim font-mono" style="font-size: 0.7rem;">Free default: 5 turns/day</small>
-              </div>
-              <div class="col-6">
-                <label class="form-label text-dim small">Turns Used Today</label>
-                <input type="number" class="form-control form-control-custom" id="userFormTurnsUsed" value="0" min="0">
-                <small class="text-dim font-mono" style="font-size: 0.7rem;">Today's usage count</small>
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer modal-footer-custom">
-          <button type="button" class="btn btn-subtle" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-glow" onclick="saveUserForm()">Save Changes</button>
         </div>
       </div>
-    </div>
-  </div>
 
-  <!-- Modal: Create / Edit Scenario -->
-  <div class="modal fade" id="scenarioModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-      <div class="modal-content modal-content-custom">
-        <div class="modal-header modal-header-custom">
-          <h5 class="modal-title h6 mb-0 fw-bold" id="scenarioModalTitle">Create Scenario</h5>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body modal-body-custom">
-          <form id="scenarioForm" onsubmit="event.preventDefault(); saveScenarioForm();">
-            <input type="hidden" id="scenarioFormId">
-            <div class="row g-3 mb-3">
-              <div class="col-8">
-                <label class="form-label text-dim small">Scenario Title</label>
-                <input type="text" class="form-control form-control-custom" id="scenarioFormTitle"
-                  placeholder="e.g. Ordering at a French Bistro" required>
-              </div>
-              <div class="col-4">
-                <label class="form-label text-dim small">Emoji Icon</label>
-                <input type="text" class="form-control form-control-custom" id="scenarioFormEmoji" placeholder="🥐"
-                  value="💬">
-              </div>
-            </div>
-            <div class="row g-3 mb-3">
-              <div class="col-4">
-                <label class="form-label text-dim small">Category</label>
-                <select class="form-select form-select-custom" id="scenarioFormCategory">
-                  <option value="Daily Life">Daily Life</option>
-                  <option value="Travel">Travel</option>
-                  <option value="Business">Business</option>
-                  <option value="Social">Social</option>
-                  <option value="Emergency">Emergency</option>
-                </select>
-              </div>
-              <div class="col-4">
-                <label class="form-label text-dim small">CEFR Level</label>
-                <select class="form-select form-select-custom" id="scenarioFormCefr">
-                  <option value="Beginner">Beginner</option>
-                  <option value="Intermediate">Intermediate</option>
-                  <option value="Advanced">Advanced</option>
-                </select>
-              </div>
-              <div class="col-4">
-                <label class="form-label text-dim small">Language</label>
-                <select class="form-select form-select-custom" id="scenarioFormLang">
-                  <option value="English">English</option>
-                  <option value="Spanish">Spanish</option>
-                  <option value="French">French</option>
-                  <option value="German">German</option>
-                  <option value="Japanese">Japanese</option>
-                  <option value="Chinese">Chinese</option>
-                  <option value="Korean">Korean</option>
-                  <option value="Vietnamese">Vietnamese</option>
-                </select>
-              </div>
-            </div>
-            <div class="mb-3">
-              <label class="form-label text-dim small">Short Description</label>
-              <textarea class="form-control form-control-custom" id="scenarioFormDesc" rows="2"
-                placeholder="Describe the roleplay situation for the learner..."></textarea>
-            </div>
-            <div class="mb-3">
-              <label class="form-label text-dim small">AI System Prompt / Persona Instructions</label>
-              <textarea class="form-control form-control-custom font-mono" id="scenarioFormPrompt" rows="4"
-                placeholder="You are a friendly barista in Paris..."></textarea>
-            </div>
+      <!-- Toast Notification Container -->
+      <div id="adminToastContainer"></div>
 
-            <!-- Live Prompt Simulator Box -->
-            <div class="p-3 rounded mb-3"
-              style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle);">
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="fw-bold small text-primary"><i class="bi bi-terminal me-1"></i>Live AI Persona
-                  Simulator</span>
-                <button type="button" class="btn btn-sm btn-subtle" onclick="testScenarioPromptLive()">
-                  <i class="bi bi-play-fill me-1 text-success"></i>Test Prompt
-                </button>
-              </div>
-              <div class="mb-2">
-                <input type="text" class="form-control form-control-custom small" id="scenarioTestInput"
-                  placeholder="Simulate learner message (e.g. Hello! Can I have a croissant?)">
-              </div>
-              <div class="p-2 rounded small font-mono text-dim" id="scenarioTestResult"
-                style="background: var(--bg-base); min-height: 48px;">
-                AI simulation test results will appear here.
-              </div>
-            </div>
-          </form>
-        </div>
-        <div class="modal-footer modal-footer-custom">
-          <button type="button" class="btn btn-subtle" data-bs-dismiss="modal">Cancel</button>
-          <button type="button" class="btn btn-glow" onclick="saveScenarioForm()">Save Scenario</button>
-        </div>
-      </div>
-    </div>
-  </div>
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <!-- JAVASCRIPT CONTROLLER WITH SWR ZERO-LATENCY ENGINE              -->
+      <!-- ═══════════════════════════════════════════════════════════════ -->
+      <script>
+        let currentSection = 'overview';
+        let currentDays = 14;
+        let timelineChart = null;
+        let cefrChart = null;
+        let languageChart = null;
+        let userSearchTimeout = null;
 
-  <!-- Modal: Session Replay Inspector -->
-  <div class="modal fade" id="sessionModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-      <div class="modal-content modal-content-custom">
-        <div class="modal-header modal-header-custom">
-          <div>
-            <h5 class="modal-title h6 mb-0 fw-bold" id="sessionInspectorTitle">Session Replay</h5>
-            <small class="text-dim" id="sessionInspectorSubtitle">Learner Details</small>
-          </div>
-          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body modal-body-custom" id="sessionInspectorTurns">
-          <!-- Session Turns Injected Here -->
-        </div>
-      </div>
-    </div>
-  </div>
+        document.addEventListener('DOMContentLoaded', () => {
+          initTheme();
+          updateClock();
+          setInterval(updateClock, 1000);
 
-  <!-- Toast Notification Container -->
-  <div id="adminToastContainer"></div>
+          // Check URL hash routing
+          const hash = window.location.hash.replace('#', '');
+          if (hash && ['overview', 'users', 'scenarios', 'sessions', 'flashcards', 'maintenance'].includes(hash)) {
+            currentSection = hash;
+          }
 
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <!-- JAVASCRIPT CONTROLLER WITH SWR ZERO-LATENCY ENGINE              -->
-  <!-- ═══════════════════════════════════════════════════════════════ -->
-  <script>
-    let currentSection = 'overview';
-    let currentDays = 14;
-    let timelineChart = null;
-    let cefrChart = null;
-    let languageChart = null;
-    let userSearchTimeout = null;
+          // Check if already authenticated
+          const gate = document.getElementById('adminLoginGate');
+          if (gate && gate.style.display !== 'none') {
+            // Unauthenticated -> wait for gate login
+            return;
+          }
 
-    document.addEventListener('DOMContentLoaded', () => {
-      initTheme();
-      updateClock();
-      setInterval(updateClock, 1000);
+          initAdminDashboard();
+        });
 
-      // Check URL hash routing
-      const hash = window.location.hash.replace('#', '');
-      if (hash && ['overview', 'users', 'scenarios', 'sessions', 'flashcards', 'maintenance'].includes(hash)) {
-        currentSection = hash;
-      }
+        function initAdminDashboard() {
+          // 1. SWR Immediate Cache Render (0ms latency!)
+          applySwrMetricsCache();
+          applySwrAnalyticsCache();
 
-      // Check if already authenticated
-      const gate = document.getElementById('adminLoginGate');
-      if (gate && gate.style.display !== 'none') {
-        // Unauthenticated -> wait for gate login
-        return;
-      }
+          // 2. Switch to active section
+          switchSection(currentSection, false);
 
-      initAdminDashboard();
-    });
+          // 3. Background fresh parallel fetch
+          Promise.all([
+            loadMetrics(),
+            loadAnalyticsData(currentDays)
+          ]).catch(e => console.error("Initial load error:", e));
+        }
 
-    function initAdminDashboard() {
-      // 1. SWR Immediate Cache Render (0ms latency!)
-      applySwrMetricsCache();
-      applySwrAnalyticsCache();
+        // Theme Management
+        function initTheme() {
+          const savedTheme = localStorage.getItem('linguist_admin_theme') || 'dark';
+          document.documentElement.setAttribute('data-theme', savedTheme);
+          updateThemeIcon(savedTheme);
+        }
 
-      // 2. Switch to active section
-      switchSection(currentSection, false);
+        function toggleTheme() {
+          const current = document.documentElement.getAttribute('data-theme') || 'dark';
+          const next = current === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('linguist_admin_theme', next);
+          updateThemeIcon(next);
+          if (timelineChart) loadAnalyticsData(currentDays);
+        }
 
-      // 3. Background fresh parallel fetch
-      Promise.all([
-        loadMetrics(),
-        loadAnalyticsData(currentDays)
-      ]).catch(e => console.error("Initial load error:", e));
-    }
+        function updateThemeIcon(theme) {
+          const icon = document.getElementById('themeIcon');
+          if (!icon) return;
+          icon.className = theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi bi-moon-stars text-primary';
+        }
 
-    // Theme Management
-    function initTheme() {
-      const savedTheme = localStorage.getItem('linguist_admin_theme') || 'dark';
-      document.documentElement.setAttribute('data-theme', savedTheme);
-      updateThemeIcon(savedTheme);
-    }
+        function toggleSidebar() {
+          document.getElementById('adminSidebar').classList.toggle('open');
+          document.getElementById('sidebarBackdrop').classList.toggle('active');
+        }
 
-    function toggleTheme() {
-      const current = document.documentElement.getAttribute('data-theme') || 'dark';
-      const next = current === 'dark' ? 'light' : 'dark';
-      document.documentElement.setAttribute('data-theme', next);
-      localStorage.setItem('linguist_admin_theme', next);
-      updateThemeIcon(next);
-      if (timelineChart) loadAnalyticsData(currentDays);
-    }
+        function updateClock() {
+          const now = new Date();
+          const clockEl = document.getElementById('liveClock');
+          if (clockEl) {
+            clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' • ' + now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
+          }
+        }
 
-    function updateThemeIcon(theme) {
-      const icon = document.getElementById('themeIcon');
-      if (!icon) return;
-      icon.className = theme === 'dark' ? 'bi bi-sun-fill text-warning' : 'bi bi-moon-stars text-primary';
-    }
+        // Modal helpers with Bootstrap 5 getOrCreateInstance
+        function showModal(modalId) {
+          const el = document.getElementById(modalId);
+          if (!el) return;
+          const modal = bootstrap.Modal.getOrCreateInstance(el);
+          modal.show();
+        }
 
-    function toggleSidebar() {
-      document.getElementById('adminSidebar').classList.toggle('open');
-      document.getElementById('sidebarBackdrop').classList.toggle('active');
-    }
+        function hideModal(modalId) {
+          const el = document.getElementById(modalId);
+          if (!el) return;
+          const modal = bootstrap.Modal.getOrCreateInstance(el);
+          modal.hide();
+        }
 
-    function updateClock() {
-      const now = new Date();
-      const clockEl = document.getElementById('liveClock');
-      if (clockEl) {
-        clockEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' • ' + now.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' });
-      }
-    }
+        // Toast Notification System
+        function showToast(message, type = 'info') {
+          const container = document.getElementById('adminToastContainer');
+          const toast = document.createElement('div');
+          toast.className = 'admin-toast';
 
-    // Modal helpers with Bootstrap 5 getOrCreateInstance
-    function showModal(modalId) {
-      const el = document.getElementById(modalId);
-      if (!el) return;
-      const modal = bootstrap.Modal.getOrCreateInstance(el);
-      modal.show();
-    }
+          const iconMap = {
+            success: 'bi-check-circle-fill text-success',
+            error: 'bi-exclamation-triangle-fill text-danger',
+            info: 'bi-info-circle-fill text-primary'
+          };
 
-    function hideModal(modalId) {
-      const el = document.getElementById(modalId);
-      if (!el) return;
-      const modal = bootstrap.Modal.getOrCreateInstance(el);
-      modal.hide();
-    }
-
-    // Toast Notification System
-    function showToast(message, type = 'info') {
-      const container = document.getElementById('adminToastContainer');
-      const toast = document.createElement('div');
-      toast.className = 'admin-toast';
-
-      const iconMap = {
-        success: 'bi-check-circle-fill text-success',
-        error: 'bi-exclamation-triangle-fill text-danger',
-        info: 'bi-info-circle-fill text-primary'
-      };
-
-      toast.innerHTML = `
+          toast.innerHTML = `
         <i class="bi ${iconMap[type] || iconMap.info} fs-5"></i>
         <div style="font-size: 0.88rem; font-weight: 500;">${message}</div>
       `;
 
-      container.appendChild(toast);
-      setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transform = 'translateY(10px)';
-        toast.style.transition = 'all 0.25s ease';
-        setTimeout(() => toast.remove(), 250);
-      }, 3500);
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // AUTHENTICATION & GATE CONTROLLERS
-    // ─────────────────────────────────────────────────────────────────
-    async function handleAdminLogin(event) {
-      event.preventDefault();
-      const email = document.getElementById('gateEmail').value.trim();
-      const password = document.getElementById('gatePassword').value;
-      const alertBox = document.getElementById('gateAlert');
-      const btn = document.getElementById('btnGateSubmit');
-
-      alertBox.classList.add('d-none');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Authenticating...';
-
-      try {
-        const res = await fetch('/api/admin/auth/login/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password })
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          alertBox.textContent = data.error || 'Authentication failed.';
-          alertBox.classList.remove('d-none');
-          btn.disabled = false;
-          btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Authenticate & Enter';
-          return;
+          container.appendChild(toast);
+          setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateY(10px)';
+            toast.style.transition = 'all 0.25s ease';
+            setTimeout(() => toast.remove(), 250);
+          }, 3500);
         }
 
-        // Login success -> unlock interface smoothly
-        document.getElementById('adminLoginGate').style.display = 'none';
-        const appContainer = document.getElementById('adminAppContainer');
-        appContainer.style.display = 'flex';
-        appContainer.style.animation = 'fadeInView 0.3s ease';
+        // ─────────────────────────────────────────────────────────────────
+        // AUTHENTICATION & GATE CONTROLLERS
+        // ─────────────────────────────────────────────────────────────────
+        async function handleAdminLogin(event) {
+          event.preventDefault();
+          const email = document.getElementById('gateEmail').value.trim();
+          const password = document.getElementById('gatePassword').value;
+          const alertBox = document.getElementById('gateAlert');
+          const btn = document.getElementById('btnGateSubmit');
 
-        showToast('Welcome Administrator! Master Control Unlocked.', 'success');
-        initAdminDashboard();
-      } catch (err) {
-        alertBox.textContent = 'Connection error: ' + err.message;
-        alertBox.classList.remove('d-none');
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Authenticate & Enter';
-      }
-    }
+          alertBox.classList.add('d-none');
+          btn.disabled = true;
+          btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Authenticating...';
 
-    async function handleAdminLogout() {
-      if (!confirm("Are you sure you want to terminate this Admin session?")) return;
-      try {
-        await fetch('/api/admin/auth/logout/', { method: 'POST' });
-        localStorage.removeItem('linguist_admin_metrics');
-        localStorage.removeItem('linguist_admin_analytics');
-        window.location.reload();
-      } catch (e) {
-        window.location.reload();
-      }
-    }
+          try {
+            const res = await fetch('/api/admin/auth/login/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email, password })
+            });
 
-    // Section Navigation & URL Hash
-    function switchSection(sectionId, updateHash = true) {
-      currentSection = sectionId;
-      if (updateHash) {
-        window.location.hash = '#' + sectionId;
-      }
-
-      document.querySelectorAll('.admin-nav-item').forEach(el => el.classList.remove('active'));
-      document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
-
-      const activeSection = document.getElementById(`section-${sectionId}`);
-      if (activeSection) activeSection.classList.add('active');
-
-      const navItems = document.querySelectorAll('.admin-nav-item');
-      navItems.forEach(item => {
-        if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(`'${sectionId}'`)) {
-          item.classList.add('active');
-        }
-      });
-
-      const titles = {
-        overview: 'Platform Overview & Telemetry',
-        users: 'Learners & User Management',
-        scenarios: 'Scenario Studio & AI Personas',
-        sessions: 'Session Replays & Feedback Inspector',
-        flashcards: 'Flashcards & Spaced Repetition (SM-2)',
-        maintenance: 'System Health & Maintenance'
-      };
-      document.getElementById('currentSectionTitle').textContent = titles[sectionId] || 'Admin Portal';
-
-      if (sectionId === 'users') loadUsersData(1);
-      if (sectionId === 'scenarios') loadScenariosData();
-      if (sectionId === 'sessions') loadSessionsData(1);
-      if (sectionId === 'flashcards') loadFlashcardsData();
-      if (sectionId === 'maintenance') loadMaintenanceData();
-    }
-
-    function refreshCurrentSection() {
-      const icon = document.getElementById('refreshIcon');
-      if (icon) icon.classList.add('spin');
-      loadMetrics();
-      switchSection(currentSection, false);
-      setTimeout(() => {
-        if (icon) icon.classList.remove('spin');
-        showToast('Telemetry refreshed successfully', 'success');
-      }, 400);
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // 1. SWR ZERO-LATENCY METRICS & OVERVIEW
-    // ─────────────────────────────────────────────────────────────────
-    function applySwrMetricsCache() {
-      try {
-        const cached = localStorage.getItem('linguist_admin_metrics');
-        if (!cached) return;
-        const data = JSON.parse(cached);
-        renderMetricsUI(data);
-      } catch (e) { }
-    }
-
-    function applySwrAnalyticsCache() {
-      try {
-        const cached = localStorage.getItem('linguist_admin_analytics');
-        if (!cached) return;
-        const data = JSON.parse(cached);
-        if (data.timeline) renderTimelineChart(data.timeline);
-        if (data.cefr_distribution) renderCefrChart(data.cefr_distribution);
-        if (data.language_distribution) renderLanguageChart(data.language_distribution);
-        if (data.scenario_stats) renderTopScenarios(data.scenario_stats);
-      } catch (e) { }
-    }
-
-    function renderMetricsUI(data) {
-      if (!data) return;
-      document.getElementById('kpiTotalUsers').textContent = data.users.total;
-      document.getElementById('kpiProCount').textContent = `${data.users.pro || 0} VIP`;
-      document.getElementById('kpiFreeCount').textContent = `${data.users.free || 0} Free`;
-      document.getElementById('kpiActiveToday').textContent = data.users.active_today;
-      document.getElementById('kpiNew7d').textContent = `+${data.users.new_7d} new`;
-      document.getElementById('kpiTotalSessions').textContent = data.activity.total_sessions;
-      document.getElementById('kpiTotalTurns').textContent = `${data.activity.total_turns} turns`;
-      document.getElementById('kpiAvgScore').textContent = `${data.activity.avg_score}%`;
-      document.getElementById('kpiGrammarAvg').textContent = data.activity.avg_grammar;
-      document.getElementById('kpiPronAvg').textContent = data.activity.avg_pronunciation;
-
-      document.getElementById('navUserBadge').textContent = data.users.total;
-      document.getElementById('navScenarioBadge').textContent = data.scenarios_count || 0;
-
-      if (data.storage) {
-        document.getElementById('maintAudioFilesCount').textContent = data.storage.audio_files_count;
-        document.getElementById('maintAudioMb').textContent = data.storage.audio_mb;
-        document.getElementById('maintMediaPath').textContent = data.storage.media_path;
-      }
-
-      if (data.ai_status) {
-        document.getElementById('aiLlmLabel').textContent = data.ai_status.llm_engine;
-        document.getElementById('aiTtsLabel').textContent = data.ai_status.tts_engine;
-      }
-    }
-
-    async function loadMetrics() {
-      try {
-        const res = await fetch('/api/admin/metrics/');
-        if (res.status === 401) {
-          document.getElementById('adminLoginGate').style.display = 'flex';
-          document.getElementById('adminAppContainer').style.display = 'none';
-          return;
-        }
-        if (!res.ok) return;
-        const data = await res.json();
-        renderMetricsUI(data);
-        localStorage.setItem('linguist_admin_metrics', JSON.stringify(data));
-      } catch (e) {
-        console.error('Error loading metrics:', e);
-      }
-    }
-
-    async function loadAnalyticsData(days = 14, btnEl = null) {
-      currentDays = days;
-      if (btnEl) {
-        btnEl.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
-        btnEl.classList.add('active');
-      }
-
-      try {
-        const res = await fetch(`/api/admin/analytics/?days=${days}`);
-        if (!res.ok) return;
-        const data = await res.json();
-
-        renderTimelineChart(data.timeline);
-        renderCefrChart(data.cefr_distribution);
-        renderLanguageChart(data.language_distribution);
-        renderTopScenarios(data.scenario_stats);
-
-        localStorage.setItem('linguist_admin_analytics', JSON.stringify(data));
-      } catch (e) {
-        console.error('Error loading analytics:', e);
-      }
-    }
-
-    function renderTimelineChart(timeline) {
-      const ctx = document.getElementById('timelineChart');
-      if (!ctx) return;
-      if (timelineChart) timelineChart.destroy();
-
-      const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
-      const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-      const textColor = isDark ? '#94A3B8' : '#64748B';
-
-      timelineChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: timeline.labels,
-          datasets: [
-            {
-              label: 'Conversational Turns',
-              data: timeline.turns,
-              borderColor: '#6366F1',
-              backgroundColor: 'rgba(99, 102, 241, 0.12)',
-              fill: true,
-              tension: 0.35,
-              borderWidth: 2
-            },
-            {
-              label: 'Practice Sessions',
-              data: timeline.sessions,
-              borderColor: '#06B6D4',
-              backgroundColor: 'transparent',
-              borderWidth: 2,
-              tension: 0.35
-            },
-            {
-              label: 'New Learners',
-              data: timeline.users,
-              borderColor: '#10B981',
-              backgroundColor: 'transparent',
-              borderWidth: 2,
-              borderDash: [4, 4],
-              tension: 0.35
+            const data = await res.json();
+            if (!res.ok) {
+              alertBox.textContent = data.error || 'Authentication failed.';
+              alertBox.classList.remove('d-none');
+              btn.disabled = false;
+              btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Authenticate & Enter';
+              return;
             }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'top', labels: { color: textColor, font: { family: 'Plus Jakarta Sans', size: 11 } } },
-            tooltip: { padding: 10, cornerRadius: 8 }
-          },
-          scales: {
-            x: { grid: { color: gridColor }, ticks: { color: textColor } },
-            y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }
+
+            // Login success -> unlock interface smoothly
+            document.getElementById('adminLoginGate').style.display = 'none';
+            const appContainer = document.getElementById('adminAppContainer');
+            appContainer.style.display = 'flex';
+            appContainer.style.animation = 'fadeInView 0.3s ease';
+
+            showToast('Welcome Administrator! Master Control Unlocked.', 'success');
+            initAdminDashboard();
+          } catch (err) {
+            alertBox.textContent = 'Connection error: ' + err.message;
+            alertBox.classList.remove('d-none');
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-box-arrow-in-right me-1"></i>Authenticate & Enter';
           }
         }
-      });
-    }
 
-    function renderCefrChart(cefrData) {
-      const ctx = document.getElementById('cefrChart');
-      if (!ctx) return;
-      if (cefrChart) cefrChart.destroy();
-
-      const labels = Object.keys(cefrData);
-      const values = Object.values(cefrData);
-
-      cefrChart = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: labels.length ? labels : ['Beginner'],
-          datasets: [{
-            data: values.length ? values : [1],
-            backgroundColor: ['#6366F1', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#F43F5E', '#A855F7'],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { position: 'bottom', labels: { color: '#94A3B8', font: { family: 'Plus Jakarta Sans', size: 10 } } }
-          },
-          cutout: '72%'
-        }
-      });
-    }
-
-    function renderLanguageChart(langData) {
-      const ctx = document.getElementById('languageChart');
-      if (!ctx) return;
-      if (languageChart) languageChart.destroy();
-
-      const labels = Object.keys(langData);
-      const values = Object.values(langData);
-
-      languageChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Learners',
-            data: values,
-            backgroundColor: '#8B5CF6',
-            borderRadius: 6
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { display: false }, ticks: { color: '#64748B' } },
-            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748B', precision: 0 } }
+        async function handleAdminLogout() {
+          if (!confirm("Are you sure you want to terminate this Admin session?")) return;
+          try {
+            await fetch('/api/admin/auth/logout/', { method: 'POST' });
+            localStorage.removeItem('linguist_admin_metrics');
+            localStorage.removeItem('linguist_admin_analytics');
+            window.location.reload();
+          } catch (e) {
+            window.location.reload();
           }
         }
-      });
-    }
 
-    function renderTopScenarios(scenarios) {
-      const tbody = document.getElementById('topScenariosTableBody');
-      if (!tbody) return;
+        // Section Navigation & URL Hash
+        function switchSection(sectionId, updateHash = true) {
+          currentSection = sectionId;
+          if (updateHash) {
+            window.location.hash = '#' + sectionId;
+          }
 
-      if (!scenarios || !scenarios.length) {
-        tbody.innerHTML = '<tr><td colspan="3" class="text-center text-dim py-4">No scenario sessions yet</td></tr>';
-        return;
-      }
+          document.querySelectorAll('.admin-nav-item').forEach(el => el.classList.remove('active'));
+          document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
 
-      tbody.innerHTML = scenarios.map(s => `
+          const activeSection = document.getElementById(`section-${sectionId}`);
+          if (activeSection) activeSection.classList.add('active');
+
+          const navItems = document.querySelectorAll('.admin-nav-item');
+          navItems.forEach(item => {
+            if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(`'${sectionId}'`)) {
+              item.classList.add('active');
+            }
+          });
+
+          const titles = {
+            overview: 'Platform Overview & Telemetry',
+            users: 'Learners & User Management',
+            scenarios: 'Scenario Studio & AI Personas',
+            sessions: 'Session Replays & Feedback Inspector',
+            flashcards: 'Flashcards & Spaced Repetition (SM-2)',
+            maintenance: 'System Health & Maintenance'
+          };
+          document.getElementById('currentSectionTitle').textContent = titles[sectionId] || 'Admin Portal';
+
+          if (sectionId === 'users') loadUsersData(1);
+          if (sectionId === 'scenarios') loadScenariosData();
+          if (sectionId === 'sessions') loadSessionsData(1);
+          if (sectionId === 'flashcards') loadFlashcardsData();
+          if (sectionId === 'maintenance') loadMaintenanceData();
+        }
+
+        function refreshCurrentSection() {
+          const icon = document.getElementById('refreshIcon');
+          if (icon) icon.classList.add('spin');
+          loadMetrics();
+          switchSection(currentSection, false);
+          setTimeout(() => {
+            if (icon) icon.classList.remove('spin');
+            showToast('Telemetry refreshed successfully', 'success');
+          }, 400);
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // 1. SWR ZERO-LATENCY METRICS & OVERVIEW
+        // ─────────────────────────────────────────────────────────────────
+        function applySwrMetricsCache() {
+          try {
+            const cached = localStorage.getItem('linguist_admin_metrics');
+            if (!cached) return;
+            const data = JSON.parse(cached);
+            renderMetricsUI(data);
+          } catch (e) { }
+        }
+
+        function applySwrAnalyticsCache() {
+          try {
+            const cached = localStorage.getItem('linguist_admin_analytics');
+            if (!cached) return;
+            const data = JSON.parse(cached);
+            if (data.timeline) renderTimelineChart(data.timeline);
+            if (data.cefr_distribution) renderCefrChart(data.cefr_distribution);
+            if (data.language_distribution) renderLanguageChart(data.language_distribution);
+            if (data.scenario_stats) renderTopScenarios(data.scenario_stats);
+          } catch (e) { }
+        }
+
+        function renderMetricsUI(data) {
+          if (!data) return;
+          document.getElementById('kpiTotalUsers').textContent = data.users.total;
+          document.getElementById('kpiProCount').textContent = `${data.users.pro || 0} VIP`;
+          document.getElementById('kpiFreeCount').textContent = `${data.users.free || 0} Free`;
+          document.getElementById('kpiActiveToday').textContent = data.users.active_today;
+          document.getElementById('kpiNew7d').textContent = `+${data.users.new_7d} new`;
+          document.getElementById('kpiTotalSessions').textContent = data.activity.total_sessions;
+          document.getElementById('kpiTotalTurns').textContent = `${data.activity.total_turns} turns`;
+          document.getElementById('kpiAvgScore').textContent = `${data.activity.avg_score}%`;
+          document.getElementById('kpiGrammarAvg').textContent = data.activity.avg_grammar;
+          document.getElementById('kpiPronAvg').textContent = data.activity.avg_pronunciation;
+
+          document.getElementById('navUserBadge').textContent = data.users.total;
+          document.getElementById('navScenarioBadge').textContent = data.scenarios_count || 0;
+
+          if (data.storage) {
+            document.getElementById('maintAudioFilesCount').textContent = data.storage.audio_files_count;
+            document.getElementById('maintAudioMb').textContent = data.storage.audio_mb;
+            document.getElementById('maintMediaPath').textContent = data.storage.media_path;
+          }
+
+          if (data.ai_status) {
+            document.getElementById('aiLlmLabel').textContent = data.ai_status.llm_engine;
+            document.getElementById('aiTtsLabel').textContent = data.ai_status.tts_engine;
+          }
+        }
+
+        async function loadMetrics() {
+          try {
+            const res = await fetch('/api/admin/metrics/');
+            if (res.status === 401) {
+              document.getElementById('adminLoginGate').style.display = 'flex';
+              document.getElementById('adminAppContainer').style.display = 'none';
+              return;
+            }
+            if (!res.ok) return;
+            const data = await res.json();
+            renderMetricsUI(data);
+            localStorage.setItem('linguist_admin_metrics', JSON.stringify(data));
+          } catch (e) {
+            console.error('Error loading metrics:', e);
+          }
+        }
+
+        async function loadAnalyticsData(days = 14, btnEl = null) {
+          currentDays = days;
+          if (btnEl) {
+            btnEl.parentElement.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btnEl.classList.add('active');
+          }
+
+          try {
+            const res = await fetch(`/api/admin/analytics/?days=${days}`);
+            if (!res.ok) return;
+            const data = await res.json();
+
+            renderTimelineChart(data.timeline);
+            renderCefrChart(data.cefr_distribution);
+            renderLanguageChart(data.language_distribution);
+            renderTopScenarios(data.scenario_stats);
+
+            localStorage.setItem('linguist_admin_analytics', JSON.stringify(data));
+          } catch (e) {
+            console.error('Error loading analytics:', e);
+          }
+        }
+
+        function renderTimelineChart(timeline) {
+          const ctx = document.getElementById('timelineChart');
+          if (!ctx) return;
+          if (timelineChart) timelineChart.destroy();
+
+          const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+          const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+          const textColor = isDark ? '#94A3B8' : '#64748B';
+
+          timelineChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: timeline.labels,
+              datasets: [
+                {
+                  label: 'Conversational Turns',
+                  data: timeline.turns,
+                  borderColor: '#6366F1',
+                  backgroundColor: 'rgba(99, 102, 241, 0.12)',
+                  fill: true,
+                  tension: 0.35,
+                  borderWidth: 2
+                },
+                {
+                  label: 'Practice Sessions',
+                  data: timeline.sessions,
+                  borderColor: '#06B6D4',
+                  backgroundColor: 'transparent',
+                  borderWidth: 2,
+                  tension: 0.35
+                },
+                {
+                  label: 'New Learners',
+                  data: timeline.users,
+                  borderColor: '#10B981',
+                  backgroundColor: 'transparent',
+                  borderWidth: 2,
+                  borderDash: [4, 4],
+                  tension: 0.35
+                }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'top', labels: { color: textColor, font: { family: 'Plus Jakarta Sans', size: 11 } } },
+                tooltip: { padding: 10, cornerRadius: 8 }
+              },
+              scales: {
+                x: { grid: { color: gridColor }, ticks: { color: textColor } },
+                y: { grid: { color: gridColor }, ticks: { color: textColor, precision: 0 } }
+              }
+            }
+          });
+        }
+
+        function renderCefrChart(cefrData) {
+          const ctx = document.getElementById('cefrChart');
+          if (!ctx) return;
+          if (cefrChart) cefrChart.destroy();
+
+          const labels = Object.keys(cefrData);
+          const values = Object.values(cefrData);
+
+          cefrChart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+              labels: labels.length ? labels : ['Beginner'],
+              datasets: [{
+                data: values.length ? values : [1],
+                backgroundColor: ['#6366F1', '#8B5CF6', '#06B6D4', '#10B981', '#F59E0B', '#F43F5E', '#A855F7'],
+                borderWidth: 0
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: { position: 'bottom', labels: { color: '#94A3B8', font: { family: 'Plus Jakarta Sans', size: 10 } } }
+              },
+              cutout: '72%'
+            }
+          });
+        }
+
+        function renderLanguageChart(langData) {
+          const ctx = document.getElementById('languageChart');
+          if (!ctx) return;
+          if (languageChart) languageChart.destroy();
+
+          const labels = Object.keys(langData);
+          const values = Object.values(langData);
+
+          languageChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+              labels: labels,
+              datasets: [{
+                label: 'Learners',
+                data: values,
+                backgroundColor: '#8B5CF6',
+                borderRadius: 6
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { grid: { display: false }, ticks: { color: '#64748B' } },
+                y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#64748B', precision: 0 } }
+              }
+            }
+          });
+        }
+
+        function renderTopScenarios(scenarios) {
+          const tbody = document.getElementById('topScenariosTableBody');
+          if (!tbody) return;
+
+          if (!scenarios || !scenarios.length) {
+            tbody.innerHTML = '<tr><td colspan="3" class="text-center text-dim py-4">No scenario sessions yet</td></tr>';
+            return;
+          }
+
+          tbody.innerHTML = scenarios.map(s => `
         <tr>
           <td><span class="fw-bold">${s.title}</span></td>
           <td><span class="badge bg-secondary text-white font-mono">${s.sessions_count}</span></td>
           <td><span class="status-badge ${s.avg_score >= 80 ? 'badge-vip' : 'badge-free'}">${s.avg_score}%</span></td>
         </tr>
       `).join('');
-    }
+        }
 
-    // ─────────────────────────────────────────────────────────────────
-    // 2. LEARNERS & USERS CRUD
-    // ─────────────────────────────────────────────────────────────────
-    function debounceUserSearch() {
-      clearTimeout(userSearchTimeout);
-      userSearchTimeout = setTimeout(() => loadUsersData(1), 300);
-    }
+        // ─────────────────────────────────────────────────────────────────
+        // 2. LEARNERS & USERS CRUD
+        // ─────────────────────────────────────────────────────────────────
+        function debounceUserSearch() {
+          clearTimeout(userSearchTimeout);
+          userSearchTimeout = setTimeout(() => loadUsersData(1), 300);
+        }
 
-    function renderUsersTable(data) {
-      const tbody = document.getElementById('usersTableBody');
-      if (!tbody) return;
-      if (!data.users || !data.users.length) {
-        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-dim py-5">No learners found matching filters</td></tr>';
-        document.getElementById('userPaginationInfo').textContent = '0 users';
-        document.getElementById('userPaginationButtons').innerHTML = '';
-        return;
-      }
+        function renderUsersTable(data) {
+          const tbody = document.getElementById('usersTableBody');
+          if (!tbody) return;
+          if (!data.users || !data.users.length) {
+            tbody.innerHTML = '<tr><td colspan="9" class="text-center text-dim py-5">No learners found matching filters</td></tr>';
+            document.getElementById('userPaginationInfo').textContent = '0 users';
+            document.getElementById('userPaginationButtons').innerHTML = '';
+            return;
+          }
 
-      tbody.innerHTML = data.users.map(u => {
-        const isVip = (u.subscription_plan || '').toUpperCase() === 'VIP';
-        const turnBadge = isVip
-          ? `<span class="status-badge badge-vip">Unlimited</span>`
-          : `<span class="badge ${u.today_turns >= (u.daily_turn_limit || 5) ? 'bg-danger' : 'bg-secondary'} font-mono">${u.today_turns} / ${u.daily_turn_limit || 5}</span>`;
+          tbody.innerHTML = data.users.map(u => {
+            const isVip = (u.subscription_plan || '').toUpperCase() === 'VIP';
+            const turnBadge = isVip
+              ? `<span class="status-badge badge-vip">Unlimited</span>`
+              : `<span class="badge ${u.today_turns >= (u.daily_turn_limit || 5) ? 'bg-danger' : 'bg-secondary'} font-mono">${u.today_turns} / ${u.daily_turn_limit || 5}</span>`;
 
-        const resetActionBtn = isVip
-          ? ''
-          : `<button class="btn btn-subtle p-1 px-2 text-warning" title="Reset Today's Turn Limit to 0" onclick="resetUserTurns('${u.id}', '${u.username}')">
+            const resetActionBtn = isVip
+              ? ''
+              : `<button class="btn btn-subtle p-1 px-2 text-warning" title="Reset Today's Turn Limit to 0" onclick="resetUserTurns('${u.id}', '${u.username}')">
                <i class="bi bi-arrow-counterclockwise"></i>
              </button>`;
 
-        return `
+            return `
         <tr>
           <td>
             <div class="d-flex align-items-center gap-2">
@@ -2129,218 +2143,218 @@
           </td>
         </tr>
       `;
-      }).join('');
+          }).join('');
 
-      document.getElementById('userPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total learners)`;
-      renderPaginationButtons('userPaginationButtons', data.page, data.total_pages, loadUsersData);
-    }
+          document.getElementById('userPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total learners)`;
+          renderPaginationButtons('userPaginationButtons', data.page, data.total_pages, loadUsersData);
+        }
 
-    async function loadUsersData(page = 1) {
-      const q = document.getElementById('userSearchInput').value.trim();
-      const plan = document.getElementById('userPlanFilter').value;
-      const role = document.getElementById('userRoleFilter').value;
-      const lang = document.getElementById('userLangFilter').value;
+        async function loadUsersData(page = 1) {
+          const q = document.getElementById('userSearchInput').value.trim();
+          const plan = document.getElementById('userPlanFilter').value;
+          const role = document.getElementById('userRoleFilter').value;
+          const lang = document.getElementById('userLangFilter').value;
 
-      const isDefaultFilter = (page === 1 && !q && plan === 'all' && role === 'all' && lang === 'all');
+          const isDefaultFilter = (page === 1 && !q && plan === 'all' && role === 'all' && lang === 'all');
 
-      // 1. SWR Instant render from localStorage
-      if (isDefaultFilter) {
-        try {
-          const cached = localStorage.getItem('linguist_admin_users_p1');
-          if (cached) {
-            const parsed = JSON.parse(cached);
-            renderUsersTable(parsed);
+          // 1. SWR Instant render from localStorage
+          if (isDefaultFilter) {
+            try {
+              const cached = localStorage.getItem('linguist_admin_users_p1');
+              if (cached) {
+                const parsed = JSON.parse(cached);
+                renderUsersTable(parsed);
+              }
+            } catch (e) { }
           }
-        } catch (e) {}
-      }
 
-      // 2. Fresh Background Fetch
-      try {
-        const res = await fetch(`/api/admin/users/?page=${page}&q=${encodeURIComponent(q)}&plan=${plan}&role=${role}&lang=${lang}`);
-        if (!res.ok) return;
-        const data = await res.json();
+          // 2. Fresh Background Fetch
+          try {
+            const res = await fetch(`/api/admin/users/?page=${page}&q=${encodeURIComponent(q)}&plan=${plan}&role=${role}&lang=${lang}`);
+            if (!res.ok) return;
+            const data = await res.json();
 
-        renderUsersTable(data);
+            renderUsersTable(data);
 
-        if (isDefaultFilter) {
-          localStorage.setItem('linguist_admin_users_p1', JSON.stringify(data));
-        }
-      } catch (e) {
-        console.error('Error loading users:', e);
-      }
-    }
-
-    function togglePlanLimitField() {
-      const plan = document.getElementById('userFormPlan').value;
-      const isVip = plan === 'VIP';
-      const limitFields = document.getElementById('userFormLimitFields');
-      const vipBanner = document.getElementById('userFormVipBanner');
-
-      if (isVip) {
-        if (limitFields) limitFields.classList.add('d-none');
-        if (vipBanner) vipBanner.classList.remove('d-none');
-      } else {
-        if (limitFields) limitFields.classList.remove('d-none');
-        if (vipBanner) vipBanner.classList.add('d-none');
-        const limitInput = document.getElementById('userFormDailyLimit');
-        if (limitInput && !limitInput.value) limitInput.value = 5;
-      }
-    }
-
-    function renderPaginationButtons(containerId, currentPage, totalPages, callback) {
-      const container = document.getElementById(containerId);
-      if (!container) return;
-      let html = '';
-      if (currentPage > 1) {
-        html += `<button class="btn btn-subtle" onclick="${callback.name}(${currentPage - 1})"><i class="bi bi-chevron-left"></i></button>`;
-      }
-      for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
-        html += `<button class="btn btn-subtle ${i === currentPage ? 'active' : ''}" onclick="${callback.name}(${i})">${i}</button>`;
-      }
-      if (currentPage < totalPages) {
-        html += `<button class="btn btn-subtle" onclick="${callback.name}(${currentPage + 1})"><i class="bi bi-chevron-right"></i></button>`;
-      }
-      container.innerHTML = html;
-    }
-
-    function openNewUserModal() {
-      document.getElementById('userModalTitle').textContent = 'Add New Learner';
-      document.getElementById('userFormId').value = '';
-      document.getElementById('userFormUsername').value = '';
-      document.getElementById('userFormEmail').value = '';
-      document.getElementById('userFormPassword').value = '';
-      document.getElementById('pwdHint').textContent = '(default: 123456)';
-      document.getElementById('userFormLang').value = 'English';
-      document.getElementById('userFormLevel').value = 'Beginner';
-      document.getElementById('userFormPlan').value = 'Free';
-      document.getElementById('userFormRole').value = 'user';
-      document.getElementById('userFormDailyLimit').value = 5;
-      document.getElementById('userFormDailyLimit').disabled = false;
-      document.getElementById('userFormTurnsUsed').value = 0;
-      showModal('userModal');
-    }
-
-    function editUserModal(user) {
-      document.getElementById('userModalTitle').textContent = `Edit Profile: ${user.username}`;
-      document.getElementById('userFormId').value = user.id;
-      document.getElementById('userFormUsername').value = user.username;
-      document.getElementById('userFormEmail').value = user.email;
-      document.getElementById('userFormPassword').value = '';
-      document.getElementById('pwdHint').textContent = '(leave blank to keep unchanged)';
-      document.getElementById('userFormLang').value = user.target_language;
-      document.getElementById('userFormLevel').value = user.proficiency_level;
-      document.getElementById('userFormPlan').value = user.subscription_plan || 'Free';
-      document.getElementById('userFormRole').value = user.role || 'user';
-      document.getElementById('userFormDailyLimit').value = user.daily_turn_limit !== null && user.daily_turn_limit !== undefined ? user.daily_turn_limit : 5;
-      document.getElementById('userFormTurnsUsed').value = user.today_turns || 0;
-      togglePlanLimitField();
-      showModal('userModal');
-    }
-
-    async function saveUserForm() {
-      const id = document.getElementById('userFormId').value;
-      const username = document.getElementById('userFormUsername').value.trim();
-      const email = document.getElementById('userFormEmail').value.trim();
-      const password = document.getElementById('userFormPassword').value;
-      const target_language = document.getElementById('userFormLang').value;
-      const proficiency_level = document.getElementById('userFormLevel').value;
-      const subscription_plan = document.getElementById('userFormPlan').value;
-      const role = document.getElementById('userFormRole').value;
-      const daily_turn_limit = subscription_plan === 'VIP' ? null : parseInt(document.getElementById('userFormDailyLimit').value) || 5;
-      const daily_turns_used = parseInt(document.getElementById('userFormTurnsUsed').value) || 0;
-
-      if (!username && !email) {
-        showToast('Please enter a username or email', 'error');
-        return;
-      }
-
-      const payload = {
-        username,
-        email,
-        target_language,
-        proficiency_level,
-        subscription_plan,
-        role,
-        daily_turn_limit,
-        daily_turns_used
-      };
-      if (password) payload.password = password;
-
-      try {
-        const url = id ? `/api/admin/users/${id}/` : `/api/admin/users/create/`;
-        const method = id ? 'PUT' : 'POST';
-
-        const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          showToast(data.error || 'Failed to save learner profile', 'error');
-          return;
+            if (isDefaultFilter) {
+              localStorage.setItem('linguist_admin_users_p1', JSON.stringify(data));
+            }
+          } catch (e) {
+            console.error('Error loading users:', e);
+          }
         }
 
-        hideModal('userModal');
-        showToast(data.message || 'Learner saved successfully', 'success');
-        loadUsersData(1);
-        loadMetrics();
-      } catch (e) {
-        showToast('Error saving user: ' + e, 'error');
-      }
-    }
+        function togglePlanLimitField() {
+          const plan = document.getElementById('userFormPlan').value;
+          const isVip = plan === 'VIP';
+          const limitFields = document.getElementById('userFormLimitFields');
+          const vipBanner = document.getElementById('userFormVipBanner');
 
-    async function resetUserTurns(userId, username) {
-      if (!confirm(`Reset daily turn limit counter for "${username}"?`)) return;
-      try {
-        const res = await fetch(`/api/admin/users/${userId}/reset-turns/`, { method: 'POST' });
-        const data = await res.json();
-        if (res.ok) {
-          showToast(data.message, 'success');
-          loadUsersData(1);
-        } else {
-          showToast(data.error || 'Reset failed', 'error');
+          if (isVip) {
+            if (limitFields) limitFields.classList.add('d-none');
+            if (vipBanner) vipBanner.classList.remove('d-none');
+          } else {
+            if (limitFields) limitFields.classList.remove('d-none');
+            if (vipBanner) vipBanner.classList.add('d-none');
+            const limitInput = document.getElementById('userFormDailyLimit');
+            if (limitInput && !limitInput.value) limitInput.value = 5;
+          }
         }
-      } catch (e) {
-        showToast('Error resetting turns', 'error');
-      }
-    }
 
-    async function deleteUser(userId, username) {
-      if (!confirm(`Permanently delete learner "${username}"? All associated sessions will be removed.`)) return;
-      try {
-        const res = await fetch(`/api/admin/users/${userId}/`, { method: 'DELETE' });
-        const data = await res.json();
-        if (res.ok) {
-          showToast(data.message, 'success');
-          loadUsersData(1);
-          loadMetrics();
-        } else {
-          showToast(data.error || 'Delete failed', 'error');
+        function renderPaginationButtons(containerId, currentPage, totalPages, callback) {
+          const container = document.getElementById(containerId);
+          if (!container) return;
+          let html = '';
+          if (currentPage > 1) {
+            html += `<button class="btn btn-subtle" onclick="${callback.name}(${currentPage - 1})"><i class="bi bi-chevron-left"></i></button>`;
+          }
+          for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+            html += `<button class="btn btn-subtle ${i === currentPage ? 'active' : ''}" onclick="${callback.name}(${i})">${i}</button>`;
+          }
+          if (currentPage < totalPages) {
+            html += `<button class="btn btn-subtle" onclick="${callback.name}(${currentPage + 1})"><i class="bi bi-chevron-right"></i></button>`;
+          }
+          container.innerHTML = html;
         }
-      } catch (e) {
-        showToast('Error deleting user', 'error');
-      }
-    }
 
-    // ─────────────────────────────────────────────────────────────────
-    // 3. SCENARIOS STUDIO CRUD & AI SIMULATOR
-    // ─────────────────────────────────────────────────────────────────
-    function renderScenariosGrid(scenarios) {
-      const grid = document.getElementById('scenariosGrid');
-      if (!grid) return;
-      if (!scenarios || !scenarios.length) {
-        grid.innerHTML = `
+        function openNewUserModal() {
+          document.getElementById('userModalTitle').textContent = 'Add New Learner';
+          document.getElementById('userFormId').value = '';
+          document.getElementById('userFormUsername').value = '';
+          document.getElementById('userFormEmail').value = '';
+          document.getElementById('userFormPassword').value = '';
+          document.getElementById('pwdHint').textContent = '(default: 123456)';
+          document.getElementById('userFormLang').value = 'English';
+          document.getElementById('userFormLevel').value = 'Beginner';
+          document.getElementById('userFormPlan').value = 'Free';
+          document.getElementById('userFormRole').value = 'user';
+          document.getElementById('userFormDailyLimit').value = 5;
+          document.getElementById('userFormDailyLimit').disabled = false;
+          document.getElementById('userFormTurnsUsed').value = 0;
+          showModal('userModal');
+        }
+
+        function editUserModal(user) {
+          document.getElementById('userModalTitle').textContent = `Edit Profile: ${user.username}`;
+          document.getElementById('userFormId').value = user.id;
+          document.getElementById('userFormUsername').value = user.username;
+          document.getElementById('userFormEmail').value = user.email;
+          document.getElementById('userFormPassword').value = '';
+          document.getElementById('pwdHint').textContent = '(leave blank to keep unchanged)';
+          document.getElementById('userFormLang').value = user.target_language;
+          document.getElementById('userFormLevel').value = user.proficiency_level;
+          document.getElementById('userFormPlan').value = user.subscription_plan || 'Free';
+          document.getElementById('userFormRole').value = user.role || 'user';
+          document.getElementById('userFormDailyLimit').value = user.daily_turn_limit !== null && user.daily_turn_limit !== undefined ? user.daily_turn_limit : 5;
+          document.getElementById('userFormTurnsUsed').value = user.today_turns || 0;
+          togglePlanLimitField();
+          showModal('userModal');
+        }
+
+        async function saveUserForm() {
+          const id = document.getElementById('userFormId').value;
+          const username = document.getElementById('userFormUsername').value.trim();
+          const email = document.getElementById('userFormEmail').value.trim();
+          const password = document.getElementById('userFormPassword').value;
+          const target_language = document.getElementById('userFormLang').value;
+          const proficiency_level = document.getElementById('userFormLevel').value;
+          const subscription_plan = document.getElementById('userFormPlan').value;
+          const role = document.getElementById('userFormRole').value;
+          const daily_turn_limit = subscription_plan === 'VIP' ? null : parseInt(document.getElementById('userFormDailyLimit').value) || 5;
+          const daily_turns_used = parseInt(document.getElementById('userFormTurnsUsed').value) || 0;
+
+          if (!username && !email) {
+            showToast('Please enter a username or email', 'error');
+            return;
+          }
+
+          const payload = {
+            username,
+            email,
+            target_language,
+            proficiency_level,
+            subscription_plan,
+            role,
+            daily_turn_limit,
+            daily_turns_used
+          };
+          if (password) payload.password = password;
+
+          try {
+            const url = id ? `/api/admin/users/${id}/` : `/api/admin/users/create/`;
+            const method = id ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+              showToast(data.error || 'Failed to save learner profile', 'error');
+              return;
+            }
+
+            hideModal('userModal');
+            showToast(data.message || 'Learner saved successfully', 'success');
+            loadUsersData(1);
+            loadMetrics();
+          } catch (e) {
+            showToast('Error saving user: ' + e, 'error');
+          }
+        }
+
+        async function resetUserTurns(userId, username) {
+          if (!confirm(`Reset daily turn limit counter for "${username}"?`)) return;
+          try {
+            const res = await fetch(`/api/admin/users/${userId}/reset-turns/`, { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+              showToast(data.message, 'success');
+              loadUsersData(1);
+            } else {
+              showToast(data.error || 'Reset failed', 'error');
+            }
+          } catch (e) {
+            showToast('Error resetting turns', 'error');
+          }
+        }
+
+        async function deleteUser(userId, username) {
+          if (!confirm(`Permanently delete learner "${username}"? All associated sessions will be removed.`)) return;
+          try {
+            const res = await fetch(`/api/admin/users/${userId}/`, { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok) {
+              showToast(data.message, 'success');
+              loadUsersData(1);
+              loadMetrics();
+            } else {
+              showToast(data.error || 'Delete failed', 'error');
+            }
+          } catch (e) {
+            showToast('Error deleting user', 'error');
+          }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // 3. SCENARIOS STUDIO CRUD & AI SIMULATOR
+        // ─────────────────────────────────────────────────────────────────
+        function renderScenariosGrid(scenarios) {
+          const grid = document.getElementById('scenariosGrid');
+          if (!grid) return;
+          if (!scenarios || !scenarios.length) {
+            grid.innerHTML = `
           <div class="col-12 text-center py-5">
             <p class="text-dim">No practice scenarios configured.</p>
             <button class="btn btn-glow" onclick="seedScenariosTrigger()">Seed Default Scenarios</button>
           </div>
         `;
-        return;
-      }
+            return;
+          }
 
-      grid.innerHTML = scenarios.map(s => `
+          grid.innerHTML = scenarios.map(s => `
         <div class="col-12 col-md-6 col-xl-4">
           <div class="glass-card h-100 d-flex flex-column justify-content-between">
             <div>
@@ -2373,154 +2387,154 @@
           </div>
         </div>
       `).join('');
-    }
-
-    async function loadScenariosData() {
-      // 1. SWR Instant render from localStorage
-      try {
-        const cached = localStorage.getItem('linguist_admin_scenarios');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          renderScenariosGrid(parsed);
-        }
-      } catch (e) {}
-
-      // 2. Background fresh fetch
-      try {
-        const res = await fetch('/api/admin/scenarios/');
-        if (!res.ok) return;
-        const data = await res.json();
-        renderScenariosGrid(data.scenarios);
-        localStorage.setItem('linguist_admin_scenarios', JSON.stringify(data.scenarios));
-      } catch (e) {
-        console.error('Error loading scenarios:', e);
-      }
-    }
-
-    function openCreateScenarioModal() {
-      document.getElementById('scenarioModalTitle').textContent = 'Create Practice Scenario';
-      document.getElementById('scenarioFormId').value = '';
-      document.getElementById('scenarioFormTitle').value = '';
-      document.getElementById('scenarioFormEmoji').value = '💬';
-      document.getElementById('scenarioFormCategory').value = 'Daily Life';
-      document.getElementById('scenarioFormCefr').value = 'Beginner';
-      document.getElementById('scenarioFormLang').value = 'English';
-      document.getElementById('scenarioFormDesc').value = '';
-      document.getElementById('scenarioFormPrompt').value = 'You are a helpful and polite conversation partner.';
-      document.getElementById('scenarioTestResult').textContent = 'AI simulation test results will appear here.';
-      showModal('scenarioModal');
-    }
-
-    function openEditScenarioModal(s) {
-      document.getElementById('scenarioModalTitle').textContent = `Edit Scenario: ${s.title}`;
-      document.getElementById('scenarioFormId').value = s.id;
-      document.getElementById('scenarioFormTitle').value = s.title;
-      document.getElementById('scenarioFormEmoji').value = s.emoji || '💬';
-      document.getElementById('scenarioFormCategory').value = s.category || 'Daily Life';
-      document.getElementById('scenarioFormCefr').value = s.cefr || 'Beginner';
-      document.getElementById('scenarioFormLang').value = s.lang || 'English';
-      document.getElementById('scenarioFormDesc').value = s.description || '';
-      document.getElementById('scenarioFormPrompt').value = s.prompt || '';
-      document.getElementById('scenarioTestResult').textContent = 'AI simulation test results will appear here.';
-      showModal('scenarioModal');
-    }
-
-    async function saveScenarioForm() {
-      const id = document.getElementById('scenarioFormId').value;
-      const title = document.getElementById('scenarioFormTitle').value.trim();
-      if (!title) {
-        showToast('Scenario title is required', 'error');
-        return;
-      }
-
-      const payload = {
-        title,
-        emoji: document.getElementById('scenarioFormEmoji').value.trim() || '💬',
-        category: document.getElementById('scenarioFormCategory').value.trim(),
-        cefr: document.getElementById('scenarioFormCefr').value,
-        lang: document.getElementById('scenarioFormLang').value,
-        description: document.getElementById('scenarioFormDesc').value.trim(),
-        prompt: document.getElementById('scenarioFormPrompt').value.trim()
-      };
-
-      try {
-        const url = id ? `/api/admin/scenarios/${id}/` : `/api/admin/scenarios/`;
-        const method = id ? 'PUT' : 'POST';
-
-        const res = await fetch(url, {
-          method,
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          showToast(data.error || 'Failed to save scenario', 'error');
-          return;
         }
 
-        hideModal('scenarioModal');
-        showToast('Scenario saved successfully!', 'success');
-        loadScenariosData();
-        loadMetrics();
-      } catch (e) {
-        showToast('Error saving scenario: ' + e, 'error');
-      }
-    }
+        async function loadScenariosData() {
+          // 1. SWR Instant render from localStorage
+          try {
+            const cached = localStorage.getItem('linguist_admin_scenarios');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              renderScenariosGrid(parsed);
+            }
+          } catch (e) { }
 
-    async function deleteScenario(id, title) {
-      if (!confirm(`Delete scenario "${title}"?`)) return;
-      try {
-        const res = await fetch(`/api/admin/scenarios/${id}/`, { method: 'DELETE' });
-        const data = await res.json();
-        if (res.ok) {
-          showToast(data.message, 'success');
-          loadScenariosData();
-          loadMetrics();
-        } else {
-          showToast(data.error || 'Delete failed', 'error');
+          // 2. Background fresh fetch
+          try {
+            const res = await fetch('/api/admin/scenarios/');
+            if (!res.ok) return;
+            const data = await res.json();
+            renderScenariosGrid(data.scenarios);
+            localStorage.setItem('linguist_admin_scenarios', JSON.stringify(data.scenarios));
+          } catch (e) {
+            console.error('Error loading scenarios:', e);
+          }
         }
-      } catch (e) {
-        showToast('Error deleting scenario', 'error');
-      }
-    }
 
-    async function seedScenariosTrigger() {
-      try {
-        showToast('Seeding default scenarios...', 'info');
-        const res = await fetch('/api/admin/scenarios/seed/', { method: 'POST' });
-        const data = await res.json();
-        if (res.ok) {
-          showToast(data.message, 'success');
-          loadScenariosData();
-          loadMetrics();
-        } else {
-          showToast(data.error || 'Seeding failed', 'error');
+        function openCreateScenarioModal() {
+          document.getElementById('scenarioModalTitle').textContent = 'Create Practice Scenario';
+          document.getElementById('scenarioFormId').value = '';
+          document.getElementById('scenarioFormTitle').value = '';
+          document.getElementById('scenarioFormEmoji').value = '💬';
+          document.getElementById('scenarioFormCategory').value = 'Daily Life';
+          document.getElementById('scenarioFormCefr').value = 'Beginner';
+          document.getElementById('scenarioFormLang').value = 'English';
+          document.getElementById('scenarioFormDesc').value = '';
+          document.getElementById('scenarioFormPrompt').value = 'You are a helpful and polite conversation partner.';
+          document.getElementById('scenarioTestResult').textContent = 'AI simulation test results will appear here.';
+          showModal('scenarioModal');
         }
-      } catch (e) {
-        showToast('Error triggering scenario seed', 'error');
-      }
-    }
 
-    async function testScenarioPromptLive() {
-      const prompt = document.getElementById('scenarioFormPrompt').value.trim() || 'You are a friendly conversation partner.';
-      const userMsg = document.getElementById('scenarioTestInput').value.trim() || 'Hello! What do you recommend?';
-      const cefr = document.getElementById('scenarioFormCefr').value || 'Beginner';
-      const lang = document.getElementById('scenarioFormLang').value || 'English';
-      const resultBox = document.getElementById('scenarioTestResult');
+        function openEditScenarioModal(s) {
+          document.getElementById('scenarioModalTitle').textContent = `Edit Scenario: ${s.title}`;
+          document.getElementById('scenarioFormId').value = s.id;
+          document.getElementById('scenarioFormTitle').value = s.title;
+          document.getElementById('scenarioFormEmoji').value = s.emoji || '💬';
+          document.getElementById('scenarioFormCategory').value = s.category || 'Daily Life';
+          document.getElementById('scenarioFormCefr').value = s.cefr || 'Beginner';
+          document.getElementById('scenarioFormLang').value = s.lang || 'English';
+          document.getElementById('scenarioFormDesc').value = s.description || '';
+          document.getElementById('scenarioFormPrompt').value = s.prompt || '';
+          document.getElementById('scenarioTestResult').textContent = 'AI simulation test results will appear here.';
+          showModal('scenarioModal');
+        }
 
-      resultBox.innerHTML = '<span class="spinner-border spinner-border-sm me-2 text-primary"></span>Simulating AI Persona response in <strong>' + lang + '</strong> (' + cefr + ')...';
+        async function saveScenarioForm() {
+          const id = document.getElementById('scenarioFormId').value;
+          const title = document.getElementById('scenarioFormTitle').value.trim();
+          if (!title) {
+            showToast('Scenario title is required', 'error');
+            return;
+          }
 
-      try {
-        const res = await fetch('/api/admin/scenarios/test-prompt/', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, user_message: userMsg, cefr, lang })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          const fb = data.feedback || {};
-          resultBox.innerHTML = `
+          const payload = {
+            title,
+            emoji: document.getElementById('scenarioFormEmoji').value.trim() || '💬',
+            category: document.getElementById('scenarioFormCategory').value.trim(),
+            cefr: document.getElementById('scenarioFormCefr').value,
+            lang: document.getElementById('scenarioFormLang').value,
+            description: document.getElementById('scenarioFormDesc').value.trim(),
+            prompt: document.getElementById('scenarioFormPrompt').value.trim()
+          };
+
+          try {
+            const url = id ? `/api/admin/scenarios/${id}/` : `/api/admin/scenarios/`;
+            const method = id ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+              showToast(data.error || 'Failed to save scenario', 'error');
+              return;
+            }
+
+            hideModal('scenarioModal');
+            showToast('Scenario saved successfully!', 'success');
+            loadScenariosData();
+            loadMetrics();
+          } catch (e) {
+            showToast('Error saving scenario: ' + e, 'error');
+          }
+        }
+
+        async function deleteScenario(id, title) {
+          if (!confirm(`Delete scenario "${title}"?`)) return;
+          try {
+            const res = await fetch(`/api/admin/scenarios/${id}/`, { method: 'DELETE' });
+            const data = await res.json();
+            if (res.ok) {
+              showToast(data.message, 'success');
+              loadScenariosData();
+              loadMetrics();
+            } else {
+              showToast(data.error || 'Delete failed', 'error');
+            }
+          } catch (e) {
+            showToast('Error deleting scenario', 'error');
+          }
+        }
+
+        async function seedScenariosTrigger() {
+          try {
+            showToast('Seeding default scenarios...', 'info');
+            const res = await fetch('/api/admin/scenarios/seed/', { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+              showToast(data.message, 'success');
+              loadScenariosData();
+              loadMetrics();
+            } else {
+              showToast(data.error || 'Seeding failed', 'error');
+            }
+          } catch (e) {
+            showToast('Error triggering scenario seed', 'error');
+          }
+        }
+
+        async function testScenarioPromptLive() {
+          const prompt = document.getElementById('scenarioFormPrompt').value.trim() || 'You are a friendly conversation partner.';
+          const userMsg = document.getElementById('scenarioTestInput').value.trim() || 'Hello! What do you recommend?';
+          const cefr = document.getElementById('scenarioFormCefr').value || 'Beginner';
+          const lang = document.getElementById('scenarioFormLang').value || 'English';
+          const resultBox = document.getElementById('scenarioTestResult');
+
+          resultBox.innerHTML = '<span class="spinner-border spinner-border-sm me-2 text-primary"></span>Simulating AI Persona response in <strong>' + lang + '</strong> (' + cefr + ')...';
+
+          try {
+            const res = await fetch('/api/admin/scenarios/test-prompt/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt, user_message: userMsg, cefr, lang })
+            });
+            const data = await res.json();
+            if (res.ok) {
+              const fb = data.feedback || {};
+              resultBox.innerHTML = `
             <div class="d-flex align-items-center justify-content-between mb-2">
               <span class="text-primary fw-bold small"><i class="bi bi-robot me-1"></i>AI Persona (${data.target_language || lang}):</span>
               <span class="status-badge badge-lang">${data.target_language || lang} • ${data.cefr || cefr}</span>
@@ -2537,32 +2551,32 @@
             </div>
             ${fb.comments ? `<div class="text-dim small mt-1"><em>${fb.comments}</em></div>` : ''}
           `;
-        } else {
-          resultBox.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error: ${data.error || 'AI simulation failed'}</span>`;
-        }
-      } catch (e) {
-        resultBox.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error: ${e}</span>`;
-      }
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // 4. SESSIONS & CONVERSATION INSPECTOR
-    // ─────────────────────────────────────────────────────────────────
-    async function loadSessionsData(page = 1) {
-      try {
-        const res = await fetch(`/api/admin/sessions/?page=${page}`);
-        if (!res.ok) return;
-        const data = await res.json();
-
-        const tbody = document.getElementById('sessionsTableBody');
-        if (!data.sessions.length) {
-          tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-5">No learning sessions recorded yet</td></tr>';
-          document.getElementById('sessionPaginationInfo').textContent = '0 sessions';
-          document.getElementById('sessionPaginationButtons').innerHTML = '';
-          return;
+            } else {
+              resultBox.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error: ${data.error || 'AI simulation failed'}</span>`;
+            }
+          } catch (e) {
+            resultBox.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error: ${e}</span>`;
+          }
         }
 
-        tbody.innerHTML = data.sessions.map(s => `
+        // ─────────────────────────────────────────────────────────────────
+        // 4. SESSIONS & CONVERSATION INSPECTOR
+        // ─────────────────────────────────────────────────────────────────
+        async function loadSessionsData(page = 1) {
+          try {
+            const res = await fetch(`/api/admin/sessions/?page=${page}`);
+            if (!res.ok) return;
+            const data = await res.json();
+
+            const tbody = document.getElementById('sessionsTableBody');
+            if (!data.sessions.length) {
+              tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-5">No learning sessions recorded yet</td></tr>';
+              document.getElementById('sessionPaginationInfo').textContent = '0 sessions';
+              document.getElementById('sessionPaginationButtons').innerHTML = '';
+              return;
+            }
+
+            tbody.innerHTML = data.sessions.map(s => `
           <tr>
             <td><code class="text-primary font-mono">${s.id.slice(0, 8)}...</code></td>
             <td>
@@ -2585,31 +2599,31 @@
           </tr>
         `).join('');
 
-        document.getElementById('sessionPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total sessions)`;
-        renderPaginationButtons('sessionPaginationButtons', data.page, data.total_pages, loadSessionsData);
-      } catch (e) {
-        console.error('Error loading sessions:', e);
-      }
-    }
+            document.getElementById('sessionPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total sessions)`;
+            renderPaginationButtons('sessionPaginationButtons', data.page, data.total_pages, loadSessionsData);
+          } catch (e) {
+            console.error('Error loading sessions:', e);
+          }
+        }
 
-    async function inspectSession(sessionId) {
-      try {
-        const res = await fetch(`/api/admin/sessions/${sessionId}/`);
-        if (!res.ok) return;
-        const data = await res.json();
+        async function inspectSession(sessionId) {
+          try {
+            const res = await fetch(`/api/admin/sessions/${sessionId}/`);
+            if (!res.ok) return;
+            const data = await res.json();
 
-        document.getElementById('sessionInspectorTitle').textContent = `Session: ${data.session.scenario_title}`;
-        document.getElementById('sessionInspectorSubtitle').textContent = `Learner: ${data.session.user_name} (${data.session.user_email}) • ${data.session.total_turns} Turns • Score: ${data.session.overall_score || 0}%`;
+            document.getElementById('sessionInspectorTitle').textContent = `Session: ${data.session.scenario_title}`;
+            document.getElementById('sessionInspectorSubtitle').textContent = `Learner: ${data.session.user_name} (${data.session.user_email}) • ${data.session.total_turns} Turns • Score: ${data.session.overall_score || 0}%`;
 
-        const container = document.getElementById('sessionInspectorTurns');
-        if (!data.turns.length) {
-          container.innerHTML = '<div class="text-center text-dim py-4">No interaction turns logged in this session.</div>';
-        } else {
-          container.innerHTML = data.turns.map(t => {
-            let feedbackHtml = '';
-            if (t.detailed_feedback) {
-              const fb = t.detailed_feedback;
-              feedbackHtml = `
+            const container = document.getElementById('sessionInspectorTurns');
+            if (!data.turns.length) {
+              container.innerHTML = '<div class="text-center text-dim py-4">No interaction turns logged in this session.</div>';
+            } else {
+              container.innerHTML = data.turns.map(t => {
+                let feedbackHtml = '';
+                if (t.detailed_feedback) {
+                  const fb = t.detailed_feedback;
+                  feedbackHtml = `
                 <div class="mt-2 p-2 rounded small" style="background: var(--bg-base); border: 1px solid var(--border-subtle);">
                   <div class="d-flex gap-2 mb-1">
                     <span class="status-badge badge-vip font-mono">Grammar: ${fb.grammar_score || 0}%</span>
@@ -2624,9 +2638,9 @@
                   ` : ''}
                 </div>
               `;
-            }
+                }
 
-            return `
+                return `
               <div class="turn-card">
                 <div class="d-flex justify-content-between mb-2">
                   <span class="turn-speaker text-primary"><i class="bi bi-person me-1"></i>Learner Turn #${t.turn_number}</span>
@@ -2650,36 +2664,36 @@
                 ${feedbackHtml}
               </div>
             `;
-          }).join('');
+              }).join('');
+            }
+
+            showModal('sessionModal');
+          } catch (e) {
+            showToast('Error loading session details: ' + e, 'error');
+          }
         }
 
-        showModal('sessionModal');
-      } catch (e) {
-        showToast('Error loading session details: ' + e, 'error');
-      }
-    }
+        // ─────────────────────────────────────────────────────────────────
+        // 5. FLASHCARDS & VOCABULARY
+        // ─────────────────────────────────────────────────────────────────
+        async function loadFlashcardsData() {
+          try {
+            const res = await fetch('/api/admin/flashcards/');
+            if (!res.ok) return;
+            const data = await res.json();
 
-    // ─────────────────────────────────────────────────────────────────
-    // 5. FLASHCARDS & VOCABULARY
-    // ─────────────────────────────────────────────────────────────────
-    async function loadFlashcardsData() {
-      try {
-        const res = await fetch('/api/admin/flashcards/');
-        if (!res.ok) return;
-        const data = await res.json();
+            document.getElementById('fcTotalCards').textContent = data.total_cards;
+            document.getElementById('fcDueCards').textContent = data.due_cards;
+            document.getElementById('fcAvgEase').textContent = data.avg_ease_factor;
+            document.getElementById('fcAvgReps').textContent = data.avg_repetitions;
 
-        document.getElementById('fcTotalCards').textContent = data.total_cards;
-        document.getElementById('fcDueCards').textContent = data.due_cards;
-        document.getElementById('fcAvgEase').textContent = data.avg_ease_factor;
-        document.getElementById('fcAvgReps').textContent = data.avg_repetitions;
+            const tbody = document.getElementById('flashcardsTableBody');
+            if (!data.recent_cards.length) {
+              tbody.innerHTML = '<tr><td colspan="8" class="text-center text-dim py-5">No vocabulary cards in database</td></tr>';
+              return;
+            }
 
-        const tbody = document.getElementById('flashcardsTableBody');
-        if (!data.recent_cards.length) {
-          tbody.innerHTML = '<tr><td colspan="8" class="text-center text-dim py-5">No vocabulary cards in database</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = data.recent_cards.map(c => `
+            tbody.innerHTML = data.recent_cards.map(c => `
           <tr>
             <td><span class="fw-bold text-main">${c.word}</span></td>
             <td><span class="text-dim">${c.translation || '-'}</span></td>
@@ -2691,51 +2705,51 @@
             <td><small class="text-dim font-mono">${c.next_review ? new Date(c.next_review).toLocaleDateString() : '-'}</small></td>
           </tr>
         `).join('');
-      } catch (e) {
-        console.error('Error loading flashcards:', e);
-      }
-    }
-
-    // ─────────────────────────────────────────────────────────────────
-    // 6. SYSTEM HEALTH & MAINTENANCE
-    // ─────────────────────────────────────────────────────────────────
-    async function loadMaintenanceData() {
-      try {
-        const res = await fetch('/api/admin/system-health/');
-        if (!res.ok) return;
-        const data = await res.json();
-
-        document.getElementById('maintAudioFilesCount').textContent = data.storage.total_files;
-        document.getElementById('maintAudioMb').textContent = data.storage.size_mb;
-        document.getElementById('maintMediaPath').textContent = data.storage.media_path;
-      } catch (e) {
-        console.error('Error loading system health:', e);
-      }
-    }
-
-    async function runAudioCleanup() {
-      const btn = document.getElementById('btnAudioCleanup');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Running Garbage Collection...';
-
-      try {
-        const res = await fetch('/api/admin/system/cleanup-audio/', { method: 'POST' });
-        const data = await res.json();
-        if (res.ok) {
-          showToast(data.message || 'Cleanup completed', 'success');
-          loadMaintenanceData();
-          loadMetrics();
-        } else {
-          showToast(data.error || 'Cleanup failed', 'error');
+          } catch (e) {
+            console.error('Error loading flashcards:', e);
+          }
         }
-      } catch (e) {
-        showToast('Error triggering audio cleanup: ' + e, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="bi bi-trash3-fill me-1 text-danger"></i>Run Audio GC (30d+ Cleanup)';
-      }
-    }
-  </script>
+
+        // ─────────────────────────────────────────────────────────────────
+        // 6. SYSTEM HEALTH & MAINTENANCE
+        // ─────────────────────────────────────────────────────────────────
+        async function loadMaintenanceData() {
+          try {
+            const res = await fetch('/api/admin/system-health/');
+            if (!res.ok) return;
+            const data = await res.json();
+
+            document.getElementById('maintAudioFilesCount').textContent = data.storage.total_files;
+            document.getElementById('maintAudioMb').textContent = data.storage.size_mb;
+            document.getElementById('maintMediaPath').textContent = data.storage.media_path;
+          } catch (e) {
+            console.error('Error loading system health:', e);
+          }
+        }
+
+        async function runAudioCleanup() {
+          const btn = document.getElementById('btnAudioCleanup');
+          btn.disabled = true;
+          btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Running Garbage Collection...';
+
+          try {
+            const res = await fetch('/api/admin/system/cleanup-audio/', { method: 'POST' });
+            const data = await res.json();
+            if (res.ok) {
+              showToast(data.message || 'Cleanup completed', 'success');
+              loadMaintenanceData();
+              loadMetrics();
+            } else {
+              showToast(data.error || 'Cleanup failed', 'error');
+            }
+          } catch (e) {
+            showToast('Error triggering audio cleanup: ' + e, 'error');
+          } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="bi bi-trash3-fill me-1 text-danger"></i>Run Audio GC (30d+ Cleanup)';
+          }
+        }
+      </script>
 </body>
 
 </html>
