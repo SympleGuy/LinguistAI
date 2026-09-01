@@ -504,7 +504,16 @@ class AdminUsersApiView(AdminRequiredMixin, View):
         total = qs.count()
         start = (page - 1) * limit
         end = start + limit
-        users_page = qs[start:end]
+        users_page = list(qs[start:end])
+
+        # Single Batched Query for all user session counts
+        user_ids = [u.id for u in users_page]
+        session_counts_map = {
+            item['user_id']: item['c']
+            for item in LearningSession.objects.filter(user_id__in=user_ids)
+            .values('user_id')
+            .annotate(c=Count('id'))
+        }
 
         today = timezone.now().date()
         users_data = []
@@ -515,7 +524,7 @@ class AdminUsersApiView(AdminRequiredMixin, View):
             if u.last_turn_reset_date != today:
                 turns_used = 0
 
-            sessions_count = LearningSession.objects.filter(user_id=u.id).count()
+            sessions_count = session_counts_map.get(u.id, 0)
             plan_str = (u.subscription_plan or "Free").strip()
             is_vip = plan_str.upper() in ("VIP", "PRO")
             limit_val = None if is_vip else (u.daily_turn_limit if u.daily_turn_limit is not None else 5)
@@ -921,20 +930,27 @@ class AdminSessionsApiView(AdminRequiredMixin, View):
 
         start = (page - 1) * limit
         end = start + limit
-        sessions_page = qs[start:end]
+        sessions_page = list(qs[start:end])
 
-        # Batch lookup users and scenarios
+        # Batch lookup users, scenarios, and interaction log turn counts
         user_ids = [s.user_id for s in sessions_page if s.user_id]
         scenario_ids = [s.scenario_id for s in sessions_page if s.scenario_id]
+        session_ids = [s.id for s in sessions_page]
 
         users_map = {u.id: u for u in AppUser.objects.filter(id__in=user_ids)}
         scenarios_map = {sc.id: sc for sc in Scenario.objects.filter(id__in=scenario_ids)}
+        turns_map = {
+            item['session_id']: item['c']
+            for item in InteractionLog.objects.filter(session_id__in=session_ids)
+            .values('session_id')
+            .annotate(c=Count('id'))
+        }
 
         data = []
         for s in sessions_page:
             u = users_map.get(s.user_id)
             sc = scenarios_map.get(s.scenario_id)
-            turns_count = InteractionLog.objects.filter(session_id=s.id).count()
+            turns_count = turns_map.get(s.id, 0)
             data.append({
                 "id": str(s.id),
                 "user_name": u.username if u else "Anonymous",
@@ -999,11 +1015,14 @@ class AdminSessionDetailApiView(AdminRequiredMixin, View):
 class AdminFlashcardsApiView(AdminRequiredMixin, View):
     """GET /api/admin/flashcards/"""
     def get(self, request):
-        now = timezone.now()
-        total_cards = VocabularyCard.objects.count()
-        due_cards = VocabularyCard.objects.filter(next_review__lte=now).count()
+        cached = get_cached("flashcards_summary", ttl_seconds=30)
+        if cached:
+            return JsonResponse(cached)
 
+        now = timezone.now()
         agg = VocabularyCard.objects.aggregate(
+            total_cards=Count('id'),
+            due_cards=Count('id', filter=Q(next_review__lte=now)),
             avg_ease=Avg('ease_factor'),
             avg_reps=Avg('repetitions')
         )
@@ -1031,13 +1050,16 @@ class AdminFlashcardsApiView(AdminRequiredMixin, View):
                 "next_review": c['next_review'].isoformat() if c['next_review'] else None
             })
 
-        return JsonResponse({
-            "total_cards": total_cards,
-            "due_cards": due_cards,
+        response_data = {
+            "total_cards": agg['total_cards'] or 0,
+            "due_cards": agg['due_cards'] or 0,
             "avg_ease_factor": round(agg['avg_ease'] or 2.5, 2),
             "avg_repetitions": round(agg['avg_reps'] or 0.0, 1),
             "recent_cards": cards_data
-        })
+        }
+
+        set_cached("flashcards_summary", response_data, ttl_seconds=30)
+        return JsonResponse(response_data)
 
 
 # ─────────────────────────────────────────────────────────────────────────────

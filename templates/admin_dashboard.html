@@ -2064,6 +2064,69 @@
     function debounceUserSearch() {
       clearTimeout(userSearchTimeout);
       userSearchTimeout = setTimeout(() => loadUsersData(1), 300);
+    function renderUsersTable(data) {
+      const tbody = document.getElementById('usersTableBody');
+      if (!tbody) return;
+      if (!data.users || !data.users.length) {
+        tbody.innerHTML = '<tr><td colspan="9" class="text-center text-dim py-5">No learners found matching filters</td></tr>';
+        document.getElementById('userPaginationInfo').textContent = '0 users';
+        document.getElementById('userPaginationButtons').innerHTML = '';
+        return;
+      }
+
+      tbody.innerHTML = data.users.map(u => {
+        const isVip = (u.subscription_plan || '').toUpperCase() === 'VIP';
+        const turnBadge = isVip
+          ? `<span class="status-badge badge-vip">Unlimited</span>`
+          : `<span class="badge ${u.today_turns >= (u.daily_turn_limit || 5) ? 'bg-danger' : 'bg-secondary'} font-mono">${u.today_turns} / ${u.daily_turn_limit || 5}</span>`;
+
+        const resetActionBtn = isVip
+          ? ''
+          : `<button class="btn btn-subtle p-1 px-2 text-warning" title="Reset Today's Turn Limit to 0" onclick="resetUserTurns('${u.id}', '${u.username}')">
+               <i class="bi bi-arrow-counterclockwise"></i>
+             </button>`;
+
+        return `
+        <tr>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <div class="rounded-circle bg-primary bg-opacity-25 text-primary d-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 0.82rem;">
+                ${(u.username || 'U')[0].toUpperCase()}
+              </div>
+              <div>
+                <div class="fw-bold">${u.username || 'Anonymous'}</div>
+                <small class="text-dim font-mono" style="font-size: 0.75rem;">${u.email || u.id.slice(0, 8)}</small>
+              </div>
+            </div>
+          </td>
+          <td>
+            <span class="status-badge ${u.role === 'admin' ? 'badge-admin' : 'badge-free'}">
+              ${u.role === 'admin' ? 'ADMIN' : 'LEARNER'}
+            </span>
+          </td>
+          <td><span class="status-badge badge-lang">${u.target_language}</span></td>
+          <td><span class="status-badge badge-cefr">${u.proficiency_level}</span></td>
+          <td><span class="status-badge ${isVip ? 'badge-vip' : 'badge-free'}">${u.subscription_plan || 'Free'}</span></td>
+          <td><span class="fw-bold font-mono">${u.sessions_count}</span></td>
+          <td>${turnBadge}</td>
+          <td><small class="text-dim font-mono">${u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</small></td>
+          <td class="text-end">
+            <div class="btn-group btn-group-sm">
+              <button class="btn btn-subtle p-1 px-2" title="Edit Profile, Role, Plan & Limits" onclick='editUserModal(${JSON.stringify(u)})'>
+                <i class="bi bi-pencil"></i>
+              </button>
+              ${resetActionBtn}
+              <button class="btn btn-subtle p-1 px-2 text-danger" title="Delete User" onclick="deleteUser('${u.id}', '${u.username}')">
+                <i class="bi bi-trash"></i>
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+      }).join('');
+
+      document.getElementById('userPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total learners)`;
+      renderPaginationButtons('userPaginationButtons', data.page, data.total_pages, loadUsersData);
     }
 
     async function loadUsersData(page = 1) {
@@ -2072,72 +2135,25 @@
       const role = document.getElementById('userRoleFilter').value;
       const lang = document.getElementById('userLangFilter').value;
 
+      // 1. SWR Instant render if default page 1
+      if (page === 1 && !q && plan === 'all' && role === 'all' && lang === 'all') {
+        try {
+          const cached = localStorage.getItem('linguist_admin_users');
+          if (cached) {
+            renderUsersTable(JSON.parse(cached));
+          }
+        } catch (e) {}
+      }
+
+      // 2. Fresh background fetch
       try {
         const res = await fetch(`/api/admin/users/?page=${page}&q=${encodeURIComponent(q)}&plan=${plan}&role=${role}&lang=${lang}`);
         if (!res.ok) return;
         const data = await res.json();
-
-        const tbody = document.getElementById('usersTableBody');
-        if (!data.users.length) {
-          tbody.innerHTML = '<tr><td colspan="9" class="text-center text-dim py-5">No learners found matching filters</td></tr>';
-          document.getElementById('userPaginationInfo').textContent = '0 users';
-          document.getElementById('userPaginationButtons').innerHTML = '';
-          return;
+        renderUsersTable(data);
+        if (page === 1 && !q && plan === 'all' && role === 'all' && lang === 'all') {
+          localStorage.setItem('linguist_admin_users', JSON.stringify(data));
         }
-
-        tbody.innerHTML = data.users.map(u => {
-          const isVip = (u.subscription_plan || '').toUpperCase() === 'VIP';
-          const turnBadge = isVip
-            ? `<span class="status-badge badge-vip">Unlimited</span>`
-            : `<span class="badge ${u.today_turns >= (u.daily_turn_limit || 5) ? 'bg-danger' : 'bg-secondary'} font-mono">${u.today_turns} / ${u.daily_turn_limit || 5}</span>`;
-
-          const resetActionBtn = isVip
-            ? ''
-            : `<button class="btn btn-subtle p-1 px-2 text-warning" title="Reset Today's Turn Limit to 0" onclick="resetUserTurns('${u.id}', '${u.username}')">
-                 <i class="bi bi-arrow-counterclockwise"></i>
-               </button>`;
-
-          return `
-          <tr>
-            <td>
-              <div class="d-flex align-items-center gap-2">
-                <div class="rounded-circle bg-primary bg-opacity-25 text-primary d-flex align-items-center justify-content-center fw-bold" style="width: 34px; height: 34px; font-size: 0.82rem;">
-                  ${(u.username || 'U')[0].toUpperCase()}
-                </div>
-                <div>
-                  <div class="fw-bold">${u.username || 'Anonymous'}</div>
-                  <small class="text-dim font-mono" style="font-size: 0.75rem;">${u.email || u.id.slice(0, 8)}</small>
-                </div>
-              </div>
-            </td>
-            <td>
-              <span class="status-badge ${u.role === 'admin' ? 'badge-admin' : 'badge-free'}">
-                ${u.role === 'admin' ? 'ADMIN' : 'LEARNER'}
-              </span>
-            </td>
-            <td><span class="status-badge badge-lang">${u.target_language}</span></td>
-            <td><span class="status-badge badge-cefr">${u.proficiency_level}</span></td>
-            <td><span class="status-badge ${isVip ? 'badge-vip' : 'badge-free'}">${u.subscription_plan || 'Free'}</span></td>
-            <td><span class="fw-bold font-mono">${u.sessions_count}</span></td>
-            <td>${turnBadge}</td>
-            <td><small class="text-dim font-mono">${u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</small></td>
-            <td class="text-end">
-              <div class="btn-group btn-group-sm">
-                <button class="btn btn-subtle p-1 px-2" title="Edit Profile, Role, Plan & Limits" onclick='editUserModal(${JSON.stringify(u)})'>
-                  <i class="bi bi-pencil"></i>
-                </button>
-                ${resetActionBtn}
-                <button class="btn btn-subtle p-1 px-2 text-danger" title="Delete User" onclick="deleteUser('${u.id}', '${u.username}')">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </div>
-            </td>
-          </tr>
-        `;
-        }).join('');
-
-        document.getElementById('userPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total learners)`;
-        renderPaginationButtons('userPaginationButtons', data.page, data.total_pages, loadUsersData);
       } catch (e) {
         console.error('Error loading users:', e);
       }
@@ -2507,45 +2523,61 @@
     // ─────────────────────────────────────────────────────────────────
     // 4. SESSIONS & CONVERSATION INSPECTOR
     // ─────────────────────────────────────────────────────────────────
+    function renderSessionsTable(data) {
+      const tbody = document.getElementById('sessionsTableBody');
+      if (!tbody) return;
+      if (!data.sessions || !data.sessions.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-5">No learning sessions recorded yet</td></tr>';
+        document.getElementById('sessionPaginationInfo').textContent = '0 sessions';
+        document.getElementById('sessionPaginationButtons').innerHTML = '';
+        return;
+      }
+
+      tbody.innerHTML = data.sessions.map(s => `
+        <tr>
+          <td><code class="text-primary font-mono">${s.id.slice(0, 8)}...</code></td>
+          <td>
+            <div class="fw-bold">${s.user_name}</div>
+            <small class="text-dim font-mono" style="font-size: 0.75rem;">${s.user_email}</small>
+          </td>
+          <td><span class="fw-bold">${s.scenario_title}</span></td>
+          <td>
+            <span class="status-badge ${s.overall_score >= 80 ? 'badge-vip' : (s.overall_score >= 60 ? 'badge-free' : 'bg-danger text-white')} font-mono">
+              ${s.overall_score ? s.overall_score.toFixed(1) + '%' : '-'}
+            </span>
+          </td>
+          <td><span class="badge bg-secondary text-white font-mono">${s.turns_count} turns</span></td>
+          <td><small class="text-dim font-mono">${s.started_at ? new Date(s.started_at).toLocaleString() : '-'}</small></td>
+          <td class="text-end">
+            <button class="btn btn-sm btn-subtle" onclick="inspectSession('${s.id}')">
+              <i class="bi bi-search me-1"></i>Inspect Replay
+            </button>
+          </td>
+        </tr>
+      `).join('');
+
+      document.getElementById('sessionPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total sessions)`;
+      renderPaginationButtons('sessionPaginationButtons', data.page, data.total_pages, loadSessionsData);
+    }
+
     async function loadSessionsData(page = 1) {
+      // 1. SWR Instant render
+      if (page === 1) {
+        try {
+          const cached = localStorage.getItem('linguist_admin_sessions');
+          if (cached) renderSessionsTable(JSON.parse(cached));
+        } catch (e) {}
+      }
+
+      // 2. Fresh background fetch
       try {
         const res = await fetch(`/api/admin/sessions/?page=${page}`);
         if (!res.ok) return;
         const data = await res.json();
-
-        const tbody = document.getElementById('sessionsTableBody');
-        if (!data.sessions.length) {
-          tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-5">No learning sessions recorded yet</td></tr>';
-          document.getElementById('sessionPaginationInfo').textContent = '0 sessions';
-          document.getElementById('sessionPaginationButtons').innerHTML = '';
-          return;
+        renderSessionsTable(data);
+        if (page === 1) {
+          localStorage.setItem('linguist_admin_sessions', JSON.stringify(data));
         }
-
-        tbody.innerHTML = data.sessions.map(s => `
-          <tr>
-            <td><code class="text-primary font-mono">${s.id.slice(0, 8)}...</code></td>
-            <td>
-              <div class="fw-bold">${s.user_name}</div>
-              <small class="text-dim font-mono" style="font-size: 0.75rem;">${s.user_email}</small>
-            </td>
-            <td><span class="fw-bold">${s.scenario_title}</span></td>
-            <td>
-              <span class="status-badge ${s.overall_score >= 80 ? 'badge-vip' : (s.overall_score >= 60 ? 'badge-free' : 'bg-danger text-white')} font-mono">
-                ${s.overall_score ? s.overall_score.toFixed(1) + '%' : '-'}
-              </span>
-            </td>
-            <td><span class="badge bg-secondary text-white font-mono">${s.turns_count} turns</span></td>
-            <td><small class="text-dim font-mono">${s.started_at ? new Date(s.started_at).toLocaleString() : '-'}</small></td>
-            <td class="text-end">
-              <button class="btn btn-sm btn-subtle" onclick="inspectSession('${s.id}')">
-                <i class="bi bi-search me-1"></i>Inspect Replay
-              </button>
-            </td>
-          </tr>
-        `).join('');
-
-        document.getElementById('sessionPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total sessions)`;
-        renderPaginationButtons('sessionPaginationButtons', data.page, data.total_pages, loadSessionsData);
       } catch (e) {
         console.error('Error loading sessions:', e);
       }
@@ -2621,35 +2653,47 @@
     // ─────────────────────────────────────────────────────────────────
     // 5. FLASHCARDS & VOCABULARY
     // ─────────────────────────────────────────────────────────────────
+    function renderFlashcardsUI(data) {
+      document.getElementById('fcTotalCards').textContent = data.total_cards;
+      document.getElementById('fcDueCards').textContent = data.due_cards;
+      document.getElementById('fcAvgEase').textContent = data.avg_ease_factor;
+      document.getElementById('fcAvgReps').textContent = data.avg_repetitions;
+
+      const tbody = document.getElementById('flashcardsTableBody');
+      if (!tbody) return;
+      if (!data.recent_cards || !data.recent_cards.length) {
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-dim py-5">No vocabulary cards in database</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = data.recent_cards.map(c => `
+        <tr>
+          <td><span class="fw-bold text-main">${c.word}</span></td>
+          <td><span class="text-dim">${c.translation || '-'}</span></td>
+          <td><span class="status-badge badge-lang">${c.language}</span></td>
+          <td><small class="text-dim font-mono">${c.user_email}</small></td>
+          <td><span class="badge bg-secondary font-mono">${c.repetitions}</span></td>
+          <td class="font-mono">${c.interval} d</td>
+          <td><span class="status-badge badge-cefr font-mono">${c.ease_factor}</span></td>
+          <td><small class="text-dim font-mono">${c.next_review ? new Date(c.next_review).toLocaleDateString() : '-'}</small></td>
+        </tr>
+      `).join('');
+    }
+
     async function loadFlashcardsData() {
+      // 1. SWR Instant render
+      try {
+        const cached = localStorage.getItem('linguist_admin_flashcards');
+        if (cached) renderFlashcardsUI(JSON.parse(cached));
+      } catch (e) {}
+
+      // 2. Fresh background fetch
       try {
         const res = await fetch('/api/admin/flashcards/');
         if (!res.ok) return;
         const data = await res.json();
-
-        document.getElementById('fcTotalCards').textContent = data.total_cards;
-        document.getElementById('fcDueCards').textContent = data.due_cards;
-        document.getElementById('fcAvgEase').textContent = data.avg_ease_factor;
-        document.getElementById('fcAvgReps').textContent = data.avg_repetitions;
-
-        const tbody = document.getElementById('flashcardsTableBody');
-        if (!data.recent_cards.length) {
-          tbody.innerHTML = '<tr><td colspan="8" class="text-center text-dim py-5">No vocabulary cards in database</td></tr>';
-          return;
-        }
-
-        tbody.innerHTML = data.recent_cards.map(c => `
-          <tr>
-            <td><span class="fw-bold text-main">${c.word}</span></td>
-            <td><span class="text-dim">${c.translation || '-'}</span></td>
-            <td><span class="status-badge badge-lang">${c.language}</span></td>
-            <td><small class="text-dim font-mono">${c.user_email}</small></td>
-            <td><span class="badge bg-secondary font-mono">${c.repetitions}</span></td>
-            <td class="font-mono">${c.interval} d</td>
-            <td><span class="status-badge badge-cefr font-mono">${c.ease_factor}</span></td>
-            <td><small class="text-dim font-mono">${c.next_review ? new Date(c.next_review).toLocaleDateString() : '-'}</small></td>
-          </tr>
-        `).join('');
+        renderFlashcardsUI(data);
+        localStorage.setItem('linguist_admin_flashcards', JSON.stringify(data));
       } catch (e) {
         console.error('Error loading flashcards:', e);
       }
@@ -2658,15 +2702,26 @@
     // ─────────────────────────────────────────────────────────────────
     // 6. SYSTEM HEALTH & MAINTENANCE
     // ─────────────────────────────────────────────────────────────────
+    function renderMaintenanceUI(data) {
+      document.getElementById('maintAudioFilesCount').textContent = data.storage.total_files;
+      document.getElementById('maintAudioMb').textContent = data.storage.size_mb;
+      document.getElementById('maintMediaPath').textContent = data.storage.media_path;
+    }
+
     async function loadMaintenanceData() {
+      // 1. SWR Instant render
+      try {
+        const cached = localStorage.getItem('linguist_admin_maint');
+        if (cached) renderMaintenanceUI(JSON.parse(cached));
+      } catch (e) {}
+
+      // 2. Fresh background fetch
       try {
         const res = await fetch('/api/admin/system-health/');
         if (!res.ok) return;
         const data = await res.json();
-
-        document.getElementById('maintAudioFilesCount').textContent = data.storage.total_files;
-        document.getElementById('maintAudioMb').textContent = data.storage.size_mb;
-        document.getElementById('maintMediaPath').textContent = data.storage.media_path;
+        renderMaintenanceUI(data);
+        localStorage.setItem('linguist_admin_maint', JSON.stringify(data));
       } catch (e) {
         console.error('Error loading system health:', e);
       }
