@@ -33,6 +33,9 @@ urlpatterns = [
 
     # Dedicated Admin Dashboard & Telemetry REST APIs
     path("admin/dashboard/", admin_views.admin_dashboard_view, name="admin_dashboard"),
+    path("api/admin/auth/login/", admin_views.AdminLoginApiView.as_view(), name="admin_api_login"),
+    path("api/admin/auth/logout/", admin_views.AdminLogoutApiView.as_view(), name="admin_api_logout"),
+    path("api/admin/auth/me/", admin_views.AdminAuthMeApiView.as_view(), name="admin_api_me"),
     path("api/admin/metrics/", admin_views.AdminMetricsApiView.as_view(), name="admin_metrics"),
     path("api/admin/analytics/", admin_views.AdminAnalyticsApiView.as_view(), name="admin_analytics"),
     path("api/admin/users/", admin_views.AdminUsersApiView.as_view(), name="admin_users"),
