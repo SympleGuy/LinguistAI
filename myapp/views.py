@@ -179,6 +179,7 @@ def register_view(request):
         request.session["supabase_user_id"] = str(app_user.id)
         request.session["user_email"] = email
         request.session["username"] = display_username
+        request.session["role"] = app_user.role or "user"
 
         user_data = {
             "id": str(app_user.id),
@@ -186,7 +187,8 @@ def register_view(request):
             "email": email,
             "proficiency_level": app_user.proficiency_level or "Beginner",
             "target_language": app_user.target_language or "English",
-            "subscription_plan": app_user.subscription_plan or "Free"
+            "subscription_plan": app_user.subscription_plan or "Free",
+            "role": app_user.role or "user"
         }
 
         if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
@@ -254,6 +256,7 @@ def login_view(request):
         request.session["supabase_user_id"] = str(app_user.id)
         request.session["user_email"] = user_email
         request.session["username"] = user_display
+        request.session["role"] = app_user.role or "user"
 
         is_allowed, today_turns, plan = check_user_daily_turn_limit(app_user.id)
         daily_limit = 5 if plan.lower() == "free" else None
@@ -266,6 +269,7 @@ def login_view(request):
             "proficiency_level": app_user.proficiency_level or "Beginner",
             "target_language": app_user.target_language or "English",
             "subscription_plan": app_user.subscription_plan or "Free",
+            "role": app_user.role or "user",
             "today_turns": today_turns,
             "daily_limit": daily_limit,
             "remaining_turns": remaining_turns
@@ -321,7 +325,10 @@ def api_me(request):
     # If we got the user via X-User-ID, re-establish Django session for future requests
     if not request.session.get("supabase_user_id"):
         request.session["supabase_user_id"] = str(app_user.id)
+        request.session["role"] = app_user.role or "user"
         request.session.modified = True
+    else:
+        request.session["role"] = app_user.role or "user"
 
     user_email = app_user.email or app_user.username
     user_display = app_user.username or user_email
@@ -339,6 +346,7 @@ def api_me(request):
             "proficiency_level": app_user.proficiency_level or "Beginner",
             "target_language": app_user.target_language or "English",
             "subscription_plan": app_user.subscription_plan or "Free",
+            "role": app_user.role or "user",
             "today_turns": today_turns,
             "daily_limit": daily_limit,
             "remaining_turns": remaining_turns
@@ -346,6 +354,74 @@ def api_me(request):
     })
 
 
+@method_decorator(csrf_exempt, name='dispatch')
+class OAuthSyncView(View):
+    """
+    POST /api/auth/oauth-sync/
+    Synchronizes an authenticated OAuth user (e.g. Google Sign-In) into local database
+    and establishes the Django session.
+    """
+    def post(self, request):
+        try:
+            data = json.loads(request.body)
+        except Exception:
+            data = request.POST
+
+        supabase_user_id = data.get("supabase_user_id")
+        email = (data.get("email") or "").strip()
+        username = (data.get("username") or "").strip()
+
+        if not supabase_user_id and not email:
+            return JsonResponse({"error": "supabase_user_id or email is required"}, status=400)
+
+        user = None
+        if supabase_user_id:
+            try:
+                user = AppUser.objects.filter(id=uuid.UUID(str(supabase_user_id))).first()
+            except Exception:
+                pass
+
+        if not user and email:
+            user = AppUser.objects.filter(email=email).first()
+
+        if not user:
+            u_id = uuid.UUID(str(supabase_user_id)) if supabase_user_id else uuid.uuid4()
+            user = AppUser.objects.create(
+                id=u_id,
+                username=username or (email.split("@")[0] if email else "Learner"),
+                email=email,
+                target_language="English",
+                proficiency_level="Beginner",
+                subscription_plan="Free",
+                role="user",
+                created_at=timezone.now()
+            )
+        else:
+            if username and not user.username:
+                user.username = username
+            if email and not user.email:
+                user.email = email
+            user.save()
+
+        request.session["supabase_user_id"] = str(user.id)
+        request.session["user_email"] = user.email or user.username
+        request.session["username"] = user.username or user.email
+        request.session["role"] = user.role or "user"
+        request.session.modified = True
+
+        return JsonResponse({
+            "status": "success",
+            "message": "OAuth sync successful",
+            "user": {
+                "id": str(user.id),
+                "username": user.username,
+                "email": user.email,
+                "target_language": user.target_language or "English",
+                "proficiency_level": user.proficiency_level or "Beginner",
+                "subscription_plan": user.subscription_plan or "Free",
+                "role": user.role or "user"
+            }
+        })
 
 
 def home_view(request):

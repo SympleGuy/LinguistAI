@@ -12,6 +12,7 @@ PUBLIC_API_ROUTES = [
     "/api/auth/login/",
     "/api/auth/logout/",
     "/api/auth/me/",
+    "/api/auth/oauth-sync/",
     "/api/scenarios/",
     "/api/debug-session/",
 ]
@@ -32,8 +33,31 @@ class ApiAuthenticationMiddleware:
         # Only check requests targeting the /api/ prefix
         if path.startswith("/api/"):
             is_public = any(path.startswith(pub_route) for pub_route in PUBLIC_API_ROUTES)
+            is_admin_api = path.startswith("/api/admin/")
 
-            if not is_public:
+            if is_admin_api:
+                # Admin APIs allow access if debug mode or staff/admin user or authenticated admin role
+                user_id = request.session.get("supabase_user_id")
+                is_authorized = (
+                    settings.DEBUG or
+                    (hasattr(request, "user") and request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)) or
+                    request.session.get("role") == "admin" or
+                    request.session.get("is_admin")
+                )
+                if not is_authorized and user_id:
+                    try:
+                        from .models import User as AppUser
+                        if AppUser.objects.filter(id=user_id, role="admin").exists():
+                            is_authorized = True
+                    except Exception:
+                        pass
+
+                if not is_authorized:
+                    return JsonResponse({
+                        "error": "Admin access required.",
+                        "code": 403
+                    }, status=403)
+            elif not is_public:
                 user_id = request.session.get("supabase_user_id")
                 auth_header = request.headers.get("Authorization", "")
                 has_bearer = auth_header.startswith("Bearer ") and len(auth_header.split(" ")) > 1

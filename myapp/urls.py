@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import admin_views
 
 urlpatterns = [
     path("", views.home_view, name="home"),
@@ -12,6 +13,7 @@ urlpatterns = [
     path("api/auth/login/", views.login_view, name="api_login"),
     path("api/auth/logout/", views.logout_view, name="api_logout"),
     path("api/auth/me/", views.api_me, name="api_me"),
+    path("api/auth/oauth-sync/", views.OAuthSyncView.as_view(), name="api_oauth_sync"),
 
     path("api/scenarios/", views.scenarios_list, name="scenarios_list"),
     path("api/scenarios/<int:scenario_id>/", views.ScenarioDetailView.as_view(), name="scenario_detail"),
@@ -28,4 +30,23 @@ urlpatterns = [
     path("api/sessions/<uuid:session_id>/logs/", views.SessionLogsView.as_view(), name="session_logs"),
     path("api/flashcards/due/", views.FlashcardDueView.as_view(), name="api_flashcards_due"),
     path("api/flashcards/<uuid:card_id>/review/", views.FlashcardReviewView.as_view(), name="api_flashcards_review"),
+
+    # Dedicated Admin Dashboard & Telemetry REST APIs
+    path("admin/dashboard/", admin_views.admin_dashboard_view, name="admin_dashboard"),
+    path("api/admin/metrics/", admin_views.AdminMetricsApiView.as_view(), name="admin_metrics"),
+    path("api/admin/analytics/", admin_views.AdminAnalyticsApiView.as_view(), name="admin_analytics"),
+    path("api/admin/users/", admin_views.AdminUsersApiView.as_view(), name="admin_users"),
+    path("api/admin/users/create/", admin_views.AdminUsersApiView.as_view(), name="admin_users_create"),
+    path("api/admin/users/<uuid:user_id>/", admin_views.AdminUserDetailApiView.as_view(), name="admin_user_detail"),
+    path("api/admin/users/<uuid:user_id>/reset-turns/", admin_views.AdminUserResetTurnsApiView.as_view(), name="admin_user_reset_turns"),
+    path("api/admin/scenarios/", admin_views.AdminScenariosApiView.as_view(), name="admin_scenarios"),
+    path("api/admin/scenarios/seed/", admin_views.AdminScenarioSeedApiView.as_view(), name="admin_scenarios_seed"),
+    path("api/admin/scenarios/<int:scenario_id>/", admin_views.AdminScenarioDetailApiView.as_view(), name="admin_scenario_detail"),
+    path("api/admin/scenarios/test-prompt/", admin_views.AdminScenarioTestPromptApiView.as_view(), name="admin_scenario_test_prompt"),
+    path("api/admin/sessions/", admin_views.AdminSessionsApiView.as_view(), name="admin_sessions"),
+    path("api/admin/sessions/<uuid:session_id>/", admin_views.AdminSessionDetailApiView.as_view(), name="admin_session_detail"),
+    path("api/admin/flashcards/", admin_views.AdminFlashcardsApiView.as_view(), name="admin_flashcards"),
+    path("api/admin/system-health/", admin_views.AdminSystemHealthApiView.as_view(), name="admin_system_health"),
+    path("api/admin/system/cleanup-audio/", admin_views.AdminAudioCleanupApiView.as_view(), name="admin_audio_cleanup"),
+    path("api/admin/export/<str:dataset>/", admin_views.AdminDataExportApiView.as_view(), name="admin_data_export"),
 ]

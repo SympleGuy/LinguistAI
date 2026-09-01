@@ -4,8 +4,13 @@ import uuid
 
 class User(models.Model):
     """
-    User model matching specification in 0001_initial.py
+    User model matching specification in 0001_initial.py with RBAC role support
     """
+    ROLE_CHOICES = [
+        ('user', 'Learner / User'),
+        ('admin', 'Admin'),
+    ]
+
     id = models.UUIDField(default=uuid.uuid4, editable=False, primary_key=True, serialize=False)
     username = models.CharField(blank=True, max_length=255, null=True)
     email = models.EmailField(blank=True, max_length=255, null=True)
@@ -13,6 +18,7 @@ class User(models.Model):
     target_language = models.CharField(blank=True, max_length=255, null=True)
     proficiency_level = models.CharField(blank=True, max_length=255, null=True)
     subscription_plan = models.CharField(blank=True, max_length=255, null=True)
+    role = models.CharField(blank=True, max_length=50, default='user', choices=ROLE_CHOICES)
     created_at = models.DateTimeField(blank=True, null=True)
 
 

@@ -2292,6 +2292,14 @@
             >
               <i class="bi bi-card-text"></i>Practice
             </button>
+            <a
+              class="nav-link-item text-decoration-none"
+              id="nl-admin-portal"
+              href="/admin/dashboard/"
+              style="display: none; background: rgba(99, 102, 241, 0.12); color: #4f46e5; border-radius: 8px; font-weight: 600;"
+            >
+              <i class="bi bi-shield-lock-fill"></i>Admin Portal
+            </a>
           </div>
           <button
             id="navbar-signin"
@@ -4593,6 +4601,7 @@
         const signOutBtn = document.getElementById("navbar-logout");
         const tryBtn = document.getElementById("navbar-try");
         const innerNav = document.getElementById("inner-nav");
+        const adminPortalBtn = document.getElementById("nl-admin-portal");
 
         if (currentUser) {
           if (signInBtn) signInBtn.style.display = "none";
@@ -4600,6 +4609,9 @@
             signOutBtn.style.display = isAuthPage ? "none" : "inline-flex";
           if (tryBtn) tryBtn.style.display = "none";
           if (innerNav) innerNav.style.display = isAuthPage ? "none" : "flex";
+          if (adminPortalBtn) {
+            adminPortalBtn.style.display = (!isAuthPage && (currentUser.role === "admin" || currentUser.is_admin)) ? "inline-flex" : "none";
+          }
         } else {
           if (signInBtn)
             signInBtn.style.display =
@@ -4610,6 +4622,7 @@
               isLanding || isAuthPage ? "inline-flex" : "inline-flex";
           if (innerNav)
             innerNav.style.display = isLanding || isAuthPage ? "none" : "flex";
+          if (adminPortalBtn) adminPortalBtn.style.display = "none";
         }
       }
 
