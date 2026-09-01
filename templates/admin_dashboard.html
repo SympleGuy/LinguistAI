@@ -811,7 +811,7 @@
   <!-- MAIN ADMIN APP CONTAINER                                        -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <div id="adminAppContainer" class="d-flex w-100"
-    style="{% if not is_authenticated_admin %}display: none !important;{% endif %}">
+    style="{% if not is_authenticated_admin %}display: none;{% endif %}">
 
     <!-- Backdrop for mobile drawer -->
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
@@ -1756,13 +1756,16 @@
         }
 
         // Login success -> unlock interface smoothly
-        document.getElementById('adminLoginGate').style.display = 'none';
+        document.getElementById('adminLoginGate').style.setProperty('display', 'none', 'important');
         const appContainer = document.getElementById('adminAppContainer');
-        appContainer.style.display = 'flex';
+        appContainer.style.setProperty('display', 'flex', 'important');
         appContainer.style.animation = 'fadeInView 0.3s ease';
 
         showToast('Welcome Administrator! Master Control Unlocked.', 'success');
         initAdminDashboard();
+        setTimeout(() => {
+          window.location.reload();
+        }, 500);
       } catch (err) {
         alertBox.textContent = 'Connection error: ' + err.message;
         alertBox.classList.remove('d-none');
