@@ -970,7 +970,7 @@ class AdminSessionsApiView(AdminRequiredMixin, View):
                 "user_name": u.username if u else "Anonymous",
                 "user_email": u.email if u else "-",
                 "scenario_title": sc.title if sc else "Free Conversation",
-                "overall_score": s.overall_score,
+                "overall_score": float(s.overall_score) if s.overall_score is not None else None,
                 "turns_count": turns_count,
                 "started_at": s.started_at.isoformat() if s.started_at else None
             })
@@ -1014,7 +1014,7 @@ class AdminSessionDetailApiView(AdminRequiredMixin, View):
                 "user_name": u.username if u else "Anonymous",
                 "user_email": u.email if u else "-",
                 "scenario_title": sc.title if sc else "Free Practice",
-                "overall_score": session.overall_score,
+                "overall_score": float(session.overall_score) if session.overall_score is not None else None,
                 "started_at": session.started_at.isoformat() if session.started_at else None,
                 "total_turns": len(turns_data)
             },
