@@ -1387,11 +1387,24 @@
                 </select>
               </div>
             </div>
-            <div class="row g-2 mb-3">
+
+            <!-- VIP Unlimited Banner -->
+            <div id="userFormVipBanner" class="mb-3 d-none">
+              <div class="p-3 rounded small text-warning font-mono d-flex align-items-center gap-2" style="background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.25);">
+                <i class="bi bi-gem fs-5"></i>
+                <div>
+                  <div class="fw-bold">VIP Tier Activated</div>
+                  <div class="text-dim" style="font-size: 0.75rem;">Unlimited conversational practice enabled. No daily turn limits.</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Free Tier Limit Fields -->
+            <div class="row g-2 mb-3" id="userFormLimitFields">
               <div class="col-6">
                 <label class="form-label text-dim small">Daily Turn Limit</label>
                 <input type="number" class="form-control form-control-custom" id="userFormDailyLimit" value="5" min="1" max="500">
-                <small class="text-dim font-mono" style="font-size: 0.7rem;">Free default: 5 / VIP: Unlimited</small>
+                <small class="text-dim font-mono" style="font-size: 0.7rem;">Free default: 5 turns/day</small>
               </div>
               <div class="col-6">
                 <label class="form-label text-dim small">Turns Used Today</label>
@@ -2001,7 +2014,19 @@
           return;
         }
 
-        tbody.innerHTML = data.users.map(u => `
+        tbody.innerHTML = data.users.map(u => {
+          const isVip = (u.subscription_plan || '').toUpperCase() === 'VIP';
+          const turnBadge = isVip
+            ? `<span class="status-badge badge-vip"><i class="bi bi-infinity me-1"></i>Unlimited</span>`
+            : `<span class="badge ${u.today_turns >= (u.daily_turn_limit || 5) ? 'bg-danger' : 'bg-secondary'} font-mono">${u.today_turns} / ${u.daily_turn_limit || 5}</span>`;
+
+          const resetActionBtn = isVip
+            ? ''
+            : `<button class="btn btn-subtle p-1 px-2 text-warning" title="Reset Today's Turn Limit to 0" onclick="resetUserTurns('${u.id}', '${u.username}')">
+                 <i class="bi bi-arrow-counterclockwise"></i>
+               </button>`;
+
+          return `
           <tr>
             <td>
               <div class="d-flex align-items-center gap-2">
@@ -2021,29 +2046,24 @@
             </td>
             <td><span class="status-badge badge-lang">${u.target_language}</span></td>
             <td><span class="status-badge badge-cefr">${u.proficiency_level}</span></td>
-            <td><span class="status-badge ${(u.subscription_plan || '').toUpperCase() === 'VIP' ? 'badge-vip' : 'badge-free'}">${u.subscription_plan || 'Free'}</span></td>
+            <td><span class="status-badge ${isVip ? 'badge-vip' : 'badge-free'}">${u.subscription_plan || 'Free'}</span></td>
             <td><span class="fw-bold font-mono">${u.sessions_count}</span></td>
-            <td>
-              <span class="badge ${(u.today_turns >= (u.daily_turn_limit || 5) && (u.subscription_plan || '').toUpperCase() !== 'VIP') ? 'bg-danger' : 'bg-secondary'} font-mono">
-                ${u.today_turns} / ${(u.subscription_plan || '').toUpperCase() === 'VIP' ? '∞' : (u.daily_turn_limit !== null && u.daily_turn_limit !== undefined ? u.daily_turn_limit : 5)}
-              </span>
-            </td>
+            <td>${turnBadge}</td>
             <td><small class="text-dim font-mono">${u.created_at ? new Date(u.created_at).toLocaleDateString() : '-'}</small></td>
             <td class="text-end">
               <div class="btn-group btn-group-sm">
                 <button class="btn btn-subtle p-1 px-2" title="Edit Profile, Role, Plan & Limits" onclick='editUserModal(${JSON.stringify(u)})'>
                   <i class="bi bi-pencil"></i>
                 </button>
-                <button class="btn btn-subtle p-1 px-2 text-warning" title="Reset Today's Turn Limit to 0" onclick="resetUserTurns('${u.id}', '${u.username}')">
-                  <i class="bi bi-arrow-counterclockwise"></i>
-                </button>
+                ${resetActionBtn}
                 <button class="btn btn-subtle p-1 px-2 text-danger" title="Delete User" onclick="deleteUser('${u.id}', '${u.username}')">
                   <i class="bi bi-trash"></i>
                 </button>
               </div>
             </td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
 
         document.getElementById('userPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total learners)`;
         renderPaginationButtons('userPaginationButtons', data.page, data.total_pages, loadUsersData);
@@ -2054,13 +2074,18 @@
 
     function togglePlanLimitField() {
       const plan = document.getElementById('userFormPlan').value;
-      const limitInput = document.getElementById('userFormDailyLimit');
-      if (plan === 'VIP') {
-        limitInput.disabled = true;
-        limitInput.placeholder = 'Unlimited';
+      const isVip = plan === 'VIP';
+      const limitFields = document.getElementById('userFormLimitFields');
+      const vipBanner = document.getElementById('userFormVipBanner');
+
+      if (isVip) {
+        if (limitFields) limitFields.classList.add('d-none');
+        if (vipBanner) vipBanner.classList.remove('d-none');
       } else {
-        limitInput.disabled = false;
-        if (!limitInput.value) limitInput.value = 5;
+        if (limitFields) limitFields.classList.remove('d-none');
+        if (vipBanner) vipBanner.classList.add('d-none');
+        const limitInput = document.getElementById('userFormDailyLimit');
+        if (limitInput && !limitInput.value) limitInput.value = 5;
       }
     }
 
