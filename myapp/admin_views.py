@@ -147,13 +147,13 @@ class AdminLoginApiView(View):
             authenticated = False
             if app_user.password_hash and check_password(password, app_user.password_hash):
                 authenticated = True
-            elif password in ("admin123", "123456") and getattr(app_user, 'role', '') == "admin":  # Bootstrap fallback
+            elif password == "admin123" and app_user.role == "admin":  # Bootstrap fallback
                 authenticated = True
                 app_user.password_hash = make_password(password)
                 app_user.save(update_fields=['password_hash'])
 
             if authenticated:
-                if getattr(app_user, 'role', '') != "admin":
+                if app_user.role != "admin":
                     return JsonResponse({
                         "error": "Access denied. Your account does not have Administrator privileges.",
                         "code": "FORBIDDEN"
@@ -163,12 +163,6 @@ class AdminLoginApiView(View):
                 request.session["supabase_user_id"] = str(app_user.id)
                 request.session["user_email"] = app_user.email
                 request.session["username"] = app_user.username
-
-                # Sync Django auth session if superuser exists
-                from django.contrib.auth.models import User as DjangoUser
-                dj_user = DjangoUser.objects.filter(Q(email=app_user.email) | Q(username=app_user.username) | Q(is_superuser=True)).first()
-                if dj_user:
-                    django_login(request, dj_user)
 
                 return JsonResponse({
                     "status": "success",
@@ -512,14 +506,14 @@ class AdminUsersApiView(AdminRequiredMixin, View):
         end = start + limit
         users_page = list(qs[start:end])
 
-        # Single Batched Query for all user session counts
+        # Batch lookup session counts for current page in a single query
         user_ids = [u.id for u in users_page]
-        session_counts_map = {
-            item['user_id']: item['c']
-            for item in LearningSession.objects.filter(user_id__in=user_ids)
+        session_counts_map = dict(
+            LearningSession.objects.filter(user_id__in=user_ids)
             .values('user_id')
             .annotate(c=Count('id'))
-        }
+            .values_list('user_id', 'c')
+        )
 
         today = timezone.now().date()
         users_data = []
@@ -936,21 +930,21 @@ class AdminSessionsApiView(AdminRequiredMixin, View):
 
         start = (page - 1) * limit
         end = start + limit
-        sessions_page = list(qs[start:end])
+        sessions_page = qs[start:end]
 
-        # Batch lookup users, scenarios, and interaction log turn counts
+        # Batch lookup users, scenarios and interaction turns count
         user_ids = [s.user_id for s in sessions_page if s.user_id]
         scenario_ids = [s.scenario_id for s in sessions_page if s.scenario_id]
         session_ids = [s.id for s in sessions_page]
 
         users_map = {u.id: u for u in AppUser.objects.filter(id__in=user_ids)}
         scenarios_map = {sc.id: sc for sc in Scenario.objects.filter(id__in=scenario_ids)}
-        turns_map = {
-            item['session_id']: item['c']
-            for item in InteractionLog.objects.filter(session_id__in=session_ids)
+        turns_map = dict(
+            InteractionLog.objects.filter(session_id__in=session_ids)
             .values('session_id')
             .annotate(c=Count('id'))
-        }
+            .values_list('session_id', 'c')
+        )
 
         data = []
         for s in sessions_page:
@@ -1021,14 +1015,11 @@ class AdminSessionDetailApiView(AdminRequiredMixin, View):
 class AdminFlashcardsApiView(AdminRequiredMixin, View):
     """GET /api/admin/flashcards/"""
     def get(self, request):
-        cached = get_cached("flashcards_summary", ttl_seconds=30)
-        if cached:
-            return JsonResponse(cached)
-
         now = timezone.now()
+        total_cards = VocabularyCard.objects.count()
+        due_cards = VocabularyCard.objects.filter(next_review__lte=now).count()
+
         agg = VocabularyCard.objects.aggregate(
-            total_cards=Count('id'),
-            due_cards=Count('id', filter=Q(next_review__lte=now)),
             avg_ease=Avg('ease_factor'),
             avg_reps=Avg('repetitions')
         )
@@ -1056,16 +1047,13 @@ class AdminFlashcardsApiView(AdminRequiredMixin, View):
                 "next_review": c['next_review'].isoformat() if c['next_review'] else None
             })
 
-        response_data = {
-            "total_cards": agg['total_cards'] or 0,
-            "due_cards": agg['due_cards'] or 0,
+        return JsonResponse({
+            "total_cards": total_cards,
+            "due_cards": due_cards,
             "avg_ease_factor": round(agg['avg_ease'] or 2.5, 2),
             "avg_repetitions": round(agg['avg_reps'] or 0.0, 1),
             "recent_cards": cards_data
-        }
-
-        set_cached("flashcards_summary", response_data, ttl_seconds=30)
-        return JsonResponse(response_data)
+        })
 
 
 # ─────────────────────────────────────────────────────────────────────────────

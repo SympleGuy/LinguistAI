@@ -811,7 +811,7 @@
   <!-- MAIN ADMIN APP CONTAINER                                        -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <div id="adminAppContainer" class="d-flex w-100"
-    style="{% if not is_authenticated_admin %}display: none;{% endif %}">
+    style="{% if not is_authenticated_admin %}display: none !important;{% endif %}">
 
     <!-- Backdrop for mobile drawer -->
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
@@ -1756,16 +1756,13 @@
         }
 
         // Login success -> unlock interface smoothly
-        document.getElementById('adminLoginGate').style.setProperty('display', 'none', 'important');
+        document.getElementById('adminLoginGate').style.display = 'none';
         const appContainer = document.getElementById('adminAppContainer');
-        appContainer.style.setProperty('display', 'flex', 'important');
+        appContainer.style.display = 'flex';
         appContainer.style.animation = 'fadeInView 0.3s ease';
 
         showToast('Welcome Administrator! Master Control Unlocked.', 'success');
         initAdminDashboard();
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
       } catch (err) {
         alertBox.textContent = 'Connection error: ' + err.message;
         alertBox.classList.remove('d-none');
@@ -2067,6 +2064,8 @@
     function debounceUserSearch() {
       clearTimeout(userSearchTimeout);
       userSearchTimeout = setTimeout(() => loadUsersData(1), 300);
+    }
+
     function renderUsersTable(data) {
       const tbody = document.getElementById('usersTableBody');
       if (!tbody) return;
@@ -2133,29 +2132,34 @@
     }
 
     async function loadUsersData(page = 1) {
-      const q = document.getElementById('userSearchInput').value;
+      const q = document.getElementById('userSearchInput').value.trim();
       const plan = document.getElementById('userPlanFilter').value;
       const role = document.getElementById('userRoleFilter').value;
       const lang = document.getElementById('userLangFilter').value;
 
-      // 1. SWR Instant render if default page 1
-      if (page === 1 && !q && plan === 'all' && role === 'all' && lang === 'all') {
+      const isDefaultFilter = (page === 1 && !q && plan === 'all' && role === 'all' && lang === 'all');
+
+      // 1. SWR Instant render from localStorage
+      if (isDefaultFilter) {
         try {
-          const cached = localStorage.getItem('linguist_admin_users');
+          const cached = localStorage.getItem('linguist_admin_users_p1');
           if (cached) {
-            renderUsersTable(JSON.parse(cached));
+            const parsed = JSON.parse(cached);
+            renderUsersTable(parsed);
           }
         } catch (e) {}
       }
 
-      // 2. Fresh background fetch
+      // 2. Fresh Background Fetch
       try {
         const res = await fetch(`/api/admin/users/?page=${page}&q=${encodeURIComponent(q)}&plan=${plan}&role=${role}&lang=${lang}`);
         if (!res.ok) return;
         const data = await res.json();
+
         renderUsersTable(data);
-        if (page === 1 && !q && plan === 'all' && role === 'all' && lang === 'all') {
-          localStorage.setItem('linguist_admin_users', JSON.stringify(data));
+
+        if (isDefaultFilter) {
+          localStorage.setItem('linguist_admin_users_p1', JSON.stringify(data));
         }
       } catch (e) {
         console.error('Error loading users:', e);
@@ -2526,61 +2530,45 @@
     // ─────────────────────────────────────────────────────────────────
     // 4. SESSIONS & CONVERSATION INSPECTOR
     // ─────────────────────────────────────────────────────────────────
-    function renderSessionsTable(data) {
-      const tbody = document.getElementById('sessionsTableBody');
-      if (!tbody) return;
-      if (!data.sessions || !data.sessions.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-5">No learning sessions recorded yet</td></tr>';
-        document.getElementById('sessionPaginationInfo').textContent = '0 sessions';
-        document.getElementById('sessionPaginationButtons').innerHTML = '';
-        return;
-      }
-
-      tbody.innerHTML = data.sessions.map(s => `
-        <tr>
-          <td><code class="text-primary font-mono">${s.id.slice(0, 8)}...</code></td>
-          <td>
-            <div class="fw-bold">${s.user_name}</div>
-            <small class="text-dim font-mono" style="font-size: 0.75rem;">${s.user_email}</small>
-          </td>
-          <td><span class="fw-bold">${s.scenario_title}</span></td>
-          <td>
-            <span class="status-badge ${s.overall_score >= 80 ? 'badge-vip' : (s.overall_score >= 60 ? 'badge-free' : 'bg-danger text-white')} font-mono">
-              ${s.overall_score ? s.overall_score.toFixed(1) + '%' : '-'}
-            </span>
-          </td>
-          <td><span class="badge bg-secondary text-white font-mono">${s.turns_count} turns</span></td>
-          <td><small class="text-dim font-mono">${s.started_at ? new Date(s.started_at).toLocaleString() : '-'}</small></td>
-          <td class="text-end">
-            <button class="btn btn-sm btn-subtle" onclick="inspectSession('${s.id}')">
-              <i class="bi bi-search me-1"></i>Inspect Replay
-            </button>
-          </td>
-        </tr>
-      `).join('');
-
-      document.getElementById('sessionPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total sessions)`;
-      renderPaginationButtons('sessionPaginationButtons', data.page, data.total_pages, loadSessionsData);
-    }
-
     async function loadSessionsData(page = 1) {
-      // 1. SWR Instant render
-      if (page === 1) {
-        try {
-          const cached = localStorage.getItem('linguist_admin_sessions');
-          if (cached) renderSessionsTable(JSON.parse(cached));
-        } catch (e) {}
-      }
-
-      // 2. Fresh background fetch
       try {
         const res = await fetch(`/api/admin/sessions/?page=${page}`);
         if (!res.ok) return;
         const data = await res.json();
-        renderSessionsTable(data);
-        if (page === 1) {
-          localStorage.setItem('linguist_admin_sessions', JSON.stringify(data));
+
+        const tbody = document.getElementById('sessionsTableBody');
+        if (!data.sessions.length) {
+          tbody.innerHTML = '<tr><td colspan="7" class="text-center text-dim py-5">No learning sessions recorded yet</td></tr>';
+          document.getElementById('sessionPaginationInfo').textContent = '0 sessions';
+          document.getElementById('sessionPaginationButtons').innerHTML = '';
+          return;
         }
+
+        tbody.innerHTML = data.sessions.map(s => `
+          <tr>
+            <td><code class="text-primary font-mono">${s.id.slice(0, 8)}...</code></td>
+            <td>
+              <div class="fw-bold">${s.user_name}</div>
+              <small class="text-dim font-mono" style="font-size: 0.75rem;">${s.user_email}</small>
+            </td>
+            <td><span class="fw-bold">${s.scenario_title}</span></td>
+            <td>
+              <span class="status-badge ${s.overall_score >= 80 ? 'badge-vip' : (s.overall_score >= 60 ? 'badge-free' : 'bg-danger text-white')} font-mono">
+                ${s.overall_score ? s.overall_score.toFixed(1) + '%' : '-'}
+              </span>
+            </td>
+            <td><span class="badge bg-secondary text-white font-mono">${s.turns_count} turns</span></td>
+            <td><small class="text-dim font-mono">${s.started_at ? new Date(s.started_at).toLocaleString() : '-'}</small></td>
+            <td class="text-end">
+              <button class="btn btn-sm btn-subtle" onclick="inspectSession('${s.id}')">
+                <i class="bi bi-search me-1"></i>Inspect Replay
+              </button>
+            </td>
+          </tr>
+        `).join('');
+
+        document.getElementById('sessionPaginationInfo').textContent = `Showing page ${data.page} of ${data.total_pages} (${data.total} total sessions)`;
+        renderPaginationButtons('sessionPaginationButtons', data.page, data.total_pages, loadSessionsData);
       } catch (e) {
         console.error('Error loading sessions:', e);
       }
@@ -2656,47 +2644,35 @@
     // ─────────────────────────────────────────────────────────────────
     // 5. FLASHCARDS & VOCABULARY
     // ─────────────────────────────────────────────────────────────────
-    function renderFlashcardsUI(data) {
-      document.getElementById('fcTotalCards').textContent = data.total_cards;
-      document.getElementById('fcDueCards').textContent = data.due_cards;
-      document.getElementById('fcAvgEase').textContent = data.avg_ease_factor;
-      document.getElementById('fcAvgReps').textContent = data.avg_repetitions;
-
-      const tbody = document.getElementById('flashcardsTableBody');
-      if (!tbody) return;
-      if (!data.recent_cards || !data.recent_cards.length) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center text-dim py-5">No vocabulary cards in database</td></tr>';
-        return;
-      }
-
-      tbody.innerHTML = data.recent_cards.map(c => `
-        <tr>
-          <td><span class="fw-bold text-main">${c.word}</span></td>
-          <td><span class="text-dim">${c.translation || '-'}</span></td>
-          <td><span class="status-badge badge-lang">${c.language}</span></td>
-          <td><small class="text-dim font-mono">${c.user_email}</small></td>
-          <td><span class="badge bg-secondary font-mono">${c.repetitions}</span></td>
-          <td class="font-mono">${c.interval} d</td>
-          <td><span class="status-badge badge-cefr font-mono">${c.ease_factor}</span></td>
-          <td><small class="text-dim font-mono">${c.next_review ? new Date(c.next_review).toLocaleDateString() : '-'}</small></td>
-        </tr>
-      `).join('');
-    }
-
     async function loadFlashcardsData() {
-      // 1. SWR Instant render
-      try {
-        const cached = localStorage.getItem('linguist_admin_flashcards');
-        if (cached) renderFlashcardsUI(JSON.parse(cached));
-      } catch (e) {}
-
-      // 2. Fresh background fetch
       try {
         const res = await fetch('/api/admin/flashcards/');
         if (!res.ok) return;
         const data = await res.json();
-        renderFlashcardsUI(data);
-        localStorage.setItem('linguist_admin_flashcards', JSON.stringify(data));
+
+        document.getElementById('fcTotalCards').textContent = data.total_cards;
+        document.getElementById('fcDueCards').textContent = data.due_cards;
+        document.getElementById('fcAvgEase').textContent = data.avg_ease_factor;
+        document.getElementById('fcAvgReps').textContent = data.avg_repetitions;
+
+        const tbody = document.getElementById('flashcardsTableBody');
+        if (!data.recent_cards.length) {
+          tbody.innerHTML = '<tr><td colspan="8" class="text-center text-dim py-5">No vocabulary cards in database</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = data.recent_cards.map(c => `
+          <tr>
+            <td><span class="fw-bold text-main">${c.word}</span></td>
+            <td><span class="text-dim">${c.translation || '-'}</span></td>
+            <td><span class="status-badge badge-lang">${c.language}</span></td>
+            <td><small class="text-dim font-mono">${c.user_email}</small></td>
+            <td><span class="badge bg-secondary font-mono">${c.repetitions}</span></td>
+            <td class="font-mono">${c.interval} d</td>
+            <td><span class="status-badge badge-cefr font-mono">${c.ease_factor}</span></td>
+            <td><small class="text-dim font-mono">${c.next_review ? new Date(c.next_review).toLocaleDateString() : '-'}</small></td>
+          </tr>
+        `).join('');
       } catch (e) {
         console.error('Error loading flashcards:', e);
       }
@@ -2705,26 +2681,15 @@
     // ─────────────────────────────────────────────────────────────────
     // 6. SYSTEM HEALTH & MAINTENANCE
     // ─────────────────────────────────────────────────────────────────
-    function renderMaintenanceUI(data) {
-      document.getElementById('maintAudioFilesCount').textContent = data.storage.total_files;
-      document.getElementById('maintAudioMb').textContent = data.storage.size_mb;
-      document.getElementById('maintMediaPath').textContent = data.storage.media_path;
-    }
-
     async function loadMaintenanceData() {
-      // 1. SWR Instant render
-      try {
-        const cached = localStorage.getItem('linguist_admin_maint');
-        if (cached) renderMaintenanceUI(JSON.parse(cached));
-      } catch (e) {}
-
-      // 2. Fresh background fetch
       try {
         const res = await fetch('/api/admin/system-health/');
         if (!res.ok) return;
         const data = await res.json();
-        renderMaintenanceUI(data);
-        localStorage.setItem('linguist_admin_maint', JSON.stringify(data));
+
+        document.getElementById('maintAudioFilesCount').textContent = data.storage.total_files;
+        document.getElementById('maintAudioMb').textContent = data.storage.size_mb;
+        document.getElementById('maintMediaPath').textContent = data.storage.media_path;
       } catch (e) {
         console.error('Error loading system health:', e);
       }
