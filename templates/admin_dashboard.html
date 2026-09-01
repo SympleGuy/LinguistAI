@@ -766,7 +766,11 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- STRICT ADMIN AUTHENTICATION GATE                                -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div id="adminLoginGate" style="{% if is_authenticated_admin %}display: none;{% else %}display: flex;{% endif %}">
+  {% if is_authenticated_admin %}
+  <div id="adminLoginGate" style="display: none;">
+  {% else %}
+  <div id="adminLoginGate">
+  {% endif %}
     <div class="admin-gate-card">
       <div class="admin-gate-logo">
         <i class="bi bi-shield-lock-fill"></i>
@@ -810,8 +814,11 @@
   <!-- ═══════════════════════════════════════════════════════════════ -->
   <!-- MAIN ADMIN APP CONTAINER                                        -->
   <!-- ═══════════════════════════════════════════════════════════════ -->
-  <div id="adminAppContainer" class="d-flex w-100"
-    style="{% if not is_authenticated_admin %}display: none !important;{% endif %}">
+  {% if is_authenticated_admin %}
+  <div id="adminAppContainer" class="d-flex w-100">
+  {% else %}
+  <div id="adminAppContainer" class="d-flex w-100" style="display: none !important;">
+  {% endif %}
 
     <!-- Backdrop for mobile drawer -->
     <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="toggleSidebar()"></div>
