@@ -897,19 +897,33 @@ class AdminScenarioTestPromptApiView(AdminRequiredMixin, View):
         except Exception:
             data = request.POST
 
-        prompt = data.get('prompt', 'You are a friendly conversation partner.')
-        user_message = data.get('user_message', 'Hello! Can we practice conversation?')
+        prompt = data.get('prompt', 'You are a friendly conversation partner.').strip()
+        user_message = data.get('user_message', 'Hello! Can we practice conversation?').strip()
         cefr = data.get('cefr', 'Beginner')
+        lang = data.get('lang', 'English')
 
-        history = [{"role": "user", "text": user_message}]
+        history = [{"role": "user", "content": user_message}]
 
         try:
-            ai_reply = generate_ai_conversation_response(prompt, history, user_message)
-            feedback = generate_grammar_and_feedback(user_message, ai_reply, cefr)
+            ai_reply = generate_ai_conversation_response(
+                scenario_prompt=prompt,
+                user_level=cefr,
+                target_language=lang,
+                context_history=history,
+                user_transcript=user_message
+            )
+            feedback = generate_grammar_and_feedback(
+                user_transcript=user_message,
+                target_language=lang,
+                user_level=cefr,
+                ai_response=ai_reply
+            )
 
             return JsonResponse({
                 "ai_reply": ai_reply,
-                "feedback": feedback
+                "feedback": feedback,
+                "target_language": lang,
+                "cefr": cefr
             })
         except Exception as e:
             return JsonResponse({"error": f"AI Simulation failed: {str(e)}"}, status=500)

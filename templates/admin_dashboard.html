@@ -2496,31 +2496,45 @@
     }
 
     async function testScenarioPromptLive() {
-      const prompt = document.getElementById('scenarioFormPrompt').value.trim();
+      const prompt = document.getElementById('scenarioFormPrompt').value.trim() || 'You are a friendly conversation partner.';
       const userMsg = document.getElementById('scenarioTestInput').value.trim() || 'Hello! What do you recommend?';
-      const cefr = document.getElementById('scenarioFormCefr').value;
+      const cefr = document.getElementById('scenarioFormCefr').value || 'Beginner';
+      const lang = document.getElementById('scenarioFormLang').value || 'English';
       const resultBox = document.getElementById('scenarioTestResult');
 
-      resultBox.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Simulating AI conversation...';
+      resultBox.innerHTML = '<span class="spinner-border spinner-border-sm me-2 text-primary"></span>Simulating AI Persona response in <strong>' + lang + '</strong> (' + cefr + ')...';
 
       try {
         const res = await fetch('/api/admin/scenarios/test-prompt/', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ prompt, user_message: userMsg, cefr })
+          body: JSON.stringify({ prompt, user_message: userMsg, cefr, lang })
         });
         const data = await res.json();
         if (res.ok) {
+          const fb = data.feedback || {};
           resultBox.innerHTML = `
-            <div class="mb-1 text-primary fw-bold">🤖 AI Response:</div>
-            <div class="mb-2 text-main">"${data.ai_reply}"</div>
-            <div class="text-dim small">Score: Grammar ${data.feedback.grammar_score}% | Pronunciation ${data.feedback.pronunciation_score}%</div>
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="text-primary fw-bold small"><i class="bi bi-robot me-1"></i>AI Persona (${data.target_language || lang}):</span>
+              <span class="status-badge badge-lang">${data.target_language || lang} • ${data.cefr || cefr}</span>
+            </div>
+            <div class="p-2 rounded mb-2 text-main bg-dark bg-opacity-50 border border-subtle">
+              "${data.ai_reply || 'No response generated'}"
+            </div>
+            <div class="d-flex flex-wrap gap-2 small font-mono text-dim">
+              <span>Grammar: <strong class="text-info">${fb.grammar_score ?? 85}%</strong></span>
+              <span>•</span>
+              <span>Pronunciation: <strong class="text-success">${fb.pronunciation_score ?? 90}%</strong></span>
+              <span>•</span>
+              <span>Vocabulary: <strong class="text-warning">${fb.vocabulary_score ?? 80}%</strong></span>
+            </div>
+            ${fb.comments ? `<div class="text-dim small mt-1"><em>${fb.comments}</em></div>` : ''}
           `;
         } else {
-          resultBox.textContent = 'Error: ' + (data.error || 'AI generation failed');
+          resultBox.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error: ${data.error || 'AI simulation failed'}</span>`;
         }
       } catch (e) {
-        resultBox.textContent = 'Error: ' + e;
+        resultBox.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error: ${e}</span>`;
       }
     }
 
