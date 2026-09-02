@@ -3244,6 +3244,8 @@
       let freeTalkAudioChunks = [];
       let isFreeTalkRecording = false;
       let freeTalkVisualizerAnimationId = null;
+      let freeTalkTurnCount = 0;
+      let previousPageName = "dashboard";
 
       const FREE_TALK_STARTERS_DB = {
         English: [
@@ -3253,15 +3255,64 @@
           { icon: "💡", text: "What do you think about AI and the future of technology?" },
           { icon: "🎲", text: "Ask me a thought-provoking, interesting question!" },
           { icon: "🍕", text: "What is your comfort food and why do you love it?" },
-          { icon: "🎵", text:      // ── FREE TALK STUDIO CONTROLLER ─────────────────────────────
-      let currentFreeTalkPersona = "friendly";
-      let currentFreeTalkSessionId = null;
-      let isFreeTalkRecording = false;
-      let freeTalkMediaRecorder = null;
-      let freeTalkAudioChunks = [];
-      let freeTalkVisualizerAnimationId = null;
-      let freeTalkTurnCount = 0;
-      let previousPageName = "dashboard";
+          { icon: "🎵", text: "What kind of music puts you in the best mood?" },
+          { icon: "🌍", text: "What is the most interesting cultural habit you've seen?" }
+        ],
+        French: [
+          { icon: "☕", text: "Raconte-moi ta journée !" },
+          { icon: "✈️", text: "Si tu pouvais voyager n'importe où, où irais-tu ?" },
+          { icon: "🎬", text: "Quel est ton film ou livre préféré récemment ?" },
+          { icon: "💡", text: "Que penses-tu de l'intelligence artificielle ?" },
+          { icon: "🎲", text: "Pose-moi une question surprise et intéressante !" },
+          { icon: "🥐", text: "Quel est ton plat ou dessert préféré ?" },
+          { icon: "🎵", text: "Quel genre de musique écoutes-tu en ce moment ?" }
+        ],
+        Spanish: [
+          { icon: "☕", text: "¡Cuéntame cómo ha ido tu día!" },
+          { icon: "✈️", text: "¿Si pudieras viajar a cualquier lugar, a dónde irías?" },
+          { icon: "🎬", text: "¿Cuál es tu película o libro favorito recientemente?" },
+          { icon: "💡", text: "¿Qué opinas sobre el futuro de la tecnología?" },
+          { icon: "🎲", text: "¡Hazme una pregunta interesante y aleatoria!" },
+          { icon: "🌮", text: "¿Cuál es tu comida favorita para relajarte?" }
+        ],
+        German: [
+          { icon: "☕", text: "Erzähl mir von deinem Tag!" },
+          { icon: "✈️", text: "Wohin würdest du reisen, wenn du könntest?" },
+          { icon: "🎬", text: "Was ist dein Lieblingsfilm oder Buch?" },
+          { icon: "💡", text: "Was denkst du über Künstliche Intelligenz?" },
+          { icon: "🎲", text: "Stell mir eine überraschende, spannende Frage!" }
+        ],
+        Japanese: [
+          { icon: "☕", text: "今日の一日について教えて！" },
+          { icon: "✈️", text: "今すぐどこへでも旅行できるなら、どこに行きたい？" },
+          { icon: "🎬", text: "最近面白かった映画や本はある？" },
+          { icon: "💡", text: "AIや未来のテクノロジーについてどう思う？" },
+          { icon: "🎲", text: "何か面白い質問をしてみて！" },
+          { icon: "🍜", text: "好きな日本食や料理は何ですか？" }
+        ],
+        Chinese: [
+          { icon: "☕", text: "跟我聊聊你今天过得怎么样吧！" },
+          { icon: "✈️", text: "如果你能去任何地方旅行，你想去哪里？" },
+          { icon: "🎬", text: "你最近看过什么好看的电影或书吗？" },
+          { icon: "💡", text: "你对人工智能和未来科技有什么看法？" },
+          { icon: "🎲", text: "问我一个随机有趣的问题吧！" }
+        ],
+        Korean: [
+          { icon: "☕", text: "오늘 하루 어땠는지 이야기해 줘!" },
+          { icon: "✈️", text: "어디로든 여행 갈 수 있다면 어디로 가고 싶어?" },
+          { icon: "🎬", text: "최근에 재미있게 본 영화나 책 있어?" },
+          { icon: "💡", text: "AI와 미래 기술에 대해 어떻게 생각해?" },
+          { icon: "🎲", text: "나에게 재미있고 신선한 질문 하나 해줘!" }
+        ],
+        Vietnamese: [
+          { icon: "☕", text: "Hôm nay của bạn thế nào rồi, kể mình nghe với!" },
+          { icon: "✈️", text: "Nếu được đi du lịch bất cứ đâu ngay bây giờ, bạn sẽ đi đâu?" },
+          { icon: "🎬", text: "Bộ phim hay cuốn sách bạn thích nhất gần đây là gì?" },
+          { icon: "💡", text: "Bạn nghĩ gì về tương lai của công nghệ và AI?" },
+          { icon: "🎲", text: "Hãy hỏi mình một câu hỏi ngẫu nhiên và thú vị nhé!" },
+          { icon: "🍜", text: "Món ăn yêu thích nhất của bạn là gì và vì sao?" }
+        ]
+      };
 
       function autoEndFreeTalkSession() {
         if (currentFreeTalkSessionId && freeTalkTurnCount > 0) {
