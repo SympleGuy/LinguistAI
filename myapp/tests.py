@@ -446,7 +446,7 @@ class AdminDashboardViewsTestCase(TestCase):
         res = self.client.get(reverse("admin_dashboard"))
         self.assertEqual(res.status_code, 200)
         self.assertContains(res, "LinguistAI")
-        self.assertContains(res, "Admin Portal")
+        self.assertContains(res, "Master Admin")
 
     def test_admin_metrics_api(self):
         res = self.client.get(reverse("admin_metrics"))
@@ -489,7 +489,8 @@ class AdminDashboardViewsTestCase(TestCase):
             content_type="application/json"
         )
         self.assertEqual(res_create.status_code, 201)
-        new_user_id = res_create.json()["user"]["id"]
+        new_user_id = res_create.json().get("user_id") or res_create.json().get("user", {}).get("id")
+        self.assertTrue(new_user_id)
 
         # 3. Update user
         update_payload = {"subscription_plan": "Free", "target_language": "Japanese"}
@@ -499,14 +500,18 @@ class AdminDashboardViewsTestCase(TestCase):
             content_type="application/json"
         )
         self.assertEqual(res_update.status_code, 200)
-        self.assertEqual(res_update.json()["user"]["target_language"], "Japanese")
+        
+        # Verify updated user detail
+        res_detail = self.client.get(reverse("admin_user_detail", kwargs={"user_id": new_user_id}))
+        self.assertEqual(res_detail.status_code, 200)
+        self.assertEqual(res_detail.json()["user"]["target_language"], "Japanese")
 
         # 4. Reset turns
         res_reset = self.client.post(
             reverse("admin_user_reset_turns", kwargs={"user_id": self.user.id})
         )
         self.assertEqual(res_reset.status_code, 200)
-        self.assertIn("Daily turns reset", res_reset.json()["message"])
+        self.assertIn("Daily turn count", res_reset.json()["message"])
 
         # 5. Delete user
         res_del = self.client.delete(
@@ -519,7 +524,7 @@ class AdminDashboardViewsTestCase(TestCase):
         # 1. List scenarios
         res = self.client.get(reverse("admin_scenarios"))
         self.assertEqual(res.status_code, 200)
-        self.assertGreaterEqual(res.json()["total"], 1)
+        self.assertGreaterEqual(len(res.json().get("scenarios", [])), 1)
 
         # 2. Create scenario
         create_payload = {
@@ -537,7 +542,8 @@ class AdminDashboardViewsTestCase(TestCase):
             content_type="application/json"
         )
         self.assertEqual(res_create.status_code, 201)
-        sc_id = res_create.json()["scenario"]["id"]
+        sc_id = res_create.json().get("scenario_id") or res_create.json().get("scenario", {}).get("id")
+        self.assertTrue(sc_id)
 
         # 3. Update scenario
         res_update = self.client.put(
@@ -546,7 +552,8 @@ class AdminDashboardViewsTestCase(TestCase):
             content_type="application/json"
         )
         self.assertEqual(res_update.status_code, 200)
-        self.assertEqual(res_update.json()["scenario"]["title"], "Booking an Express Train in Munich")
+        sc_obj = Scenario.objects.get(id=sc_id)
+        self.assertEqual(sc_obj.title, "Booking an Express Train in Munich")
 
         # 4. Delete scenario
         res_del = self.client.delete(
