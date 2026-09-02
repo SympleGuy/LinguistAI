@@ -15,6 +15,7 @@ PUBLIC_API_ROUTES = [
     "/api/auth/oauth-sync/",
     "/api/scenarios/",
     "/api/debug-session/",
+    "/api/tts/",
 ]
 
 

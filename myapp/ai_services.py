@@ -403,10 +403,11 @@ def generate_tts_elevenlabs(text, voice_id=None, target_language="English"):
         return f"{settings.MEDIA_URL}tts/{cached_filename}"
 
     # 1. Try ElevenLabs API
+    active_eleven_key = config("ELEVENLABS_API_KEY", default="").strip()
     if not voice_id:
-        voice_id = LANGUAGE_VOICE_MAP.get(target_language, ELEVENLABS_VOICE_ID or "JBFqnCBsd6RMkjVDRZzb")
+        voice_id = LANGUAGE_VOICE_MAP.get(target_language, config("ELEVENLABS_VOICE_ID", default="JBFqnCBsd6RMkjVDRZzb"))
 
-    if ELEVENLABS_API_KEY and voice_id and not ELEVENLABS_API_KEY.startswith("sk_dummy"):
+    if active_eleven_key and voice_id and not active_eleven_key.startswith("sk_dummy"):
         try:
             url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
             payload = {
@@ -423,7 +424,7 @@ def generate_tts_elevenlabs(text, voice_id=None, target_language="English"):
                 data=data,
                 headers={
                     "Content-Type": "application/json",
-                    "xi-api-key": ELEVENLABS_API_KEY
+                    "xi-api-key": active_eleven_key
                 },
                 method="POST"
             )
