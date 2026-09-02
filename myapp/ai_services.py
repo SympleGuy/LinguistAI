@@ -3,6 +3,7 @@ import json
 import uuid
 import time
 import base64
+import hashlib
 import urllib.request
 import urllib.parse
 from pathlib import Path
@@ -170,18 +171,46 @@ def generate_ai_conversation_response(scenario_prompt, user_level="Beginner", ta
     if context_history is None:
         context_history = []
 
-    system_instruction = (
-        f"You are a friendly, encouraging AI language tutor helping a student practice speaking {target_language}. "
-        f"The student's CEFR proficiency level is {user_level}.\n"
-        f"Scenario Context/Persona: {scenario_prompt}\n"
-        f"Instructions:\n"
-        f"1. You MUST ALWAYS speak and reply strictly in {target_language}.\n"
-        f"2. Stay in character for the scenario. If the user speaks off-topic, humorously steer them back to the scenario.\n"
-        f"3. If the user speaks in a language other than {target_language}, politely remind them in {target_language} to practice speaking in {target_language}.\n"
-        f"4. Keep your response concise (2-4 sentences max), natural, and engaging.\n"
-        f"5. Adjust vocabulary complexity to match CEFR level '{user_level}'.\n"
-        f"6. Ask open-ended questions in {target_language} to encourage the user to keep speaking."
-    )
+    is_free_talk = any(k in (scenario_prompt or "").lower() for k in ["free talk", "open conversation", "trò chuyện tự do", "casual chat", "open talk"])
+
+    if is_free_talk:
+        lower_prompt = (scenario_prompt or "").lower()
+        if "career" in lower_prompt:
+            persona_desc = "AI Persona: Career Coach & Professional Mentor. Maintain a polished, ambitious, and encouraging tone suitable for business, careers, and interviews."
+        elif "debate" in lower_prompt:
+            persona_desc = "AI Persona: Intellectual Debate Partner. Offer intriguing, polite counter-arguments and thought-provoking perspectives to encourage deep reasoning."
+        elif "strict" in lower_prompt:
+            persona_desc = "AI Persona: Academic Professor. Emphasize precise diction, eloquent expression, and grammatical elegance while being supportive."
+        else:
+            persona_desc = "AI Persona: Friendly Pal. Warm, relatable, humorous, and curious friend chatting casually about life, hobbies, and ideas."
+
+        system_instruction = (
+            f"You are an AI conversation partner and language tutor helping a student practice speaking {target_language}. "
+            f"The student's CEFR proficiency level is {user_level}.\n"
+            f"{persona_desc}\n"
+            f"Mode: Free Talk / Open Conversation (No strict script or fixed topic).\n"
+            f"Instructions:\n"
+            f"1. You MUST ALWAYS speak and reply strictly in {target_language}.\n"
+            f"2. Be genuinely interested in the student's thoughts, daily life, opinions, and stories. Converse naturally.\n"
+            f"3. If the user brings up any topic (hobbies, travel, philosophy, tech, movies, work, daily stories), dive right in with enthusiastic and thoughtful dialogue.\n"
+            f"4. If the user speaks in a language other than {target_language}, politely remind them in {target_language} to continue in {target_language}.\n"
+            f"5. Keep your response concise (2-4 sentences max), authentic, and conversational.\n"
+            f"6. Adjust vocabulary and grammatical structures to match CEFR level '{user_level}'.\n"
+            f"7. Always end with an intriguing, natural follow-up question to keep the conversation flowing smoothly."
+        )
+    else:
+        system_instruction = (
+            f"You are a friendly, encouraging AI language tutor helping a student practice speaking {target_language}. "
+            f"The student's CEFR proficiency level is {user_level}.\n"
+            f"Scenario Context/Persona: {scenario_prompt}\n"
+            f"Instructions:\n"
+            f"1. You MUST ALWAYS speak and reply strictly in {target_language}.\n"
+            f"2. Stay in character for the scenario. If the user speaks off-topic, humorously steer them back to the scenario.\n"
+            f"3. If the user speaks in a language other than {target_language}, politely remind them in {target_language} to practice speaking in {target_language}.\n"
+            f"4. Keep your response concise (2-4 sentences max), natural, and engaging.\n"
+            f"5. Adjust vocabulary complexity to match CEFR level '{user_level}'.\n"
+            f"6. Ask open-ended questions in {target_language} to encourage the user to keep speaking."
+        )
 
     # 1. Try Google Gemini (Free tier)
     if GEMINI_API_KEY:
@@ -354,18 +383,34 @@ LANGUAGE_VOICE_MAP = {
 
 def generate_tts_elevenlabs(text, voice_id=None, target_language="English"):
     """
-    Generate TTS audio for AI response text using ElevenLabs API (UC9).
-    Supports dedicated Voice ID per language and ElevenLabs Multilingual v2.
+    Generate TTS audio for AI response text.
+    1. Attempts ElevenLabs API if valid key is provided.
+    2. Seamlessly falls back to Google TTS engine to guarantee crystal-clear MP3 audio output.
     Saves audio file to MEDIA_ROOT/tts/ and returns public URL string.
     """
+    if not text or not text.strip():
+        return None
+
+    clean_text = text.strip()
+    tts_dir = Path(settings.MEDIA_ROOT) / "tts"
+    tts_dir.mkdir(parents=True, exist_ok=True)
+
+    # Check cache by MD5 hash of text and target_language
+    text_hash = hashlib.md5(f"{target_language}:{clean_text}".encode("utf-8")).hexdigest()[:12]
+    cached_filename = f"tts_{text_hash}.mp3"
+    cached_file_path = tts_dir / cached_filename
+    if cached_file_path.exists() and cached_file_path.stat().st_size > 500:
+        return f"{settings.MEDIA_URL}tts/{cached_filename}"
+
+    # 1. Try ElevenLabs API
     if not voice_id:
         voice_id = LANGUAGE_VOICE_MAP.get(target_language, ELEVENLABS_VOICE_ID or "JBFqnCBsd6RMkjVDRZzb")
 
-    if ELEVENLABS_API_KEY and voice_id:
+    if ELEVENLABS_API_KEY and voice_id and not ELEVENLABS_API_KEY.startswith("sk_dummy"):
         try:
             url = f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
             payload = {
-                "text": text,
+                "text": clean_text,
                 "model_id": "eleven_multilingual_v2",
                 "voice_settings": {
                     "stability": 0.5,
@@ -385,16 +430,47 @@ def generate_tts_elevenlabs(text, voice_id=None, target_language="English"):
             with urllib.request.urlopen(req, timeout=6) as resp:
                 if resp.status == 200:
                     audio_data = resp.read()
-                    tts_dir = Path(settings.MEDIA_ROOT) / "tts"
-                    tts_dir.mkdir(parents=True, exist_ok=True)
-                    filename = f"ai_response_{uuid.uuid4().hex[:10]}.mp3"
-                    file_path = tts_dir / filename
-                    with open(file_path, "wb") as f:
-                        f.write(audio_data)
-                    return f"{settings.MEDIA_URL}tts/{filename}"
+                    if audio_data and len(audio_data) > 500:
+                        with open(cached_file_path, "wb") as f:
+                            f.write(audio_data)
+                        return f"{settings.MEDIA_URL}tts/{cached_filename}"
         except urllib.error.HTTPError as e:
-            print(f"[AI Services] ElevenLabs HTTP {e.code}: {e.reason}")
+            print(f"[AI Services] ElevenLabs HTTP {e.code}: {e.reason}. Using resilient TTS fallback.")
         except Exception as e:
-            print(f"[AI Services] ElevenLabs TTS generation failed: {e}")
+            print(f"[AI Services] ElevenLabs TTS failed: {e}. Using resilient TTS fallback.")
+
+    # 2. Resilient Google TTS Audio Engine Fallback (Supports all 8 languages)
+    try:
+        lang_code_map = {
+            "English": "en",
+            "French": "fr",
+            "Spanish": "es",
+            "German": "de",
+            "Japanese": "ja",
+            "Chinese": "zh-CN",
+            "Korean": "ko",
+            "Vietnamese": "vi"
+        }
+        tl = lang_code_map.get(target_language, "en")
+        
+        # Split text into chunks if longer than 150 chars for Google TTS
+        encoded_query = urllib.parse.quote(clean_text[:200])
+        tts_url = f"https://translate.google.com/translate_tts?ie=UTF-8&tl={tl}&client=tw-ob&q={encoded_query}"
+        tts_req = urllib.request.Request(
+            tts_url,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+        )
+        with urllib.request.urlopen(tts_req, timeout=6) as tts_resp:
+            if tts_resp.status == 200:
+                audio_bytes = tts_resp.read()
+                if audio_bytes and len(audio_bytes) > 200:
+                    with open(cached_file_path, "wb") as f:
+                        f.write(audio_bytes)
+                    return f"{settings.MEDIA_URL}tts/{cached_filename}"
+    except Exception as ex:
+        print(f"[AI Services] TTS Fallback failed: {ex}")
 
     return None
+

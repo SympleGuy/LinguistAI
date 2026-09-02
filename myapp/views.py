@@ -490,6 +490,16 @@ def scenarios_list(request):
     if not show_all and (req_lang or req_cefr):
         filtered_list = []
         for s in scenario_list:
+            is_open_talk = s.get("category") == "Open Talk" or "free talk" in s.get("title", "").lower()
+            if is_open_talk:
+                adapted = dict(s)
+                if req_lang:
+                    adapted["lang"] = req_lang
+                if req_cefr:
+                    adapted["cefr"] = req_cefr
+                filtered_list.append(adapted)
+                continue
+
             match_lang = not req_lang or s["lang"].lower() == req_lang.lower()
             match_cefr = all_levels or not req_cefr or s["cefr"].lower() == req_cefr.lower()
             if match_lang and match_cefr:
@@ -640,10 +650,11 @@ def check_user_daily_turn_limit(user_id):
         return True, 0, "Free", 5
 
     plan = (app_user.subscription_plan or "Free").strip()
-    is_vip = plan.upper() in ("VIP", "PRO")
+    role = (app_user.role or "user").strip().lower()
+    is_vip = plan.upper() in ("VIP", "PRO") or role == "admin" or app_user.daily_turn_limit is None
 
     if is_vip:
-        return True, app_user.daily_turns_used or 0, plan, None
+        return True, app_user.daily_turns_used or 0, plan if plan.upper() in ("VIP", "PRO") else "VIP", None
 
     today = timezone.now().date()
     # Check if date has changed -> auto reset daily count
@@ -684,7 +695,7 @@ class SubmitResponseView(View):
         """Submit a text user response for a learning session and get AI feedback"""
         try:
             data = json.loads(request.body)
-            user_transcript = (data.get('user_transcript') or '').strip()
+            user_transcript = (data.get('user_transcript') or data.get('transcript') or data.get('text') or '').strip()
             user_audio_url = data.get('user_audio_url', '')
 
             if not user_transcript:
@@ -734,9 +745,14 @@ class SubmitResponseView(View):
                 if log.ai_response_text:
                     context_history.append({"role": "assistant", "content": log.ai_response_text})
 
+            persona = data.get('persona', '')
+            base_prompt = scenario.system_prompt or ""
+            if persona:
+                base_prompt += f" [Persona: {persona}]"
+
             # AI Conversation Response
             ai_response = generate_ai_conversation_response(
-                scenario_prompt=scenario.system_prompt or "",
+                scenario_prompt=base_prompt,
                 user_level=user_level,
                 target_language=target_lang,
                 context_history=context_history,
@@ -872,8 +888,13 @@ class SubmitAudioResponseView(View):
                 if log.ai_response_text:
                     context_history.append({"role": "assistant", "content": log.ai_response_text})
 
+            persona = request.POST.get('persona', '')
+            base_prompt = scenario.system_prompt or ""
+            if persona:
+                base_prompt += f" [Persona: {persona}]"
+
             ai_response = generate_ai_conversation_response(
-                scenario_prompt=scenario.system_prompt or "",
+                scenario_prompt=base_prompt,
                 user_level=user_level,
                 target_language=target_lang,
                 context_history=context_history,
@@ -1439,3 +1460,20 @@ class FlashcardReviewView(View):
             return JsonResponse({"error": "Card not found"}, status=404)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=400)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
+class TTSAudioView(View):
+    """
+    On-demand TTS Audio generator endpoint.
+    GET /api/tts/?text=Hello&lang=English
+    Returns JSON { "audio_url": "/media/tts/..." }
+    """
+    def get(self, request):
+        text = request.GET.get("text", "").strip()
+        lang = request.GET.get("lang", "English").strip()
+        if not text:
+            return JsonResponse({"error": "text query param is required"}, status=400)
+        audio_url = generate_tts_elevenlabs(text, target_language=lang)
+        return JsonResponse({"audio_url": audio_url or ""}, status=200)
+

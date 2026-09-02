@@ -301,6 +301,7 @@
 
       const PROTECTED_PAGES = [
         "scenarios",
+        "freetalk",
         "conversation",
         "dashboard",
         "profile",
@@ -339,7 +340,7 @@
         });
 
         // active nav link
-        ["scenarios", "dashboard", "profile"].forEach((n) => {
+        ["scenarios", "freetalk", "dashboard", "profile", "flashcards"].forEach((n) => {
           const el = document.getElementById("nl-" + n);
           if (el) el.classList.toggle("active", n === name);
         });
@@ -354,6 +355,9 @@
         if (name === "scenarios") {
           renderScenarios();
           updateDailyTurnUI();
+        }
+        if (name === "freetalk") {
+          initFreeTalkPage();
         }
         if (name === "conversation") {
           updateDailyTurnUI();
@@ -470,6 +474,8 @@
 
         const greetings = {
           French: {
+            free: "Bonjour ! 😊 Bienvenue dans la conversation libre ! De quoi aimerais-tu parler aujourd'hui ?",
+            talk: "Bonjour ! 😊 Bienvenue dans la conversation libre ! De quoi aimerais-tu parler aujourd'hui ?",
             restaurant:
               "Bonjour ! Bienvenue au restaurant Le Petit Paris. Avez-vous une réservation pour ce soir ?",
             coffee:
@@ -489,6 +495,8 @@
             default: `Bonjour ! Bienvenue dans votre session "${s.title}". Comment puis-je vous aider aujourd'hui ?`,
           },
           Spanish: {
+            free: "¡Hola! 😊 ¡Bienvenido a la conversación libre! ¿De qué te gustaría hablar hoy?",
+            talk: "¡Hola! 😊 ¡Bienvenido a la conversación libre! ¿De qué te gustaría hablar hoy?",
             restaurant:
               "¡Hola! Bienvenido a nuestro restaurante. ¿Tiene una reserva para hoy?",
             coffee:
@@ -507,6 +515,8 @@
             default: `¡Hola! Bienvenido a la práctica de "${s.title}". ¿En qué le puedo ayudar hoy?`,
           },
           German: {
+            free: "Hallo! 😊 Willkommen zum freien Gespräch! Worüber möchtest du heute sprechen?",
+            talk: "Hallo! 😊 Willkommen zum freien Gespräch! Worüber möchtest du heute sprechen?",
             restaurant:
               "Guten Tag! Willkommen im Restaurant. Haben Sie einen Tisch reserviert?",
             coffee:
@@ -526,6 +536,8 @@
             default: `Guten Tag! Willkommen zu Ihrer "${s.title}" Übung. Wie kann ich Ihnen helfen?`,
           },
           Japanese: {
+            free: "こんにちは！😊 フリートークへようこそ！今日はどんなことについて話したいですか？",
+            talk: "こんにちは！😊 フリートークへようこそ！今日はどんなことについて話したいですか？",
             restaurant:
               "いらっしゃいませ！レストランへようこそ。ご予約はされていますでしょうか？",
             coffee:
@@ -542,6 +554,8 @@
             default: `こんにちは！「${s.title}」の練習へようこそ。どのようなご用件でしょうか？`,
           },
           Korean: {
+            free: "안녕하세요! 😊 자유 대화에 오신 것을 환영합니다! 오늘 어떤 이야기를 나누고 싶으신가요?",
+            talk: "안녕하세요! 😊 자유 대화에 오신 것을 환영합니다! 오늘 어떤 이야기를 나누고 싶으신가요?",
             restaurant:
               "안녕하세요! 식당에 오신 것을 환영합니다. 예약하셨나요?",
             coffee:
@@ -558,6 +572,8 @@
             default: `안녕하세요! "${s.title}" 연습에 오신 것을 환영합니다. 무엇을 도와드릴까요?`,
           },
           Chinese: {
+            free: "你好！😊 欢迎来到自由对话！今天你想聊些什么呢？",
+            talk: "你好！😊 欢迎来到自由对话！今天你想聊些什么呢？",
             restaurant: "您好！欢迎光临餐厅。请问您今天有预订吗？",
             coffee: "您好！欢迎光临咖啡厅，今天想喝点什么？",
             hotel: "您好！欢迎入住酒店。请问预订的名字是什么？",
@@ -570,6 +586,8 @@
             default: `您好！欢迎来到“${s.title}”练习。请问有什么我可以协助您的？`,
           },
           Vietnamese: {
+            free: "Chào bạn! 😊 Chào mừng bạn đến với chế độ Trò chuyện tự do! Hôm nay bạn muốn cùng mình tâm sự hay bàn luận về chủ đề gì nào?",
+            talk: "Chào bạn! 😊 Chào mừng bạn đến với chế độ Trò chuyện tự do! Hôm nay bạn muốn cùng mình tâm sự hay bàn luận về chủ đề gì nào?",
             restaurant:
               "Xin chào! Chào mừng bạn đến với nhà hàng. Bạn đã đặt bàn trước chưa ạ?",
             coffee:
@@ -589,6 +607,8 @@
             default: `Xin chào! Chào mừng bạn đến với buổi luyện tập "${s.title}". Tôi có thể giúp gì cho bạn hôm nay?`,
           },
           English: {
+            free: "Hey there! 😊 Welcome to Free Talk! We can chat about anything you like — your day, hobbies, travel, movies, or ideas. What's on your mind today?",
+            talk: "Hey there! 😊 Welcome to Free Talk! We can chat about anything you like — your day, hobbies, travel, movies, or ideas. What's on your mind today?",
             restaurant:
               "Hello! Welcome to our restaurant. Do you have a table reservation with us today?",
             coffee:
@@ -666,6 +686,8 @@
         ).toLowerCase();
         const grid = document.getElementById("scenarios-grid");
         const list = SCENARIOS.filter((s) => {
+          const isFree = s.category === "Open Talk" || (s.title || "").toLowerCase().includes("free talk");
+          if (isFree) return false; // Handled separately in dedicated Free Talk studio
           const mc = activeFilter === "All" || s.category === activeFilter;
           const mq =
             !q ||
@@ -703,7 +725,7 @@
               <span style="color:var(--primary);font-size:.8rem;font-weight:600">${s.category}</span>
             </div>
           </div>
-        </div>`,
+        </div>`
           )
           .join("");
       }
@@ -748,13 +770,27 @@
 
         // Show dynamic, natural initial AI greeting for this scenario and language
         const initialGreeting = getScenarioGreeting(s);
+        const initVoiceId = "ai-voice-init-" + Date.now();
+        const initVoicePill = createAiVoicePillHtml("", initVoiceId, initialGreeting, s.lang);
         const ml = document.getElementById("msg-list");
         ml.innerHTML = `
     <div class="msg-wrap">
       <div class="msg-lbl">🤖 LinguistAI</div>
       <div class="msg-bubble msg-ai">${initialGreeting}</div>
+      <div>${initVoicePill}</div>
     </div>`;
         ml.scrollTop = ml.scrollHeight;
+
+        // Preload audio URL for instant playback when user clicks or listens
+        fetch(`/api/tts/?text=${encodeURIComponent(initialGreeting)}&lang=${encodeURIComponent(s.lang)}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d && d.audio_url) {
+              const p = document.getElementById(`pill-${initVoiceId}`);
+              if (p) p.setAttribute("data-url", d.audio_url);
+            }
+          })
+          .catch(() => {});
 
         // Set fresh waiting state for Live Feedback
         const fbList = document.getElementById("fb-list");
@@ -772,6 +808,82 @@
     </div>`,
           )
           .join("");
+
+        // Setup Free Talk Topic Starters
+        const isOpenTalk = s.category === "Open Talk" || (s.title || "").toLowerCase().includes("free talk");
+        const startersWrap = document.getElementById("conv-starters-wrap");
+        const startersList = document.getElementById("starters-list");
+        if (isOpenTalk && startersWrap && startersList) {
+          const starterMap = {
+            English: [
+              { icon: "☕", text: "Tell me about your day so far!" },
+              { icon: "✈️", text: "If you could travel anywhere right now, where would you go?" },
+              { icon: "🎬", text: "What's a movie or book you recently enjoyed?" },
+              { icon: "💡", text: "What do you think about AI and the future of technology?" },
+              { icon: "🎲", text: "Ask me a thought-provoking, interesting question!" },
+            ],
+            French: [
+              { icon: "☕", text: "Raconte-moi ta journée !" },
+              { icon: "✈️", text: "Si tu pouvais voyager n'importe où, où irais-tu ?" },
+              { icon: "🎬", text: "Quel est ton film ou livre préféré récemment ?" },
+              { icon: "💡", text: "Que penses-tu de l'intelligence artificielle ?" },
+              { icon: "🎲", text: "Pose-moi une question surprise et intéressante !" },
+            ],
+            Spanish: [
+              { icon: "☕", text: "¡Cuéntame cómo ha ido tu día!" },
+              { icon: "✈️", text: "¿Si pudieras viajar a cualquier lugar, a dónde irías?" },
+              { icon: "🎬", text: "¿Cuál es tu película o libro favorito recientemente?" },
+              { icon: "💡", text: "¿Qué opinas sobre el futuro de la inteligencia artificial?" },
+              { icon: "🎲", text: "¡Hazme una pregunta interesante y aleatoria!" },
+            ],
+            German: [
+              { icon: "☕", text: "Erzähl mir von deinem Tag!" },
+              { icon: "✈️", text: "Wohin würdest du reisen, wenn du könntest?" },
+              { icon: "🎬", text: "Was ist dein Lieblingsfilm oder Buch?" },
+              { icon: "💡", text: "Was denkst du über Künstliche Intelligenz und Zukunft?" },
+              { icon: "🎲", text: "Stell mir eine überraschende, spannende Frage!" },
+            ],
+            Japanese: [
+              { icon: "☕", text: "今日の一日について教えて！" },
+              { icon: "✈️", text: "今すぐどこへでも旅行できるなら、どこに行きたい？" },
+              { icon: "🎬", text: "最近面白かった映画や本はある？" },
+              { icon: "💡", text: "AIや未来のテクノロジーについてどう思う？" },
+              { icon: "🎲", text: "何か面白い質問をしてみて！" },
+            ],
+            Chinese: [
+              { icon: "☕", text: "跟我聊聊你今天过得怎么样吧！" },
+              { icon: "✈️", text: "如果你能去任何地方旅行，你想去哪里？" },
+              { icon: "🎬", text: "你最近看过什么好看的电影或书吗？" },
+              { icon: "💡", text: "你对人工智能和未来科技有什么看法？" },
+              { icon: "🎲", text: "问我一个随机有趣的问题吧！" },
+            ],
+            Korean: [
+              { icon: "☕", text: "오늘 하루 어땠는지 이야기해 줘!" },
+              { icon: "✈️", text: "어디로든 여행 갈 수 있다면 어디로 가고 싶어?" },
+              { icon: "🎬", text: "최근에 재미있게 본 영화나 책 있어?" },
+              { icon: "💡", text: "AI와 미래 기술에 대해 어떻게 생각해?" },
+              { icon: "🎲", text: "나에게 재미있고 신선한 질문 하나 해줘!" },
+            ],
+            Vietnamese: [
+              { icon: "☕", text: "Hôm nay của bạn thế nào rồi, kể mình nghe với!" },
+              { icon: "✈️", text: "Nếu được đi du lịch bất cứ đâu ngay bây giờ, bạn sẽ đi đâu?" },
+              { icon: "🎬", text: "Bộ phim hay cuốn sách bạn thích nhất gần đây là gì?" },
+              { icon: "💡", text: "Bạn nghĩ gì về tương lai của công nghệ và AI?" },
+              { icon: "🎲", text: "Hãy hỏi mình một câu hỏi ngẫu nhiên và thú vị nhé!" },
+            ],
+          };
+          const curStarters = starterMap[s.lang] || starterMap["English"];
+          startersList.innerHTML = curStarters
+            .map(
+              (st) =>
+                `<button type="button" class="starter-chip" onclick="selectTopicStarter('${st.text.replace(/'/g, "\\'")}')"><span>${st.icon}</span> ${st.text}</button>`
+            )
+            .join("");
+          startersWrap.style.display = "flex";
+        } else if (startersWrap) {
+          startersWrap.style.display = "none";
+        }
+
         updateDailyTurnUI();
         showPage("conversation");
 
@@ -790,9 +902,19 @@
             console.log("Started session:", currentSessionId);
           }
         } catch (e) {
-          console.warn("Cou/ld not create backend session:", e);
+          console.warn("Could not create backend session:", e);
         }
       }
+
+      window.selectTopicStarter = function (text) {
+        const input = document.getElementById("text-fallback-input");
+        const container = document.getElementById("text-fallback-container");
+        if (container) container.style.display = "flex";
+        if (input) {
+          input.value = text;
+        }
+        submitUserMessage(text);
+      };
 
       let mediaRecorder = null;
       let audioChunks = [];
@@ -1083,12 +1205,18 @@
             }
             const aiMsg = document.createElement("div");
             aiMsg.className = "msg-wrap";
-            let audioTag = data.ai_audio_url
-              ? `<audio controls autoplay src="${data.ai_audio_url}" style="margin-top:8px;width:100%;height:32px;"></audio>`
-              : "";
-            aiMsg.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response} ${audioTag}</div>`;
+            const curLang = document.getElementById("conv-lang")?.textContent || "English";
+            const voiceId = "ai-voice-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+            const voicePill = createAiVoicePillHtml(data.ai_audio_url || "", voiceId, data.ai_response, curLang);
+            aiMsg.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response}</div>`;
             ml.appendChild(aiMsg);
+            const pillWrapper = document.createElement("div");
+            pillWrapper.innerHTML = voicePill;
+            ml.appendChild(pillWrapper);
             ml.scrollTop = ml.scrollHeight;
+
+            // Play voice via ElevenLabs or Browser Speech Synthesis
+            playAiVoicePill(voiceId, true);
 
             if (data.feedback) {
               updateFeedbackUI(data.feedback);
@@ -1099,6 +1227,315 @@
           console.error("Error submitting response:", e);
         }
       }
+
+      // ── AUDIO VISUALIZER ENGINE (Web Audio API) ───────────────────
+      let audioCtx = null;
+      let analyserNode = null;
+      let visualizerAnimId = null;
+
+      function initAudioVisualizer(stream) {
+        try {
+          const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContextClass) return;
+
+          if (!audioCtx || audioCtx.state === "closed") {
+            audioCtx = new AudioContextClass();
+          }
+          if (audioCtx.state === "suspended") {
+            audioCtx.resume();
+          }
+
+          const source = audioCtx.createMediaStreamSource(stream);
+          analyserNode = audioCtx.createAnalyser();
+          analyserNode.fftSize = 64;
+          analyserNode.smoothingTimeConstant = 0.8;
+          source.connect(analyserNode);
+
+          const wrap = document.getElementById("audio-visualizer-wrap");
+          const canvas = document.getElementById("audio-visualizer-canvas");
+          if (wrap && canvas) {
+            wrap.classList.add("active");
+            const ctx = canvas.getContext("2d");
+            const bufferLength = analyserNode.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+
+            function renderFrame() {
+              visualizerAnimId = requestAnimationFrame(renderFrame);
+              analyserNode.getByteFrequencyData(dataArray);
+
+              ctx.clearRect(0, 0, canvas.width, canvas.height);
+              const barCount = 20;
+              const step = Math.max(1, Math.floor(bufferLength / barCount));
+              const barWidth = 6;
+              const gap = (canvas.width - barCount * barWidth) / (barCount - 1);
+
+              for (let i = 0; i < barCount; i++) {
+                const val = dataArray[i * step] || 0;
+                const barHeight = Math.max(3, (val / 255) * canvas.height * 0.95);
+                const x = i * (barWidth + gap);
+                const y = (canvas.height - barHeight) / 2;
+
+                const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
+                gradient.addColorStop(0, "#ec4899");
+                gradient.addColorStop(0.5, "#8b5cf6");
+                gradient.addColorStop(1, "#4f46e5");
+
+                ctx.fillStyle = gradient;
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                  ctx.roundRect(x, y, barWidth, barHeight, 3);
+                } else {
+                  ctx.rect(x, y, barWidth, barHeight);
+                }
+                ctx.fill();
+              }
+            }
+            renderFrame();
+          }
+        } catch (err) {
+          console.warn("Visualizer init warning:", err);
+        }
+      }
+
+      function stopAudioVisualizer() {
+        if (visualizerAnimId) {
+          cancelAnimationFrame(visualizerAnimId);
+          visualizerAnimId = null;
+        }
+        const wrap = document.getElementById("audio-visualizer-wrap");
+        const canvas = document.getElementById("audio-visualizer-canvas");
+        if (wrap) wrap.classList.remove("active");
+        if (canvas) {
+          const ctx = canvas.getContext("2d");
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+      }
+
+      // ── SLEEK AI VOICE NOTE PLAYER CONTROLLER ─────────────────────
+      const activeVoiceAudioMap = {};
+      let activeSpeakingVoiceId = null;
+
+      function createAiVoicePillHtml(audioUrl, voiceId, text, lang) {
+        const cleanText = (text || "").replace(/"/g, "&quot;");
+        const cleanLang = lang || "English";
+        return `
+          <div class="ai-voice-pill" id="pill-${voiceId}" data-url="${audioUrl || ""}" data-text="${cleanText}" data-lang="${cleanLang}" data-speed="1.0">
+            <button class="btn-voice-play" id="btn-play-${voiceId}" onclick="toggleAiVoicePlayback('${voiceId}')" title="Play / Replay Voice">
+              <i class="bi bi-play-fill" id="ico-play-${voiceId}"></i>
+            </button>
+            <div class="voice-wave-anim" id="wave-${voiceId}">
+              <span></span><span></span><span></span><span></span><span></span>
+            </div>
+            <span class="voice-label" id="lbl-${voiceId}">Replay Voice</span>
+            <div class="voice-speed-picker">
+              <button class="btn-speed active" id="spd-1-${voiceId}" onclick="setVoicePlaybackSpeed('${voiceId}', 1.0, event)">1x</button>
+              <button class="btn-speed" id="spd-075-${voiceId}" onclick="setVoicePlaybackSpeed('${voiceId}', 0.75, event)">0.75x</button>
+            </div>
+          </div>
+        `;
+      }
+
+      function stopAllAiVoicePlaybacks(exceptVoiceId = null) {
+        // 1. Stop HTML5 Audio objects
+        Object.keys(activeVoiceAudioMap).forEach((id) => {
+          if (id !== exceptVoiceId) {
+            const a = activeVoiceAudioMap[id];
+            if (a) {
+              a.pause();
+              a.currentTime = 0;
+            }
+            updateVoicePillUIState(id, false);
+          }
+        });
+
+        // 2. Stop Web Speech Synthesis
+        if (window.speechSynthesis) {
+          try {
+            window.speechSynthesis.cancel();
+          } catch (e) {}
+        }
+        if (activeSpeakingVoiceId && activeSpeakingVoiceId !== exceptVoiceId) {
+          updateVoicePillUIState(activeSpeakingVoiceId, false);
+          activeSpeakingVoiceId = null;
+        }
+      }
+
+      function updateVoicePillUIState(voiceId, isPlaying) {
+        const pill = document.getElementById(`pill-${voiceId}`);
+        const ico = document.getElementById(`ico-play-${voiceId}`);
+        const lbl = document.getElementById(`lbl-${voiceId}`);
+        if (!pill) return;
+        if (isPlaying) {
+          pill.classList.add("is-playing");
+          if (ico) ico.className = "bi bi-pause-fill";
+          if (lbl) lbl.textContent = "AI Speaking...";
+        } else {
+          pill.classList.remove("is-playing");
+          if (ico) ico.className = "bi bi-play-fill";
+          if (lbl) lbl.textContent = "Replay Voice";
+        }
+      }
+
+      async function playAiVoicePill(voiceId, auto = false) {
+        const pill = document.getElementById(`pill-${voiceId}`);
+        if (!pill) return;
+        let audioUrl = pill.getAttribute("data-url");
+        const rawText = pill.getAttribute("data-text") || "";
+        const text = rawText.replace(/&quot;/g, '"');
+        const lang = pill.getAttribute("data-lang") || "English";
+        const speed = parseFloat(pill.getAttribute("data-speed") || "1.0");
+
+        stopAllAiVoicePlaybacks(voiceId);
+
+        // If audioUrl is missing, fetch from backend TTS API
+        if (!audioUrl && text) {
+          try {
+            updateVoicePillUIState(voiceId, true);
+            const res = await fetch(
+              `/api/tts/?text=${encodeURIComponent(text)}&lang=${encodeURIComponent(lang)}`
+            );
+            if (res.ok) {
+              const data = await res.json();
+              if (data.audio_url) {
+                audioUrl = data.audio_url;
+                pill.setAttribute("data-url", audioUrl);
+              }
+            }
+          } catch (e) {
+            console.warn("TTS API fetch failed:", e);
+          }
+        }
+
+        // Path A: Remote ElevenLabs / Backend MP3 Audio URL exists
+        if (audioUrl) {
+          let audio = activeVoiceAudioMap[voiceId];
+          if (!audio || (audio.src && !audio.src.endsWith(audioUrl))) {
+            audio = new Audio(audioUrl);
+            activeVoiceAudioMap[voiceId] = audio;
+            audio.onplay = () => updateVoicePillUIState(voiceId, true);
+            audio.onended = () => updateVoicePillUIState(voiceId, false);
+            audio.onerror = () => {
+              playSpeechSynthesisFallback(voiceId, text, lang, speed);
+            };
+          }
+          audio.playbackRate = speed;
+          audio.currentTime = 0;
+          updateVoicePillUIState(voiceId, true);
+          audio.play().catch((err) => {
+            console.warn("Audio play prevented, falling back to Web Speech:", err);
+            playSpeechSynthesisFallback(voiceId, text, lang, speed);
+          });
+          return;
+        }
+
+        // Path B: Built-in Web Speech Synthesis or Direct Audio Stream
+        playSpeechSynthesisFallback(voiceId, text, lang, speed);
+      }
+
+      function playSpeechSynthesisFallback(voiceId, text, lang, speed = 1.0) {
+        const langCodeMap = {
+          English: "en",
+          French: "fr",
+          Spanish: "es",
+          German: "de",
+          Japanese: "ja",
+          Chinese: "zh-CN",
+          Korean: "ko",
+          Vietnamese: "vi",
+        };
+        const langCode = langCodeMap[lang] || "en";
+
+        if (window.speechSynthesis && window.speechSynthesis.getVoices().length > 0) {
+          try {
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.resume();
+            const utter = new SpeechSynthesisUtterance(text);
+            const fullLangMap = {
+              English: "en-US",
+              French: "fr-FR",
+              Spanish: "es-ES",
+              German: "de-DE",
+              Japanese: "ja-JP",
+              Chinese: "zh-CN",
+              Korean: "ko-KR",
+              Vietnamese: "vi-VN",
+            };
+            utter.lang = fullLangMap[lang] || "en-US";
+            utter.rate = speed === 0.75 ? 0.75 : 1.0;
+            activeSpeakingVoiceId = voiceId;
+
+            utter.onstart = () => updateVoicePillUIState(voiceId, true);
+            utter.onend = () => {
+              updateVoicePillUIState(voiceId, false);
+              activeSpeakingVoiceId = null;
+            };
+            utter.onerror = () => {
+              activeSpeakingVoiceId = null;
+              playDirectStreamTTS(voiceId, text, langCode, speed);
+            };
+
+            updateVoicePillUIState(voiceId, true);
+            window.speechSynthesis.speak(utter);
+            return;
+          } catch (e) {
+            console.warn("Speech synthesis error, falling back to direct stream:", e);
+          }
+        }
+
+        playDirectStreamTTS(voiceId, text, langCode, speed);
+      }
+
+      function playDirectStreamTTS(voiceId, text, langCode, speed = 1.0) {
+        try {
+          const streamUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent((text || "").substring(0, 200))}`;
+          const audio = new Audio(streamUrl);
+          activeVoiceAudioMap[voiceId] = audio;
+          audio.playbackRate = speed;
+          audio.onplay = () => updateVoicePillUIState(voiceId, true);
+          audio.onended = () => updateVoicePillUIState(voiceId, false);
+          audio.onerror = () => updateVoicePillUIState(voiceId, false);
+          updateVoicePillUIState(voiceId, true);
+          audio.play().catch(() => updateVoicePillUIState(voiceId, false));
+        } catch (e) {
+          updateVoicePillUIState(voiceId, false);
+        }
+      }
+
+      window.toggleAiVoicePlayback = function (voiceId) {
+        const pill = document.getElementById(`pill-${voiceId}`);
+        if (!pill) return;
+
+        const isPlaying = pill.classList.contains("is-playing");
+        if (isPlaying) {
+          stopAllAiVoicePlaybacks();
+        } else {
+          playAiVoicePill(voiceId, false);
+        }
+      };
+
+      window.setVoicePlaybackSpeed = function (voiceId, speed, event) {
+        if (event) event.stopPropagation();
+        const pill = document.getElementById(`pill-${voiceId}`);
+        if (pill) {
+          pill.setAttribute("data-speed", String(speed));
+        }
+        const audio = activeVoiceAudioMap[voiceId];
+        if (audio) {
+          audio.playbackRate = speed;
+        }
+        const btn1 = document.getElementById(`spd-1-${voiceId}`);
+        const btn075 = document.getElementById(`spd-075-${voiceId}`);
+        if (speed === 1.0) {
+          btn1?.classList.add("active");
+          btn075?.classList.remove("active");
+        } else {
+          btn075?.classList.add("active");
+          btn1?.classList.remove("active");
+        }
+        if (pill?.classList.contains("is-playing") && !audio) {
+          playAiVoicePill(voiceId, false);
+        }
+      };
 
       let speechRecognizer = null;
       let liveSpeechTranscript = "";
@@ -1141,6 +1578,9 @@
             audioChunks = [];
             liveSpeechTranscript = "";
             mediaRecorder = new MediaRecorder(stream);
+
+            // Initialize Live Real-time Audio Visualizer
+            initAudioVisualizer(stream);
 
             // Start browser native SpeechRecognition alongside MediaRecorder
             const SpeechRecognition =
@@ -1194,6 +1634,7 @@
             };
 
             mediaRecorder.onstop = async () => {
+              stopAudioVisualizer();
               stream.getTracks().forEach((track) => track.stop());
               if (speechRecognizer) {
                 try {
@@ -1212,6 +1653,7 @@
               "🔴 Recording… Speak now (Click mic when finished)";
             st.style.color = "#dc2626";
           } catch (err) {
+            stopAudioVisualizer();
             console.warn("Microphone access unavailable or denied:", err);
             st.textContent =
               "Microphone unavailable. Please type below or enter sample text.";
@@ -1226,6 +1668,7 @@
           ico.className = "bi bi-mic-fill";
           st.textContent = "Processing audio & generating real-time response…";
           st.style.color = "";
+          stopAudioVisualizer();
           if (speechRecognizer) {
             try {
               speechRecognizer.stop();
@@ -1287,22 +1730,20 @@
             userMsg.innerHTML = `<div class="msg-lbl">🧑 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || liveTranscript || "Spoken Audio"}</div>`;
             ml.appendChild(userMsg);
 
-            // Show AI response & auto-play synthesized voice
+            // Show AI response & auto-play synthesized voice using sleek Voice Pill
             const aiMsg = document.createElement("div");
             aiMsg.className = "msg-wrap";
-            let audioTag = data.ai_audio_url
-              ? `<audio controls autoplay src="${data.ai_audio_url}" style="margin-top:8px;width:100%;height:32px;"></audio>`
-              : "";
-            aiMsg.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response} ${audioTag}</div>`;
+            const curLang = document.getElementById("conv-lang")?.textContent || "English";
+            const voiceId = "ai-voice-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+            aiMsg.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response}</div>`;
             ml.appendChild(aiMsg);
+            const pillWrap = document.createElement("div");
+            pillWrap.innerHTML = voicePill;
+            ml.appendChild(pillWrap);
             ml.scrollTop = ml.scrollHeight;
 
-            // If no ElevenLabs audio URL, play via native browser speech synthesis
-            if (!data.ai_audio_url) {
-              const curLang =
-                document.getElementById("conv-lang")?.textContent || "English";
-              speakAiResponse(data.ai_response, curLang);
-            }
+            // Auto-play AI voice seamlessly in background
+            playAiVoicePill(voiceId, true);
 
             // Update Live Feedback Panel in Real-Time
             if (data.feedback) {
@@ -2026,12 +2467,18 @@
         if (dailyLimit !== undefined && dailyLimit !== null) {
           userDailyLimit = dailyLimit;
         } else if (currentUser && currentUser.daily_limit !== undefined) {
-          userDailyLimit = currentUser.daily_limit || 5;
+          userDailyLimit = currentUser.daily_limit;
         }
 
+        const plan = (currentUser && (currentUser.subscription_plan || "")).toUpperCase();
+        const role = (currentUser && (currentUser.role || "")).toUpperCase();
         const isVip =
-          currentUser &&
-          (currentUser.subscription_plan || "").toUpperCase() === "VIP";
+          plan === "VIP" ||
+          plan === "PRO" ||
+          role === "ADMIN" ||
+          (currentUser && currentUser.daily_limit === null) ||
+          (currentUser && currentUser.is_vip);
+
         const card = document.getElementById("scen-turn-card");
         const statusText = document.getElementById("scen-turn-status-text");
         const vipBadge = document.getElementById("scen-turn-vip-badge");
@@ -2041,6 +2488,8 @@
         const upgradeBtn = document.getElementById("btn-scen-upgrade");
         const convBadge = document.getElementById("conv-turn-badge");
         const convText = document.getElementById("conv-turns-text");
+        const ftBadge = document.getElementById("ft-turn-badge");
+        const ftText = document.getElementById("ft-turns-text");
 
         if (isVip) {
           if (card) card.classList.add("vip");
@@ -2055,6 +2504,10 @@
           if (convBadge) {
             convBadge.className = "conv-turn-badge vip";
             convBadge.innerHTML = '<i class="bi bi-gem"></i> VIP Unlimited';
+          }
+          if (ftBadge) {
+            ftBadge.className = "conv-turn-badge vip";
+            ftBadge.innerHTML = '<i class="bi bi-gem"></i> VIP Unlimited';
           }
         } else {
           const limit = userDailyLimit || 5;
@@ -2090,6 +2543,13 @@
               "conv-turn-badge" +
               (remaining <= 1 ? (remaining === 0 ? " empty" : " warn") : "");
             convText.textContent = `${remaining} / ${limit} turns left`;
+          }
+
+          if (ftBadge && ftText) {
+            ftBadge.className =
+              "conv-turn-badge" +
+              (remaining <= 1 ? (remaining === 0 ? " empty" : " warn") : "");
+            ftText.textContent = `${remaining} / ${limit} turns left`;
           }
         }
       }
@@ -2763,4 +3223,526 @@
         }
       }
 
-      // (Hook removed)
+      // ── DEDICATED FREE TALK STUDIO CONTROLLER ─────────────────────
+      let currentFreeTalkSessionId = null;
+      let currentFreeTalkPersona = "friendly";
+      let freeTalkMediaRecorder = null;
+      let freeTalkAudioChunks = [];
+      let isFreeTalkRecording = false;
+      let freeTalkVisualizerAnimationId = null;
+
+      const FREE_TALK_STARTERS_DB = {
+        English: [
+          { icon: "☕", text: "Tell me about your day so far!" },
+          { icon: "✈️", text: "If you could travel anywhere right now, where would you go?" },
+          { icon: "🎬", text: "What's a movie or book you recently enjoyed?" },
+          { icon: "💡", text: "What do you think about AI and the future of technology?" },
+          { icon: "🎲", text: "Ask me a thought-provoking, interesting question!" },
+          { icon: "🍕", text: "What is your comfort food and why do you love it?" },
+          { icon: "🎵", text: "What kind of music puts you in the best mood?" },
+          { icon: "🌍", text: "What is the most interesting cultural habit you've seen?" }
+        ],
+        French: [
+          { icon: "☕", text: "Raconte-moi ta journée !" },
+          { icon: "✈️", text: "Si tu pouvais voyager n'importe où, où irais-tu ?" },
+          { icon: "🎬", text: "Quel est ton film ou livre préféré récemment ?" },
+          { icon: "💡", text: "Que penses-tu de l'intelligence artificielle ?" },
+          { icon: "🎲", text: "Pose-moi une question surprise et intéressante !" },
+          { icon: "🥐", text: "Quel est ton plat ou dessert préféré ?" },
+          { icon: "🎵", text: "Quel genre de musique écoutes-tu en ce moment ?" }
+        ],
+        Spanish: [
+          { icon: "☕", text: "¡Cuéntame cómo ha ido tu día!" },
+          { icon: "✈️", text: "¿Si pudieras viajar a cualquier lugar, a dónde irías?" },
+          { icon: "🎬", text: "¿Cuál es tu película o libro favorito recientemente?" },
+          { icon: "💡", text: "¿Qué opinas sobre el futuro de la tecnología?" },
+          { icon: "🎲", text: "¡Hazme una pregunta interesante y aleatoria!" },
+          { icon: "🌮", text: "¿Cuál es tu comida favorita para relajarte?" }
+        ],
+        German: [
+          { icon: "☕", text: "Erzähl mir von deinem Tag!" },
+          { icon: "✈️", text: "Wohin würdest du reisen, wenn du könntest?" },
+          { icon: "🎬", text: "Was ist dein Lieblingsfilm oder Buch?" },
+          { icon: "💡", text: "Was denkst du über Künstliche Intelligenz?" },
+          { icon: "🎲", text: "Stell mir eine überraschende, spannende Frage!" }
+        ],
+        Japanese: [
+          { icon: "☕", text: "今日の一日について教えて！" },
+          { icon: "✈️", text: "今すぐどこへでも旅行できるなら、どこに行きたい？" },
+          { icon: "🎬", text: "最近面白かった映画や本はある？" },
+          { icon: "💡", text: "AIや未来のテクノロジーについてどう思う？" },
+          { icon: "🎲", text: "何か面白い質問をしてみて！" },
+          { icon: "🍜", text: "好きな日本食や料理は何ですか？" }
+        ],
+        Chinese: [
+          { icon: "☕", text: "跟我聊聊你今天过得怎么样吧！" },
+          { icon: "✈️", text: "如果你能去任何地方旅行，你想去哪里？" },
+          { icon: "🎬", text: "你最近看过什么好看的电影或书吗？" },
+          { icon: "💡", text: "你对人工智能和未来科技有什么看法？" },
+          { icon: "🎲", text: "问我一个随机有趣的问题吧！" }
+        ],
+        Korean: [
+          { icon: "☕", text: "오늘 하루 어땠는지 이야기해 줘!" },
+          { icon: "✈️", text: "어디로든 여행 갈 수 있다면 어디로 가고 싶어?" },
+          { icon: "🎬", text: "최근에 재미있게 본 영화나 책 있어?" },
+          { icon: "💡", text: "AI와 미래 기술에 대해 어떻게 생각해?" },
+          { icon: "🎲", text: "나에게 재미있고 신선한 질문 하나 해줘!" }
+        ],
+        Vietnamese: [
+          { icon: "☕", text: "Hôm nay của bạn thế nào rồi, kể mình nghe với!" },
+          { icon: "✈️", text: "Nếu được đi du lịch bất cứ đâu ngay bây giờ, bạn sẽ đi đâu?" },
+          { icon: "🎬", text: "Bộ phim hay cuốn sách bạn thích nhất gần đây là gì?" },
+          { icon: "💡", text: "Bạn nghĩ gì về tương lai của công nghệ và AI?" },
+          { icon: "🎲", text: "Hãy hỏi mình một câu hỏi ngẫu nhiên và thú vị nhé!" },
+          { icon: "🍜", text: "Món ăn yêu thích nhất của bạn là gì và vì sao?" }
+        ]
+      };
+
+      async function initFreeTalkPage() {
+        const targetLang = (currentUser && currentUser.target_language) || "English";
+        const langBadge = document.getElementById("ft-lang-badge");
+        if (langBadge) {
+          const langEmojis = {
+            English: "🇬🇧 English",
+            French: "🇫🇷 French",
+            Spanish: "🇪🇸 Spanish",
+            German: "🇩🇪 German",
+            Japanese: "🇯🇵 Japanese",
+            Chinese: "🇨🇳 Chinese",
+            Korean: "🇰🇷 Korean",
+            Vietnamese: "🇻🇳 Vietnamese",
+          };
+          langBadge.textContent = langEmojis[targetLang] || targetLang;
+        }
+
+        // Update Turn Counter
+        updateFreeTalkTurnUI();
+
+        // Render Starters
+        renderFreeTalkStarters();
+
+        // Start session if none exists
+        if (!currentFreeTalkSessionId) {
+          await resetFreeTalkSession();
+        }
+      }
+
+      function updateFreeTalkTurnUI() {
+        updateDailyTurnUI();
+      }
+
+      window.setFreeTalkPersona = function (persona) {
+        currentFreeTalkPersona = persona;
+        document.querySelectorAll(".persona-pill").forEach(p => p.classList.remove("active"));
+        const btn = document.getElementById(`p-${persona}`);
+        if (btn) btn.classList.add("active");
+
+        const personaLabels = {
+          friendly: "Friendly Pal ☕",
+          career: "Career Coach 💼",
+          debate: "Debate Partner 🧠",
+          strict: "Strict Professor 🎓"
+        };
+        const ml = document.getElementById("ft-msg-list");
+        if (ml) {
+          const sysNotice = document.createElement("div");
+          sysNotice.style.cssText = "text-align:center;font-size:0.75rem;color:var(--muted-fg);margin:10px 0;font-style:italic;";
+          sysNotice.innerHTML = `✨ Persona switched to <strong>${personaLabels[persona] || persona}</strong>`;
+          ml.appendChild(sysNotice);
+          ml.scrollTop = ml.scrollHeight;
+        }
+      };
+
+      window.renderFreeTalkStarters = function () {
+        const targetLang = (currentUser && currentUser.target_language) || "English";
+        const pool = FREE_TALK_STARTERS_DB[targetLang] || FREE_TALK_STARTERS_DB["English"];
+        const startersList = document.getElementById("ft-starters-list");
+        if (!startersList) return;
+
+        startersList.innerHTML = pool
+          .slice(0, 5)
+          .map(
+            (st) =>
+              `<button type="button" class="starter-chip" onclick="selectFreeTalkStarter('${st.text.replace(/'/g, "\\'")}')"><span>${st.icon}</span> ${st.text}</button>`
+          )
+          .join("");
+      };
+
+      window.refreshFreeTalkStarters = function () {
+        const targetLang = (currentUser && currentUser.target_language) || "English";
+        const pool = [...(FREE_TALK_STARTERS_DB[targetLang] || FREE_TALK_STARTERS_DB["English"])];
+        // Shuffle
+        for (let i = pool.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [pool[i], pool[j]] = [pool[j], pool[i]];
+        }
+        const startersList = document.getElementById("ft-starters-list");
+        if (!startersList) return;
+
+        startersList.innerHTML = pool
+          .slice(0, 5)
+          .map(
+            (st) =>
+              `<button type="button" class="starter-chip" onclick="selectFreeTalkStarter('${st.text.replace(/'/g, "\\'")}')"><span>${st.icon}</span> ${st.text}</button>`
+          )
+          .join("");
+      };
+
+      window.selectFreeTalkStarter = function (text) {
+        const input = document.getElementById("ft-text-input");
+        if (input) input.value = text;
+        submitFreeTalkText(text);
+      };
+
+      window.resetFreeTalkSession = async function () {
+        const targetLang = (currentUser && currentUser.target_language) || "English";
+        const greetings = {
+          English: "Hey there! 😊 Welcome to Free Talk! What's on your mind today? We can chat about anything!",
+          French: "Bonjour ! 😊 Bienvenue dans le studio Free Talk ! De quoi aimerais-tu discuter aujourd'hui ?",
+          Spanish: "¡Hola! 😊 ¡Bienvenido al estudio de Free Talk! ¿De qué te gustaría hablar hoy?",
+          German: "Hallo! 😊 Willkommen im Free Talk Studio! Worüber möchtest du heute sprechen?",
+          Japanese: "こんにちは！😊 フリートークスタジオへようこそ！今日はどんなことについて話したいですか？",
+          Chinese: "你好！😊 欢迎来到自由对话室！今天你想聊些什么呢？",
+          Korean: "안녕하세요! 😊 자유 대화 스튜디오에 오신 것을 환영합니다! 오늘 어떤 이야기를 나눌까요?",
+          Vietnamese: "Chào bạn! 😊 Chào mừng đến với Free Talk Studio! Hôm nay bạn muốn cùng mình tâm sự hay bàn luận chủ đề gì nào?",
+        };
+        const initialGreeting = greetings[targetLang] || greetings["English"];
+        const initVoiceId = "ft-voice-init-" + Date.now();
+        const initVoicePill = createAiVoicePillHtml("", initVoiceId, initialGreeting, targetLang);
+
+        const ml = document.getElementById("ft-msg-list");
+        if (ml) {
+          ml.innerHTML = `
+            <div class="msg-wrap">
+              <div class="msg-lbl">🤖 LinguistAI (${targetLang})</div>
+              <div class="msg-bubble msg-ai">${initialGreeting}</div>
+              <div>${initVoicePill}</div>
+            </div>`;
+          ml.scrollTop = ml.scrollHeight;
+        }
+
+        fetch(`/api/tts/?text=${encodeURIComponent(initialGreeting)}&lang=${encodeURIComponent(targetLang)}`)
+          .then((r) => r.json())
+          .then((d) => {
+            if (d && d.audio_url) {
+              const p = document.getElementById(`pill-${initVoiceId}`);
+              if (p) p.setAttribute("data-url", d.audio_url);
+            }
+          })
+          .catch(() => {});
+
+        // Reset feedback & vocab
+        const fbList = document.getElementById("ft-fb-list");
+        if (fbList) {
+          fbList.innerHTML = `<div class="fb-item" style="color:var(--muted-fg)"><span style="flex-shrink:0">🎙️</span><span>Speak or type freely. Real-time feedback, grammar notes, and scores will appear here!</span></div>`;
+        }
+        const vList = document.getElementById("ft-vocab-list");
+        if (vList) {
+          vList.innerHTML = `<div style="color:var(--muted-fg);font-size:0.8rem;text-align:center;padding:12px;">Vocabulary extracted during your chat will be saved here.</div>`;
+        }
+
+        // Start backend session using Free Talk Scenario (ID 27 or title match)
+        try {
+          const activeUid = (currentUser && currentUser.id) || currentUserId || localStorage.getItem("linguist_user_id");
+          const freeTalkScenario = SCENARIOS.find(s => s.category === "Open Talk" || (s.title || "").toLowerCase().includes("free talk")) || { id: 27 };
+          const res = await apiFetch("/api/sessions/start/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({ user_id: activeUid, scenario_id: freeTalkScenario.id }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            currentFreeTalkSessionId = data.session_id;
+          }
+        } catch (e) {
+          console.warn("Could not create Free Talk session:", e);
+        }
+      };
+
+      window.handleFreeTalkTextSubmit = function (e) {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitFreeTalkText();
+        }
+      };
+
+      window.submitFreeTalkText = async function (explicitText) {
+        const input = document.getElementById("ft-text-input");
+        const text = (explicitText !== undefined ? explicitText : (input ? input.value : "")).trim();
+        if (!text) return;
+        if (input) input.value = "";
+
+        const plan = (currentUser && (currentUser.subscription_plan || "")).toUpperCase();
+        const role = (currentUser && (currentUser.role || "")).toUpperCase();
+        const isVip =
+          plan === "VIP" ||
+          plan === "PRO" ||
+          role === "ADMIN" ||
+          (currentUser && currentUser.daily_limit === null) ||
+          (currentUser && currentUser.is_vip);
+
+        // Check Turn Limit for non-VIP
+        if (!isVip && userDailyLimit !== null && userTodayTurns >= userDailyLimit) {
+          openPaymentModal();
+          return;
+        }
+
+        const ml = document.getElementById("ft-msg-list");
+        if (ml) {
+          ml.innerHTML += `
+            <div class="msg-wrap msg-user-wrap">
+              <div class="msg-lbl">👤 You</div>
+              <div class="msg-bubble msg-user">${text}</div>
+            </div>`;
+          ml.scrollTop = ml.scrollHeight;
+        }
+
+        const targetLang = (currentUser && currentUser.target_language) || "English";
+        const placeholderVoiceId = "ft-voice-" + Date.now();
+        const placeholderPill = createAiVoicePillHtml("", placeholderVoiceId, "", targetLang);
+        if (ml) {
+          ml.innerHTML += `
+            <div class="msg-wrap" id="ft-ai-loading-wrap">
+              <div class="msg-lbl">🤖 LinguistAI</div>
+              <div class="msg-bubble msg-ai" id="ft-ai-thinking" style="color:var(--muted-fg);font-style:italic"><i class="bi bi-hourglass-split"></i> Thinking...</div>
+              <div id="ft-ai-voice-wrap">${placeholderPill}</div>
+            </div>`;
+          ml.scrollTop = ml.scrollHeight;
+        }
+
+        try {
+          const activeUid = (currentUser && currentUser.id) || currentUserId || localStorage.getItem("linguist_user_id");
+          const res = await apiFetch(`/api/sessions/${currentFreeTalkSessionId || 1}/respond/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            credentials: "include",
+            body: JSON.stringify({
+              user_id: activeUid,
+              user_transcript: text,
+              transcript: text,
+              persona: currentFreeTalkPersona,
+            }),
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            const thinkingEl = document.getElementById("ft-ai-thinking");
+            if (thinkingEl) {
+              thinkingEl.style.color = "";
+              thinkingEl.style.fontStyle = "";
+              thinkingEl.textContent = data.ai_response || "...";
+            }
+            const pillEl = document.getElementById(`pill-${placeholderVoiceId}`);
+            if (pillEl) {
+              pillEl.setAttribute("data-text", encodeURIComponent(data.ai_response || ""));
+              if (data.ai_audio_url) {
+                pillEl.setAttribute("data-url", data.ai_audio_url);
+              }
+            }
+            if (data.turns_today !== undefined) {
+              updateDailyTurnUI(data.turns_today, data.daily_limit);
+            }
+            renderFreeTalkFeedback(data.feedback, data.scores);
+          } else if (res.status === 403) {
+            const errData = await res.json().catch(() => ({}));
+            if (errData.limit_reached) {
+              const thinkingEl = document.getElementById("ft-ai-thinking");
+              if (thinkingEl) thinkingEl.textContent = "You have used all daily turns. Please upgrade to VIP for unlimited practice!";
+              openPaymentModal();
+            }
+          }
+        } catch (e) {
+          console.error("Free talk submission error:", e);
+        }
+      };
+
+      function renderFreeTalkFeedback(feedback, scores) {
+        const fbList = document.getElementById("ft-fb-list");
+        if (!fbList || !feedback) return;
+
+        const grammarScore = scores && scores.grammar !== undefined ? scores.grammar : 85;
+        const pronScore = scores && scores.pronunciation !== undefined ? scores.pronunciation : 88;
+
+        let html = `
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+            <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center;">
+              <div style="font-size:1.1rem;font-weight:800;color:var(--primary);">${grammarScore}%</div>
+              <div style="font-size:0.68rem;color:var(--muted-fg);font-weight:600;">GRAMMAR</div>
+            </div>
+            <div style="background:#f8fafc;border:1px solid var(--border);border-radius:10px;padding:8px;text-align:center;">
+              <div style="font-size:1.1rem;font-weight:800;color:#10b981;">${pronScore}%</div>
+              <div style="font-size:0.68rem;color:var(--muted-fg);font-weight:600;">FLUENCY</div>
+            </div>
+          </div>`;
+
+        if (feedback.grammar_correction && feedback.grammar_correction !== "No errors detected.") {
+          html += `<div class="fb-item" style="border-left:3px solid #ef4444;"><span style="flex-shrink:0">✏️</span><span>${feedback.grammar_correction}</span></div>`;
+        }
+        if (feedback.pronunciation_tip) {
+          html += `<div class="fb-item" style="border-left:3px solid #3b82f6;"><span style="flex-shrink:0">🔊</span><span>${feedback.pronunciation_tip}</span></div>`;
+        }
+        if (feedback.better_alternative) {
+          html += `<div class="fb-item" style="border-left:3px solid #8b5cf6;"><span style="flex-shrink:0">💡</span><span>${feedback.better_alternative}</span></div>`;
+        }
+        fbList.innerHTML = html;
+
+        // Populate vocabulary if returned
+        if (feedback.extracted_vocab && Array.isArray(feedback.extracted_vocab) && feedback.extracted_vocab.length > 0) {
+          const vList = document.getElementById("ft-vocab-list");
+          if (vList) {
+            vList.innerHTML = feedback.extracted_vocab
+              .map(v => `
+                <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border)">
+                  <span style="font-weight:600;color:var(--primary)">${v.word || v.w}</span>
+                  <span style="color:var(--muted-fg)">${v.def || v.d}</span>
+                </div>`)
+              .join("");
+          }
+        }
+      }
+
+      window.toggleFreeTalkMic = async function () {
+        const micBtn = document.getElementById("ft-mic-btn");
+        const micIcon = document.getElementById("ft-mic-icon");
+        const micStatus = document.getElementById("ft-mic-status");
+
+        if (isFreeTalkRecording) {
+          // Stop recording
+          isFreeTalkRecording = false;
+          if (micBtn) micBtn.classList.remove("recording");
+          if (micIcon) micIcon.className = "bi bi-mic-fill";
+          if (micStatus) micStatus.textContent = "Processing your voice with Whisper AI...";
+          stopFreeTalkAudioVisualizer();
+          if (freeTalkMediaRecorder && freeTalkMediaRecorder.state !== "inactive") {
+            freeTalkMediaRecorder.stop();
+          }
+          return;
+        }
+
+        // Start recording
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          freeTalkAudioChunks = [];
+          freeTalkMediaRecorder = new MediaRecorder(stream);
+          freeTalkMediaRecorder.ondataavailable = (e) => {
+            if (e.data.size > 0) freeTalkAudioChunks.push(e.data);
+          };
+          freeTalkMediaRecorder.onstop = async () => {
+            stream.getTracks().forEach((track) => track.stop());
+            const audioBlob = new Blob(freeTalkAudioChunks, { type: "audio/webm" });
+            await submitFreeTalkAudio(audioBlob);
+          };
+
+          freeTalkMediaRecorder.start();
+          isFreeTalkRecording = true;
+          if (micBtn) micBtn.classList.add("recording");
+          if (micIcon) micIcon.className = "bi bi-stop-fill";
+          if (micStatus) micStatus.textContent = "Listening... Speak freely in your target language!";
+          startFreeTalkAudioVisualizer(stream);
+        } catch (err) {
+          console.warn("Microphone access failed for Free Talk:", err);
+          if (micStatus) micStatus.textContent = "Microphone permission denied. Type below instead.";
+        }
+      };
+
+      async function submitFreeTalkAudio(audioBlob) {
+        const micStatus = document.getElementById("ft-mic-status");
+        if (micStatus) micStatus.textContent = "Transcribing & evaluating voice...";
+
+        const formData = new FormData();
+        const activeUid = (currentUser && currentUser.id) || currentUserId || localStorage.getItem("linguist_user_id");
+        formData.append("user_id", activeUid);
+        formData.append("audio_file", audioBlob, "freetalk_voice.webm");
+        formData.append("persona", currentFreeTalkPersona);
+
+        try {
+          const res = await apiFetch(`/api/sessions/${currentFreeTalkSessionId || 1}/respond-audio/`, {
+            method: "POST",
+            credentials: "include",
+            body: formData,
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            if (micStatus) micStatus.textContent = "Press the mic to start speaking freely";
+
+            const ml = document.getElementById("ft-msg-list");
+            const targetLang = (currentUser && currentUser.target_language) || "English";
+            const voiceId = "ft-voice-" + Date.now();
+            const voicePill = createAiVoicePillHtml(data.ai_audio_url || "", voiceId, data.ai_response || "", targetLang);
+
+            if (ml) {
+              ml.innerHTML += `
+                <div class="msg-wrap msg-user-wrap">
+                  <div class="msg-lbl">👤 You (Voice)</div>
+                  <div class="msg-bubble msg-user">${data.user_transcript || "..."}</div>
+                </div>
+                <div class="msg-wrap">
+                  <div class="msg-lbl">🤖 LinguistAI</div>
+                  <div class="msg-bubble msg-ai">${data.ai_response || "..."}</div>
+                  <div>${voicePill}</div>
+                </div>`;
+              ml.scrollTop = ml.scrollHeight;
+            }
+
+            if (data.turns_today !== undefined) {
+              updateDailyTurnUI(data.turns_today, data.daily_limit);
+            }
+            renderFreeTalkFeedback(data.feedback, data.scores);
+          } else if (res.status === 403) {
+            if (micStatus) micStatus.textContent = "Daily turns limit reached!";
+            openPaymentModal();
+          } else {
+            if (micStatus) micStatus.textContent = "Error processing audio. Please try again.";
+          }
+        } catch (e) {
+          console.error("Free Talk audio upload failed:", e);
+          if (micStatus) micStatus.textContent = "Failed to upload audio. Check your connection.";
+        }
+      }
+
+      function startFreeTalkAudioVisualizer(stream) {
+        const canvas = document.getElementById("ft-audio-visualizer-canvas");
+        const wrap = document.getElementById("ft-audio-visualizer-wrap");
+        if (!canvas || !wrap) return;
+        wrap.classList.add("active");
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const analyser = audioCtx.createAnalyser();
+        const source = audioCtx.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 64;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        const canvasCtx = canvas.getContext("2d");
+
+        function draw() {
+          if (!isFreeTalkRecording) return;
+          freeTalkVisualizerAnimationId = requestAnimationFrame(draw);
+          analyser.getByteFrequencyData(dataArray);
+
+          canvasCtx.clearRect(0, 0, canvas.width, canvas.height);
+          const barWidth = (canvas.width / bufferLength) * 1.5;
+          let barHeight;
+          let x = 0;
+
+          for (let i = 0; i < bufferLength; i++) {
+            barHeight = (dataArray[i] / 255) * canvas.height;
+            canvasCtx.fillStyle = "#8b5cf6";
+            canvasCtx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+            x += barWidth + 2;
+          }
+        }
+        draw();
+      }
+
+      function stopFreeTalkAudioVisualizer() {
+        const wrap = document.getElementById("ft-audio-visualizer-wrap");
+        if (wrap) wrap.classList.remove("active");
+        if (freeTalkVisualizerAnimationId) {
+          cancelAnimationFrame(freeTalkVisualizerAnimationId);
+          freeTalkVisualizerAnimationId = null;
+        }
+      }
+

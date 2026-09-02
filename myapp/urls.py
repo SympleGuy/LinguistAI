@@ -30,6 +30,7 @@ urlpatterns = [
     path("api/sessions/<uuid:session_id>/logs/", views.SessionLogsView.as_view(), name="session_logs"),
     path("api/flashcards/due/", views.FlashcardDueView.as_view(), name="api_flashcards_due"),
     path("api/flashcards/<uuid:card_id>/review/", views.FlashcardReviewView.as_view(), name="api_flashcards_review"),
+    path("api/tts/", views.TTSAudioView.as_view(), name="api_tts"),
 
     # Dedicated Admin Dashboard & Telemetry REST APIs
     path("admin/dashboard/", admin_views.admin_dashboard_view, name="admin_dashboard"),

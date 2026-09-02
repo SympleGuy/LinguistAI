@@ -44,6 +44,13 @@
             </button>
             <button
               class="nav-link-item"
+              id="nl-freetalk"
+              onclick="showPage('freetalk')"
+            >
+              <i class="bi bi-chat-dots-fill" style="color: #8b5cf6"></i>Free Talk
+            </button>
+            <button
+              class="nav-link-item"
               id="nl-dashboard"
               onclick="showPage('dashboard')"
             >
@@ -790,6 +797,13 @@
                 </button>
               </div>
               <div class="msg-list" id="msg-list"></div>
+              
+              <!-- Topic Starters Suggestions (Visible in Free Talk / Open Conversation) -->
+              <div class="conv-starters-wrap" id="conv-starters-wrap" style="display: none">
+                <div class="starters-title"><i class="bi bi-chat-quote-fill"></i> Conversation Starters:</div>
+                <div class="starters-list" id="starters-list"></div>
+              </div>
+
               <div
                 style="
                   padding: 14px 20px;
@@ -809,6 +823,9 @@
                       id="mic-status"
                     >
                       Press the mic to start speaking
+                    </div>
+                    <div class="audio-visualizer-wrap" id="audio-visualizer-wrap">
+                      <canvas id="audio-visualizer-canvas" class="audio-visualizer-canvas" width="280" height="26"></canvas>
                     </div>
                     <div style="font-size: 0.7rem; color: var(--muted-fg)">
                       Powered by Gemini · ElevenLabs TTS
@@ -864,6 +881,126 @@
                   class="scrollable-panel"
                   style="font-size: 0.85rem"
                 ></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ FREE TALK (DEDICATED OPEN CONVERSATION STUDIO) ═══════════ -->
+    <div id="page-freetalk" class="page">
+      <div class="inner-page">
+        <div class="section-wrap">
+          <div class="freetalk-header-bar">
+            <div>
+              <h1 class="page-title" style="margin-bottom: 4px; display: flex; align-items: center; gap: 10px;">
+                <span>💬 Free Talk AI Studio</span>
+                <span id="ft-lang-badge" class="badge-lang">English</span>
+              </h1>
+              <p class="page-sub" style="margin-bottom: 0;">Practice spontaneous, unscripted conversations with your personal AI language tutor.</p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span id="ft-turn-badge" class="conv-turn-badge" title="Daily turns limit">
+                <i class="bi bi-lightning-charge-fill"></i>
+                <span id="ft-turns-text">5 / 5 turns left</span>
+              </span>
+              <button class="btn-new-chat" onclick="resetFreeTalkSession()">
+                <i class="bi bi-arrow-clockwise"></i> New Topic
+              </button>
+            </div>
+          </div>
+
+          <!-- AI Persona Ribbon -->
+          <div class="persona-ribbon-card">
+            <div class="persona-label"><i class="bi bi-person-gear"></i> Choose AI Persona:</div>
+            <div class="persona-pills-list">
+              <button class="persona-pill active" id="p-friendly" onclick="setFreeTalkPersona('friendly')">
+                <span class="persona-emoji">☕</span>
+                <div class="persona-info">
+                  <strong>Friendly Pal</strong>
+                  <small>Warm, casual & encouraging</small>
+                </div>
+              </button>
+              <button class="persona-pill" id="p-career" onclick="setFreeTalkPersona('career')">
+                <span class="persona-emoji">💼</span>
+                <div class="persona-info">
+                  <strong>Career Coach</strong>
+                  <small>Professional & interview focus</small>
+                </div>
+              </button>
+              <button class="persona-pill" id="p-debate" onclick="setFreeTalkPersona('debate')">
+                <span class="persona-emoji">🧠</span>
+                <div class="persona-info">
+                  <strong>Debate Partner</strong>
+                  <small>Thought-provoking & inquisitive</small>
+                </div>
+              </button>
+              <button class="persona-pill" id="p-strict" onclick="setFreeTalkPersona('strict')">
+                <span class="persona-emoji">🎓</span>
+                <div class="persona-info">
+                  <strong>Strict Professor</strong>
+                  <small>Detailed grammar & nuance</small>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <div class="freetalk-grid-layout">
+            <!-- Chat Box -->
+            <div class="freetalk-chat-box">
+              <div class="msg-list" id="ft-msg-list"></div>
+
+              <!-- Topic Starters Ribbon -->
+              <div class="conv-starters-wrap" id="ft-starters-wrap">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                  <div class="starters-title"><i class="bi bi-lightbulb-fill" style="color: #f59e0b"></i> Conversation Starters:</div>
+                  <button class="btn-refresh-starters" onclick="refreshFreeTalkStarters()"><i class="bi bi-arrow-repeat"></i> Randomize</button>
+                </div>
+                <div class="starters-list" id="ft-starters-list"></div>
+              </div>
+
+              <!-- Input Area -->
+              <div class="freetalk-input-bar">
+                <div style="display: flex; align-items: center; gap: 14px;">
+                  <button class="mic-btn" id="ft-mic-btn" onclick="toggleFreeTalkMic()">
+                    <i class="bi bi-mic-fill" id="ft-mic-icon"></i>
+                  </button>
+                  <div style="flex: 1;">
+                    <div style="font-size: 0.85rem; color: var(--muted-fg);" id="ft-mic-status">Press the mic to start speaking freely</div>
+                    <div class="audio-visualizer-wrap" id="ft-audio-visualizer-wrap">
+                      <canvas id="ft-audio-visualizer-canvas" class="audio-visualizer-canvas" width="280" height="26"></canvas>
+                    </div>
+                  </div>
+                </div>
+                <div class="text-fallback-container" style="display: flex; margin-top: 8px;">
+                  <input
+                    type="text"
+                    id="ft-text-input"
+                    class="text-fallback-input"
+                    placeholder="Type anything to chat freely..."
+                    onkeypress="handleFreeTalkTextSubmit(event)"
+                  />
+                  <button class="btn-send-text" onclick="submitFreeTalkText()">
+                    <i class="bi bi-send-fill"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Side Feedback & Vocabulary -->
+            <div style="display: flex; flex-direction: column; gap: 16px;">
+              <div class="fb-panel">
+                <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                  <i class="bi bi-lightning-charge-fill" style="color: #f59e0b"></i> Live Feedback
+                </div>
+                <div id="ft-fb-list" class="scrollable-panel"></div>
+              </div>
+              <div class="fb-panel">
+                <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
+                  <i class="bi bi-translate" style="color: var(--primary)"></i> Key Vocabulary
+                </div>
+                <div id="ft-vocab-list" class="scrollable-panel" style="font-size: 0.85rem;"></div>
               </div>
             </div>
           </div>
@@ -1115,13 +1252,20 @@
                 Welcome back!
               </p>
             </div>
-            <div style="display: flex; gap: 10px">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+              <button
+                class="btn-try"
+                onclick="showPage('freetalk')"
+                style="display: flex; align-items: center; gap: 6px; background: linear-gradient(135deg, #7c3aed, #4f46e5); color: #fff;"
+              >
+                <i class="bi bi-chat-dots-fill"></i> Free Talk AI
+              </button>
               <button
                 class="btn-try"
                 onclick="showPage('scenarios')"
-                style="display: flex; align-items: center; gap: 6px"
+                style="display: flex; align-items: center; gap: 6px; background: #fff; color: var(--foreground); border: 1px solid var(--border);"
               >
-                <i class="bi bi-mic-fill"></i> New Session
+                <i class="bi bi-book"></i> Scenarios
               </button>
             </div>
           </div>
