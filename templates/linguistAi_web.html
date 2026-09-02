@@ -900,13 +900,16 @@
               </h1>
               <p class="page-sub" style="margin-bottom: 0;">Practice spontaneous, unscripted conversations with your personal AI language tutor.</p>
             </div>
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
               <span id="ft-turn-badge" class="conv-turn-badge" title="Daily turns limit">
                 <i class="bi bi-lightning-charge-fill"></i>
                 <span id="ft-turns-text">5 / 5 turns left</span>
               </span>
-              <button class="btn-new-chat" onclick="resetFreeTalkSession()">
+              <button class="btn-new-chat" onclick="confirmNewFreeTalkTopic()" title="Clear conversation and start a new topic">
                 <i class="bi bi-arrow-clockwise"></i> New Topic
+              </button>
+              <button class="btn-end-session" onclick="endFreeTalkSession()" title="Finish practice and view performance summary">
+                <i class="bi bi-flag-fill"></i> End Session
               </button>
             </div>
           </div>
@@ -951,11 +954,19 @@
             <div class="freetalk-chat-box">
               <div class="msg-list" id="ft-msg-list"></div>
 
+              <!-- Button to re-open starters if hidden -->
+              <button id="ft-toggle-starters-btn" class="btn-toggle-starters" onclick="toggleFreeTalkStarters(true)" style="display: none;">
+                <i class="bi bi-lightbulb-fill"></i> Show Topic Starters
+              </button>
+
               <!-- Topic Starters Ribbon -->
               <div class="conv-starters-wrap" id="ft-starters-wrap">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
                   <div class="starters-title"><i class="bi bi-lightbulb-fill" style="color: #f59e0b"></i> Conversation Starters:</div>
-                  <button class="btn-refresh-starters" onclick="refreshFreeTalkStarters()"><i class="bi bi-arrow-repeat"></i> Randomize</button>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <button class="btn-refresh-starters" onclick="refreshFreeTalkStarters()"><i class="bi bi-arrow-repeat"></i> Randomize</button>
+                    <button class="btn-close-starters" onclick="toggleFreeTalkStarters(false)" title="Hide suggestions"><i class="bi bi-x-lg"></i></button>
+                  </div>
                 </div>
                 <div class="starters-list" id="ft-starters-list"></div>
               </div>

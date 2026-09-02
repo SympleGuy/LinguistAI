@@ -2606,4 +2606,66 @@
         background: rgba(124, 58, 237, 0.08);
       }
 
+      .btn-end-session {
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid rgba(239, 68, 68, 0.25);
+        color: #dc2626;
+        font-size: 0.82rem;
+        font-weight: 600;
+        padding: 7px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s ease;
+      }
+
+      .btn-end-session:hover {
+        background: #dc2626;
+        color: #ffffff;
+        border-color: #dc2626;
+        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+      }
+
+      .btn-toggle-starters {
+        background: rgba(245, 158, 11, 0.1);
+        border: 1px dashed rgba(245, 158, 11, 0.4);
+        color: #d97706;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 5px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 8px 16px;
+        align-self: flex-start;
+        transition: all 0.2s ease;
+      }
+
+      .btn-toggle-starters:hover {
+        background: rgba(245, 158, 11, 0.2);
+        color: #b45309;
+      }
+
+      .btn-close-starters {
+        background: none;
+        border: none;
+        color: var(--muted-fg);
+        font-size: 0.75rem;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        display: inline-flex;
+        align-items: center;
+        transition: all 0.2s ease;
+      }
+
+      .btn-close-starters:hover {
+        background: #f1f5f9;
+        color: var(--foreground);
+      }
+
 
