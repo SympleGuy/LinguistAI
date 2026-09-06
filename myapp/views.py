@@ -807,11 +807,19 @@ class SubmitResponseView(View):
                         }
                     )
 
+            scores_payload = {
+                "grammar": g_score,
+                "pronunciation": p_score,
+                "vocab": detailed_feedback.get("vocabulary_score", 80),
+                "overall": session.overall_score
+            }
+
             return JsonResponse({
                 "interaction_id": str(interaction.id),
                 "ai_response": ai_response,
                 "ai_audio_url": ai_audio_url,
                 "feedback": detailed_feedback,
+                "scores": scores_payload,
                 "created_at": interaction.created_at.isoformat() if interaction.created_at else None,
                 "turns_today": today_turns + 1,
                 "daily_limit": daily_limit
@@ -947,12 +955,20 @@ class SubmitAudioResponseView(View):
                         }
                     )
 
+            scores_payload = {
+                "grammar": g_score,
+                "pronunciation": p_score,
+                "vocab": detailed_feedback.get("vocabulary_score", 80),
+                "overall": session.overall_score
+            }
+
             return JsonResponse({
                 "interaction_id": str(interaction.id),
                 "user_transcript": user_transcript,
                 "ai_response": ai_response,
                 "ai_audio_url": ai_audio_url,
                 "feedback": detailed_feedback,
+                "scores": scores_payload,
                 "created_at": interaction.created_at.isoformat() if interaction.created_at else None,
                 "turns_today": today_turns + 1,
                 "daily_limit": daily_limit

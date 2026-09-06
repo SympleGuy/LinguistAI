@@ -1210,11 +1210,24 @@
 
       // End Lesson & Aggregate Summary Function
       function endLesson() {
+        // Fallback: If currentSessionScores arrays are empty but feedback was received, populate from feedback list
+        if ((!currentSessionScores.grammar || currentSessionScores.grammar.length === 0) && currentSessionFeedbackList.length > 0) {
+          currentSessionFeedbackList.forEach((fb) => {
+            const g = (fb.grammar_score !== undefined && fb.grammar_score !== null) ? Number(fb.grammar_score) : 85;
+            const p = (fb.pronunciation_score !== undefined && fb.pronunciation_score !== null) ? Number(fb.pronunciation_score) : 80;
+            const v = (fb.vocabulary_score !== undefined && fb.vocabulary_score !== null) ? Number(fb.vocabulary_score) : 80;
+            currentSessionScores.grammar.push(g);
+            currentSessionScores.pronunciation.push(p);
+            currentSessionScores.vocab.push(v);
+            currentSessionScores.overall.push(Math.round((g + p) / 2));
+          });
+        }
+
         // 1. Calculate average scores
-        const gScores = currentSessionScores.grammar;
-        const pScores = currentSessionScores.pronunciation;
-        const vScores = currentSessionScores.vocab;
-        const oScores = currentSessionScores.overall;
+        const gScores = currentSessionScores.grammar || [];
+        const pScores = currentSessionScores.pronunciation || [];
+        const vScores = currentSessionScores.vocab || [];
+        const oScores = currentSessionScores.overall || [];
 
         const avg = (arr) =>
           arr.length > 0
@@ -3793,13 +3806,15 @@
         const activePersonaTitle = personaLabels[currentFreeTalkPersona] || "Free Talk";
 
         // Assign scenario metadata for summary page
-        currentScenarioId = currentFreeTalkSessionId || 27;
-        const matchedScenario = SCENARIOS.find(s => String(s.id) === String(currentScenarioId)) || {
+        const freeTalkScenario = SCENARIOS.find(
+          s => s.category === "Open Talk" || (s.title || "").toLowerCase().includes("free talk")
+        ) || {
           id: 27,
           title: `Free Talk Studio (${activePersonaTitle})`,
           emoji: "💬",
           lang: targetLang
         };
+        currentScenarioId = freeTalkScenario.id;
 
         // Call endLesson to aggregate scores & open summary page
         endLesson();
@@ -3948,19 +3963,31 @@
         const fbList = document.getElementById("ft-fb-list");
         if (!fbList || !feedback) return;
 
-        // Track scores for Session Summary
-        if (scores) {
-          if (scores.grammar !== undefined) currentSessionScores.grammar.push(scores.grammar);
-          if (scores.pronunciation !== undefined) currentSessionScores.pronunciation.push(scores.pronunciation);
-          if (scores.vocab !== undefined) currentSessionScores.vocab.push(scores.vocab);
-          if (scores.overall !== undefined) currentSessionScores.overall.push(scores.overall);
-        }
+        // Robustly extract turn scores from scores payload OR feedback object
+        const grammarScore = (scores && scores.grammar !== undefined)
+          ? Number(scores.grammar)
+          : (feedback.grammar_score !== undefined ? Number(feedback.grammar_score) : 85);
+
+        const pronScore = (scores && scores.pronunciation !== undefined)
+          ? Number(scores.pronunciation)
+          : (feedback.pronunciation_score !== undefined ? Number(feedback.pronunciation_score) : 80);
+
+        const vocabScore = (scores && scores.vocab !== undefined)
+          ? Number(scores.vocab)
+          : (feedback.vocabulary_score !== undefined ? Number(feedback.vocabulary_score) : 80);
+
+        const overallScore = (scores && scores.overall !== undefined)
+          ? Number(scores.overall)
+          : Math.round((grammarScore + pronScore) / 2);
+
+        // Always push scores to session scores for Summary page calculation
+        currentSessionScores.grammar.push(grammarScore);
+        currentSessionScores.pronunciation.push(pronScore);
+        currentSessionScores.vocab.push(vocabScore);
+        currentSessionScores.overall.push(overallScore);
 
         // Track feedback for Summary
         currentSessionFeedbackList.push(feedback);
-
-        const grammarScore = scores && scores.grammar !== undefined ? scores.grammar : (feedback.grammar_score !== undefined ? feedback.grammar_score : 0);
-        const pronScore = scores && scores.pronunciation !== undefined ? scores.pronunciation : (feedback.pronunciation_score !== undefined ? feedback.pronunciation_score : 0);
 
         let html = `
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
