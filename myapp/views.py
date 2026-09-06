@@ -971,11 +971,15 @@ class DashboardView(View):
 
             # Get user's learning sessions
             sessions = LearningSession.objects.filter(user_id=user_id).order_by('-started_at')
-            total_sessions = sessions.count()
+            session_ids = list(sessions.values_list('id', flat=True))
 
             # Get logs for calculating averages
-            session_ids = list(sessions.values_list('id', flat=True))
             logs = InteractionLog.objects.filter(session_id__in=session_ids)
+            active_session_ids = set(logs.values_list('session_id', flat=True))
+
+            # Only count and display sessions with actual interactions or scores
+            valid_sessions = [s for s in sessions if s.id in active_session_ids or (s.overall_score is not None and s.overall_score > 0)]
+            total_sessions = len(valid_sessions)
 
             g_scores = []
             p_scores = []
@@ -986,11 +990,11 @@ class DashboardView(View):
                     if "pronunciation_score" in log.detailed_feedback:
                         p_scores.append(log.detailed_feedback["pronunciation_score"])
 
-            avg_grammar = round(sum(g_scores) / len(g_scores)) if g_scores else 85
-            avg_pronunciation = round(sum(p_scores) / len(p_scores)) if p_scores else 82
+            avg_grammar = round(sum(g_scores) / len(g_scores)) if g_scores else 0
+            avg_pronunciation = round(sum(p_scores) / len(p_scores)) if p_scores else 0
 
             recent_sessions = []
-            for session in sessions[:10]:
+            for session in valid_sessions[:10]:
                 title = "Practice Session"
                 emoji = "💬"
                 lang = "English"
@@ -1014,7 +1018,7 @@ class DashboardView(View):
                     "emoji": emoji,
                     "lang": lang,
                     "started_at": session.started_at.isoformat() if session.started_at else None,
-                    "overall_score": session.overall_score or 85
+                    "overall_score": round(session.overall_score) if session.overall_score is not None else 0
                 })
 
             username = app_user.username if app_user else f"User {str(user_id)[:8]}"
@@ -1207,10 +1211,10 @@ class UserAnalyticsView(View):
                         if "vocabulary_score" in l.detailed_feedback:
                             v_day_scores.append(l.detailed_feedback["vocabulary_score"])
 
-                # If user had activity, calculate actual average; otherwise provide smooth default baseline
-                g_avg = round(sum(g_day_scores) / len(g_day_scores)) if g_day_scores else (80 + (6 - i) * 2)
-                p_avg = round(sum(p_day_scores) / len(p_day_scores)) if p_day_scores else (78 + (6 - i) * 2)
-                v_avg = round(sum(v_day_scores) / len(v_day_scores)) if v_day_scores else (82 + (6 - i))
+                # If user had activity, calculate actual average; otherwise 0
+                g_avg = round(sum(g_day_scores) / len(g_day_scores)) if g_day_scores else 0
+                p_avg = round(sum(p_day_scores) / len(p_day_scores)) if p_day_scores else 0
+                v_avg = round(sum(v_day_scores) / len(v_day_scores)) if v_day_scores else 0
 
                 grammar_series.append(min(100, g_avg))
                 pron_series.append(min(100, p_avg))
@@ -1235,9 +1239,9 @@ class UserAnalyticsView(View):
                             if isinstance(c, dict) and "explanation" in c:
                                 corrections_list.append(c.get("explanation", ""))
 
-            avg_grammar = round(sum(all_g) / len(all_g)) if all_g else 85
-            avg_pron = round(sum(all_p) / len(all_p)) if all_p else 82
-            avg_vocab = round(sum(all_v) / len(all_v)) if all_v else 80
+            avg_grammar = round(sum(all_g) / len(all_g)) if all_g else 0
+            avg_pron = round(sum(all_p) / len(all_p)) if all_p else 0
+            avg_vocab = round(sum(all_v) / len(all_v)) if all_v else 0
 
             # Count top common mistakes
             from collections import Counter
@@ -1361,7 +1365,7 @@ class SessionLogsView(View):
                 "scenario_title": scenario_title,
                 "scenario_emoji": scenario_emoji,
                 "scenario_lang": scenario_lang,
-                "overall_score": session.overall_score or 85,
+                "overall_score": round(session.overall_score) if session.overall_score is not None else 0,
                 "started_at": session.started_at.isoformat() if session.started_at else None,
                 "history": history
             }, status=200)

@@ -353,7 +353,18 @@
         }
 
         if (previousPageName === "freetalk" && name !== "freetalk" && name !== "summary") {
-          autoEndFreeTalkSession();
+          if (freeTalkTurnCount > 0) {
+            const wantToEnd = confirm(
+              "Bạn đang có phiên Free Talk chưa kết thúc. Bạn có muốn chọn 'End Session' để xem tổng kết bài học trước khi chuyển trang không?"
+            );
+            if (wantToEnd) {
+              endFreeTalkSession();
+              return;
+            } else {
+              currentFreeTalkSessionId = null;
+              freeTalkTurnCount = 0;
+            }
+          }
         }
         previousPageName = name;
 
@@ -1021,13 +1032,13 @@
         const avg = (arr) =>
           arr.length > 0
             ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length)
-            : 85;
+            : 0;
 
         const avgG = avg(gScores);
         const avgP = avg(pScores);
         const avgV = avg(vScores);
         const avgO =
-          oScores.length > 0 ? avg(oScores) : Math.round((avgG + avgP) / 2);
+          oScores.length > 0 ? avg(oScores) : (avgG > 0 || avgP > 0 ? Math.round((avgG + avgP) / 2) : 0);
 
         // 2. Set Score KPIs
         document.getElementById("sum-overall-score").textContent = `${avgO}%`;
@@ -2160,13 +2171,14 @@
           const avg = (arr) =>
             arr.length > 0
               ? Math.round(arr.reduce((a, b) => a + b, 0) / arr.length)
-              : 85;
+              : 0;
           const avgG = avg(gScores);
           const avgP = avg(pScores);
           const avgV = avg(vScores);
           const avgO =
-            data.overall_score ||
-            (oScores.length > 0 ? avg(oScores) : Math.round((avgG + avgP) / 2));
+            data.overall_score !== undefined && data.overall_score !== null
+              ? Math.round(data.overall_score)
+              : (oScores.length > 0 ? avg(oScores) : (avgG > 0 || avgP > 0 ? Math.round((avgG + avgP) / 2) : 0));
 
           // 2. Populate KPI cards
           document.getElementById("sum-overall-score").textContent = `${avgO}%`;
@@ -3367,25 +3379,25 @@
       };
 
       window.setFreeTalkPersona = function (persona) {
+        if (persona === currentFreeTalkPersona) return;
+
+        // If user already interacted in this session, enforce ending the session first!
+        if (freeTalkTurnCount > 0) {
+          const wantToEnd = confirm(
+            "Bạn đang có bài học dở dang với persona hiện tại. Hãy chọn 'End Session' để xem tổng kết bài học trước khi chuyển persona!\n\nBạn có muốn Kết Thúc Bài Học (End Session) ngay bây giờ không?"
+          );
+          if (wantToEnd) {
+            endFreeTalkSession();
+          }
+          return;
+        }
+
         currentFreeTalkPersona = persona;
         document.querySelectorAll(".persona-pill").forEach(p => p.classList.remove("active"));
         const btn = document.getElementById(`p-${persona}`);
         if (btn) btn.classList.add("active");
 
-        const personaLabels = {
-          friendly: "Friendly Pal ☕",
-          career: "Career Coach 💼",
-          debate: "Debate Partner 🧠",
-          strict: "Strict Professor 🎓"
-        };
-        const ml = document.getElementById("ft-msg-list");
-        if (ml) {
-          const sysNotice = document.createElement("div");
-          sysNotice.style.cssText = "text-align:center;font-size:0.75rem;color:var(--muted-fg);margin:10px 0;font-style:italic;";
-          sysNotice.innerHTML = `✨ Persona switched to <strong>${personaLabels[persona] || persona}</strong>`;
-          ml.appendChild(sysNotice);
-          ml.scrollTop = ml.scrollHeight;
-        }
+        resetFreeTalkSession();
       };
 
       window.renderFreeTalkStarters = function () {
@@ -3432,8 +3444,13 @@
 
       window.confirmNewFreeTalkTopic = async function () {
         if (freeTalkTurnCount > 0) {
-          const confirmed = confirm("Are you sure you want to start a new topic? Your current conversation will be finalized and refreshed.");
-          if (!confirmed) return;
+          const wantToEnd = confirm(
+            "Bạn đang có phiên học dở dang. Bạn có muốn chọn 'End Session' để xem tổng kết bài học trước khi đổi chủ đề mới không?"
+          );
+          if (wantToEnd) {
+            endFreeTalkSession();
+            return;
+          }
         }
         await resetFreeTalkSession();
       };
@@ -3528,7 +3545,10 @@
           vList.innerHTML = `<div style="color:var(--muted-fg);font-size:0.8rem;text-align:center;padding:12px;">Vocabulary extracted during your chat will appear here.</div>`;
         }
 
-        // Start backend session using Free Talk Scenario (ID 27 or title match)
+      };
+
+      async function ensureFreeTalkSession() {
+        if (currentFreeTalkSessionId) return currentFreeTalkSessionId;
         try {
           const activeUid = (currentUser && currentUser.id) || currentUserId || localStorage.getItem("linguist_user_id");
           const freeTalkScenario = SCENARIOS.find(s => s.category === "Open Talk" || (s.title || "").toLowerCase().includes("free talk")) || { id: 27 };
@@ -3541,15 +3561,17 @@
           if (res.ok) {
             const data = await res.json();
             currentFreeTalkSessionId = data.session_id;
+            return currentFreeTalkSessionId;
           }
         } catch (e) {
-          console.warn("Could not create Free Talk session:", e);
+          console.warn("Could not lazily create Free Talk session:", e);
         }
-      };
+        return null;
+      }
 
       window.endFreeTalkSession = function () {
         if (freeTalkTurnCount === 0 && currentSessionFeedbackList.length === 0) {
-          alert("Please practice at least 1 turn before concluding the session!");
+          alert("Bạn chưa thực hiện tương tác nào với AI trong phiên này. Hãy gửi tin nhắn hoặc nói vào micro để bắt đầu bài học trước khi kết thúc nhé!");
           return;
         }
 
@@ -3635,6 +3657,7 @@
         }
 
         try {
+          await ensureFreeTalkSession();
           const activeUid = (currentUser && currentUser.id) || currentUserId || localStorage.getItem("linguist_user_id");
           const res = await apiFetch(`/api/sessions/${currentFreeTalkSessionId || 1}/respond/`, {
             method: "POST",
@@ -3698,8 +3721,8 @@
         // Track feedback for Summary
         currentSessionFeedbackList.push(feedback);
 
-        const grammarScore = scores && scores.grammar !== undefined ? scores.grammar : 85;
-        const pronScore = scores && scores.pronunciation !== undefined ? scores.pronunciation : 88;
+        const grammarScore = scores && scores.grammar !== undefined ? scores.grammar : (feedback.grammar_score !== undefined ? feedback.grammar_score : 0);
+        const pronScore = scores && scores.pronunciation !== undefined ? scores.pronunciation : (feedback.pronunciation_score !== undefined ? feedback.pronunciation_score : 0);
 
         let html = `
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
@@ -3816,6 +3839,7 @@
         formData.append("persona", currentFreeTalkPersona);
 
         try {
+          await ensureFreeTalkSession();
           const res = await apiFetch(`/api/sessions/${currentFreeTalkSessionId || 1}/respond-audio/`, {
             method: "POST",
             credentials: "include",
