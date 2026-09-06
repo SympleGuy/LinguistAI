@@ -312,10 +312,10 @@
       ];
 
       function showLinguistConfirm({
-        title = "Xác nhận",
-        desc = "Bạn có chắc chắn muốn thực hiện hành động này?",
-        confirmText = "Xác nhận",
-        cancelText = "Hủy bỏ",
+        title = "Confirmation",
+        desc = "Are you sure you want to perform this action?",
+        confirmText = "Confirm",
+        cancelText = "Cancel",
         icon = "bi-question-circle-fill",
         iconColor = "#4f46e5",
         iconBg = "rgba(79, 70, 229, 0.12)",
@@ -379,9 +379,9 @@
       }
 
       function showLinguistAlert({
-        title = "Thông báo",
+        title = "Notice",
         desc = "",
-        buttonText = "Đã hiểu",
+        buttonText = "Got it",
         icon = "bi-info-circle-fill",
         iconColor = "#6366f1",
         iconBg = "rgba(99, 102, 241, 0.12)",
@@ -455,10 +455,10 @@
         if (previousPageName === "freetalk" && name !== "freetalk" && name !== "summary") {
           if (typeof freeTalkTurnCount !== "undefined" && freeTalkTurnCount > 0) {
             const wantToEnd = await showLinguistConfirm({
-              title: "Kết thúc bài học Free Talk?",
-              desc: "Bạn có phiên đàm thoại Free Talk chưa kết thúc. Bạn có muốn kết thúc để xem bảng điểm và nhận xét AI trước khi chuyển trang không?",
-              confirmText: "Kết Thúc & Xem Tổng Kết",
-              cancelText: "Tiếp tục học",
+              title: "End Free Talk Session?",
+              desc: "You have an ongoing Free Talk session with AI. Would you like to end the session to view your score and AI feedback before navigating away?",
+              confirmText: "End & View Summary",
+              cancelText: "Continue Chatting",
               icon: "bi-flag-fill",
               iconColor: "#e11d48",
               iconBg: "rgba(225, 29, 72, 0.12)",
@@ -474,10 +474,10 @@
         } else if (previousPageName === "conversation" && name !== "conversation" && name !== "summary") {
           if (typeof currentSessionFeedbackList !== "undefined" && currentSessionFeedbackList.length > 0) {
             const wantToEnd = await showLinguistConfirm({
-              title: "Kết thúc bài học kịch bản?",
-              desc: "Bạn có bài học tình huống đang thực hành dở dang. Bạn có muốn kết thúc bài học để lưu kết quả và xem tổng kết trước khi chuyển trang không?",
-              confirmText: "Kết Thúc & Xem Tổng Kết",
-              cancelText: "Tiếp tục bài học",
+              title: "End Scenario Lesson?",
+              desc: "You have an ongoing scenario lesson in progress. Would you like to end the lesson to save your progress and view the summary before leaving?",
+              confirmText: "End & View Summary",
+              cancelText: "Continue Lesson",
               icon: "bi-flag-fill",
               iconColor: "#6366f1",
               iconBg: "rgba(99, 102, 241, 0.12)",
@@ -1182,9 +1182,9 @@
       window.confirmEndScenarioLesson = async function () {
         if (!currentSessionFeedbackList || currentSessionFeedbackList.length === 0) {
           await showLinguistAlert({
-            title: "Chưa có lượt đối thoại nào",
-            desc: "Bạn chưa thực hiện tương tác nào với AI trong kịch bản này. Hãy gửi tin nhắn hoặc nói vào micro để bắt đầu luyện tập trước khi kết thúc nhé!",
-            buttonText: "Đã hiểu",
+            title: "No Interactions Yet",
+            desc: "You haven't interacted with the AI in this scenario yet. Please send a message or speak into the microphone to start practicing before ending the session!",
+            buttonText: "Got it",
             icon: "bi-chat-dots-fill",
             iconColor: "#6366f1",
             iconBg: "rgba(99, 102, 241, 0.12)"
@@ -1193,10 +1193,10 @@
         }
 
         const confirmed = await showLinguistConfirm({
-          title: "Kết thúc bài học kịch bản?",
-          desc: `Bạn đã thực hiện ${currentSessionFeedbackList.length} lượt đối thoại. Bạn có muốn kết thúc bài học ngay bây giờ để nhận đánh giá chi tiết và lưu kết quả không?`,
-          confirmText: "Kết Thúc & Xem Tổng Kết",
-          cancelText: "Tiếp tục luyện tập",
+          title: "End Scenario Lesson?",
+          desc: `You have completed ${currentSessionFeedbackList.length} conversational turn(s). Would you like to conclude this lesson now to receive your detailed evaluation and score summary?`,
+          confirmText: "End & View Summary",
+          cancelText: "Keep Practicing",
           icon: "bi-flag-fill",
           iconColor: "#10b981",
           iconBg: "rgba(16, 185, 129, 0.12)",
@@ -3119,9 +3119,9 @@
             setTimeout(async () => {
               closePaymentModal();
               await showLinguistAlert({
-                title: "Nâng cấp VIP thành công! 🎉",
-                desc: "Chúc mừng bạn! Giao dịch thanh toán đã hoàn tất và tài khoản của bạn đã được nâng cấp lên gói VIP (Luyện tập không giới hạn)!",
-                buttonText: "Bắt đầu trải nghiệm",
+                title: "VIP Upgrade Successful! 🎉",
+                desc: "Congratulations! Your payment has been processed and your account is upgraded to VIP (Unlimited Practice)!",
+                buttonText: "Start Practicing Now",
                 icon: "bi-stars",
                 iconColor: "#eab308",
                 iconBg: "rgba(234, 179, 8, 0.15)"
@@ -3581,10 +3581,10 @@
         // If user already interacted in this session, enforce ending the session first!
         if (freeTalkTurnCount > 0) {
           const wantToEnd = await showLinguistConfirm({
-            title: "Chuyển sang Persona khác?",
-            desc: "Bạn đang có bài học dở dang với persona hiện tại. Bạn có muốn kết thúc và lưu phiên học này trước khi đổi persona không?",
-            confirmText: "Kết Thúc & Xem Điểm",
-            cancelText: "Ở lại tiếp tục",
+            title: "Switch AI Persona?",
+            desc: "You have an active session with the current persona. Would you like to conclude and save this session before switching personas?",
+            confirmText: "End & Save Session",
+            cancelText: "Stay & Continue",
             icon: "bi-person-badge-fill",
             iconColor: "#8b5cf6",
             iconBg: "rgba(139, 92, 246, 0.12)",
@@ -3649,10 +3649,10 @@
       window.confirmNewFreeTalkTopic = async function () {
         if (freeTalkTurnCount > 0) {
           const wantToEnd = await showLinguistConfirm({
-            title: "Bắt đầu chủ đề mới?",
-            desc: "Bạn đang có phiên học dở dang. Bạn có muốn kết thúc để xem tổng kết bài học trước khi đổi chủ đề mới không?",
-            confirmText: "Kết Thúc & Xem Điểm",
-            cancelText: "Ở lại tiếp tục",
+            title: "Start a New Topic?",
+            desc: "You have an active session in progress. Would you like to end the session and view your summary before starting a new topic?",
+            confirmText: "End & View Summary",
+            cancelText: "Stay & Continue",
             icon: "bi-arrow-clockwise",
             iconColor: "#f59e0b",
             iconBg: "rgba(245, 158, 11, 0.12)",
@@ -3813,9 +3813,9 @@
       window.endFreeTalkSession = async function () {
         if (freeTalkTurnCount === 0 && (!currentSessionFeedbackList || currentSessionFeedbackList.length === 0)) {
           await showLinguistAlert({
-            title: "Chưa có lượt đối thoại nào",
-            desc: "Bạn chưa thực hiện tương tác nào với AI trong phiên này. Hãy gửi tin nhắn hoặc nói vào micro để bắt đầu bài học trước khi kết thúc nhé!",
-            buttonText: "Đã hiểu",
+            title: "No Interactions Yet",
+            desc: "You haven't interacted with the AI in this session yet. Please send a message or speak into the microphone to start practicing before concluding!",
+            buttonText: "Got it",
             icon: "bi-chat-quote-fill",
             iconColor: "#6366f1",
             iconBg: "rgba(99, 102, 241, 0.12)"
@@ -3824,10 +3824,10 @@
         }
 
         const confirmed = await showLinguistConfirm({
-          title: "Kết thúc phiên Free Talk?",
-          desc: `Bạn đã hoàn thành ${freeTalkTurnCount || (currentSessionFeedbackList ? currentSessionFeedbackList.length : 0)} lượt đàm thoại. Bạn có muốn kết thúc phiên để xem bảng điểm và nhận xét AI không?`,
-          confirmText: "Kết Thúc & Xem Điểm",
-          cancelText: "Tiếp tục trò chuyện",
+          title: "End Free Talk Session?",
+          desc: `You have completed ${freeTalkTurnCount || (currentSessionFeedbackList ? currentSessionFeedbackList.length : 0)} conversational turn(s). Would you like to conclude this session to view your score recap and AI feedback?`,
+          confirmText: "End & View Summary",
+          cancelText: "Continue Chatting",
           icon: "bi-flag-fill",
           iconColor: "#e11d48",
           iconBg: "rgba(225, 29, 72, 0.12)",
