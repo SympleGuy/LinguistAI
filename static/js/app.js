@@ -1899,9 +1899,6 @@
       }
 
       async function handleLogout() {
-        try {
-          await apiFetch("/api/auth/logout/", { method: "POST" });
-        } catch (e) {}
         currentUser = null;
         currentUserId = "00000000-0000-0000-0000-000000000001";
         localStorage.removeItem("linguist_user");
@@ -1909,6 +1906,12 @@
         resetAuthForm(true);
         updateUserNavUI(true, false);
         showPage("landing");
+        try {
+          await apiFetch("/api/auth/logout/", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+        } catch (e) {}
       }
 
       let analyticsChartInstance = null;

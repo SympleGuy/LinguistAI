@@ -3,6 +3,8 @@ import json
 from django.http import JsonResponse
 from django.conf import settings
 from django.urls import resolve
+from django.shortcuts import redirect
+from django.contrib.sessions.exceptions import SessionInterrupted
 
 logger = logging.getLogger(__name__)
 
@@ -64,11 +66,10 @@ class ApiAuthenticationMiddleware:
                 has_bearer = auth_header.startswith("Bearer ") and len(auth_header.split(" ")) > 1
                 x_user_id = request.headers.get("X-User-ID", "")
 
-                # Also attach x_user_id to session if not already there (helps keep session alive)
-                if x_user_id and not user_id:
+                # Attach x_user_id to session if an existing session is present
+                if x_user_id and not user_id and getattr(request, "session", None) and request.session.session_key:
                     try:
                         request.session["supabase_user_id"] = x_user_id
-                        request.session.modified = True
                     except Exception:
                         pass
 
@@ -91,7 +92,21 @@ class GlobalExceptionHandlerMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        return self.get_response(request)
+        try:
+            return self.get_response(request)
+        except SessionInterrupted as e:
+            logger.info(f"[SessionInterrupted] Gracefully handled concurrent session deletion on {request.method} {request.path}: {e}")
+            if request.path.startswith("/api/"):
+                return JsonResponse({
+                    "error": "Session ended or user logged out.",
+                    "code": 401
+                }, status=401)
+            return redirect("home")
+        except Exception as e:
+            resp = self.process_exception(request, e)
+            if resp is not None:
+                return resp
+            raise e
 
     def process_exception(self, request, exception):
         logger.error(

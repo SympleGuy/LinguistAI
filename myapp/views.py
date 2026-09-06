@@ -298,7 +298,12 @@ def logout_view(request):
 
     request.session.flush()
 
-    if request.content_type == "application/json" or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+    if (
+        request.path.startswith("/api/")
+        or request.content_type == "application/json"
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+        or "application/json" in request.headers.get("Accept", "")
+    ):
         return JsonResponse({"status": "success", "message": "Logged out successfully"})
 
     return redirect("home")
