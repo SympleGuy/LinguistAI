@@ -18,7 +18,7 @@ from datetime import timedelta
 from .ai_services import (
     generate_ai_conversation_response,
     generate_grammar_and_feedback,
-    transcribe_audio_whisper,
+    transcribe_audio_gemini,
     generate_tts_elevenlabs
 )
 
@@ -866,7 +866,7 @@ class SubmitAudioResponseView(View):
                 user_audio_url = f"{settings.MEDIA_URL}user_audio/{saved_filename}"
 
                 if not user_transcript:
-                    user_transcript = transcribe_audio_whisper(audio_bytes, filename=saved_filename)
+                    user_transcript = transcribe_audio_gemini(audio_bytes, filename=saved_filename)
 
             if not user_transcript:
                 user_transcript = "Hello! I would like to practice speaking."

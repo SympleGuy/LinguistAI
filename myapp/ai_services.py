@@ -166,7 +166,7 @@ def _transcribe_gemini_audio(audio_bytes, mime_type="audio/webm"):
 def generate_ai_conversation_response(scenario_prompt, user_level="Beginner", target_language="English", context_history=None, user_transcript=""):
     """
     Generate AI conversation response (UC6/UC14).
-    Multi-provider support: Google Gemini (Free) -> OpenAI GPT-4o-mini -> Dynamic Scenario Fallback.
+    AI Engine: Google Gemini with Dynamic Scenario Fallback.
     """
     if context_history is None:
         context_history = []
@@ -212,7 +212,7 @@ def generate_ai_conversation_response(scenario_prompt, user_level="Beginner", ta
             f"6. Ask open-ended questions in {target_language} to encourage the user to keep speaking."
         )
 
-    # 1. Try Google Gemini (Free tier)
+    # 1. Try Google Gemini
     if GEMINI_API_KEY:
         history_text = ""
         for msg in context_history[-6:]:
@@ -224,31 +224,7 @@ def generate_ai_conversation_response(scenario_prompt, user_level="Beginner", ta
         if gemini_resp:
             return gemini_resp
 
-    # 2. Try OpenAI GPT-4o-mini
-    if OPENAI_API_KEY:
-        try:
-            messages = [{"role": "system", "content": system_instruction}]
-            for msg in context_history[-8:]:
-                messages.append({"role": msg.get("role", "user"), "content": msg.get("content", "")})
-            messages.append({"role": "user", "content": user_transcript})
-
-            payload = {
-                "model": "gpt-4o-mini",
-                "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 200
-            }
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {OPENAI_API_KEY}"
-            }
-            resp = _http_post_json("https://api.openai.com/v1/chat/completions", payload, headers)
-            if resp and "choices" in resp and len(resp["choices"]) > 0:
-                return resp["choices"][0]["message"]["content"].strip()
-        except Exception as e:
-            print(f"[AI Services] OpenAI LLM call failed: {e}. Falling back to dynamic mock.")
-
-    # 3. Dynamic Fallback logic
+    # 2. Dynamic Fallback logic (Used if Gemini API key is missing or unreachable)
     user_lower = user_transcript.lower()
     if any(w in user_lower for w in ["hello", "hi", "bonjour", "hola", "guten tag"]):
         return f"Hello! Great to connect with you. I'm ready to practice {target_language} for our scenario. What would you like to start with?"
@@ -286,7 +262,7 @@ def generate_grammar_and_feedback(user_transcript, target_language, user_level, 
         f"For extracted_vocabulary, extract 1-2 ADVANCED, CHALLENGING, or SCENARIO-SPECIFIC vocabulary words (CEFR B1-C1 level) from the provided AI response that the user should learn. DO NOT extract basic, generic words like 'website', 'tool', 'computer', etc. If there are no advanced words, leave the array empty. Ensure the translation accurately reflects the context.\n"
     )
 
-    # 1. Try Google Gemini (Free Tier JSON Mode)
+    # 1. Try Google Gemini (JSON Mode)
     if GEMINI_API_KEY:
         gemini_json_str = _call_gemini_generate(feedback_system_instruction, f"User Transcript: '{user_transcript}'\nAI Response: '{ai_response}'", response_json=True)
         if gemini_json_str:
@@ -295,30 +271,7 @@ def generate_grammar_and_feedback(user_transcript, target_language, user_level, 
             except Exception as e:
                 print(f"[AI Services] Gemini JSON parse warning: {e}")
 
-    # 2. Try OpenAI GPT-4o-mini
-    if OPENAI_API_KEY:
-        try:
-            payload = {
-                "model": "gpt-4o-mini",
-                "messages": [
-                    {"role": "system", "content": feedback_system_instruction},
-                    {"role": "user", "content": f"User Transcript: '{user_transcript}'\nAI Response: '{ai_response}'"}
-                ],
-                "response_format": {"type": "json_object"},
-                "temperature": 0.3
-            }
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {OPENAI_API_KEY}"
-            }
-            resp = _http_post_json("https://api.openai.com/v1/chat/completions", payload, headers)
-            if resp and "choices" in resp and len(resp["choices"]) > 0:
-                raw_json = resp["choices"][0]["message"]["content"]
-                return json.loads(raw_json)
-        except Exception as e:
-            print(f"[AI Services] OpenAI feedback generation failed: {e}. Falling back to rule-based analysis.")
-
-    # 3. Rule-based / Heuristic Fallback Analysis
+    # 2. Rule-based / Heuristic Fallback Analysis (Used if Gemini is unavailable)
     words = user_transcript.strip().split()
     word_count = len(words)
 
@@ -349,9 +302,9 @@ def generate_grammar_and_feedback(user_transcript, target_language, user_level, 
     }
 
 
-def transcribe_audio_whisper(audio_bytes, filename="audio.webm"):
+def transcribe_audio_gemini(audio_bytes, filename="audio.webm"):
     """
-    Transcribe audio using Google Gemini Multimodal.
+    Transcribe spoken audio directly using Google Gemini Multimodal Audio capability.
     """
     mime_type = "audio/webm"
     if filename.endswith(".mp3"):
@@ -369,6 +322,13 @@ def transcribe_audio_whisper(audio_bytes, filename="audio.webm"):
             return gemini_text
 
     return ""
+
+
+# Aliases for backward compatibility
+transcribe_audio = transcribe_audio_gemini
+transcribe_audio_whisper = transcribe_audio_gemini
+
+
 LANGUAGE_VOICE_MAP = {
     "English": config("ELEVENLABS_VOICE_EN", default=ELEVENLABS_VOICE_ID or "JBFqnCBsd6RMkjVDRZzb"),
     "French": config("ELEVENLABS_VOICE_FR", default="EXAVITQu4vr4xnSDxMaL"),

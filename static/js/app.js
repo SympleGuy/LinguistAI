@@ -3764,7 +3764,7 @@
           isFreeTalkRecording = false;
           if (micBtn) micBtn.classList.remove("recording");
           if (micIcon) micIcon.className = "bi bi-mic-fill";
-          if (micStatus) micStatus.textContent = "Processing your voice with Whisper AI...";
+          if (micStatus) micStatus.textContent = "Processing your voice with Gemini AI...";
           stopFreeTalkAudioVisualizer();
           if (freeTalkMediaRecorder && freeTalkMediaRecorder.state !== "inactive") {
             freeTalkMediaRecorder.stop();

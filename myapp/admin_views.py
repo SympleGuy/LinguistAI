@@ -315,16 +315,15 @@ class AdminMetricsApiView(AdminRequiredMixin, View):
 
         # AI Status Configuration
         gemini_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
-        openai_key = os.environ.get('OPENAI_API_KEY', '')
         elevenlabs_key = getattr(settings, 'ELEVENLABS_API_KEY', '') or os.environ.get('ELEVENLABS_API_KEY', '')
 
         ai_status = {
-            "llm_engine": "Gemini 2.0 Flash" if gemini_key else ("GPT-4o-mini" if openai_key else "Simulation Fallback"),
-            "llm_active": bool(gemini_key or openai_key),
+            "llm_engine": "Gemini Flash" if gemini_key else "Simulation Fallback",
+            "llm_active": bool(gemini_key),
             "tts_engine": "ElevenLabs Multilingual v2" if elevenlabs_key else "Native Audio Fallback",
             "tts_active": bool(elevenlabs_key),
-            "stt_engine": "Gemini Multimodal Audio / Whisper",
-            "fallback_mode": not bool(gemini_key or openai_key or elevenlabs_key)
+            "stt_engine": "Google Gemini Multimodal Audio",
+            "fallback_mode": not bool(gemini_key or elevenlabs_key)
         }
 
         response_data = {
@@ -1096,7 +1095,6 @@ class AdminSystemHealthApiView(AdminRequiredMixin, View):
                         pass
 
         gemini_key = getattr(settings, 'GEMINI_API_KEY', '') or os.environ.get('GEMINI_API_KEY', '')
-        openai_key = os.environ.get('OPENAI_API_KEY', '')
         elevenlabs_key = getattr(settings, 'ELEVENLABS_API_KEY', '') or os.environ.get('ELEVENLABS_API_KEY', '')
 
         result = {
@@ -1114,9 +1112,8 @@ class AdminSystemHealthApiView(AdminRequiredMixin, View):
             },
             "ai_services": {
                 "gemini_configured": bool(gemini_key),
-                "openai_configured": bool(openai_key),
                 "elevenlabs_configured": bool(elevenlabs_key),
-                "simulation_fallback_active": not bool(gemini_key or openai_key)
+                "simulation_fallback_active": not bool(gemini_key)
             }
         }
 
