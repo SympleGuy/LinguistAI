@@ -792,7 +792,7 @@
                     <span id="conv-turns-text">5 / 5 turns left</span>
                   </span>
                 </div>
-                <button class="btn-end-lesson" onclick="endLesson()">
+                <button class="btn-end-lesson" onclick="confirmEndScenarioLesson()">
                   <i class="bi bi-flag-fill"></i> End Lesson
                 </button>
               </div>
@@ -2133,6 +2133,21 @@
               <i class="bi bi-arrow-right"></i>
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- LinguistAI Interactive Custom Dialog Modal (Replaces browser alert/confirm) -->
+    <div class="linguist-dialog-overlay" id="linguistDialogModal" style="display: none;">
+      <div class="linguist-dialog-card" role="dialog" aria-modal="true">
+        <div class="dialog-icon-circle" id="dialogIconWrap">
+          <i class="bi bi-question-circle-fill" id="dialogIcon"></i>
+        </div>
+        <h3 class="dialog-heading" id="dialogTitle">Kết thúc bài học?</h3>
+        <p class="dialog-description" id="dialogDesc">Bạn có chắc chắn muốn kết thúc bài học để xem bảng tổng kết thành tích không?</p>
+        <div class="dialog-button-group" id="dialogActions">
+          <button type="button" class="btn-dialog-ghost" id="dialogBtnCancel">Tiếp tục học</button>
+          <button type="button" class="btn-dialog-solid" id="dialogBtnConfirm">Kết Thúc & Xem Tổng Kết</button>
         </div>
       </div>
     </div>

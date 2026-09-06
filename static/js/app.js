@@ -299,6 +299,8 @@
         );
       }
 
+      let previousPageName = null;
+
       const PROTECTED_PAGES = [
         "scenarios",
         "freetalk",
@@ -309,7 +311,135 @@
         "summary",
       ];
 
-      function showPage(name, syncUrl = true) {
+      function showLinguistConfirm({
+        title = "Xác nhận",
+        desc = "Bạn có chắc chắn muốn thực hiện hành động này?",
+        confirmText = "Xác nhận",
+        cancelText = "Hủy bỏ",
+        icon = "bi-question-circle-fill",
+        iconColor = "#4f46e5",
+        iconBg = "rgba(79, 70, 229, 0.12)",
+        confirmBg = null,
+      } = {}) {
+        return new Promise((resolve) => {
+          const modal = document.getElementById("linguistDialogModal");
+          if (!modal) {
+            resolve(confirm(`${title}\n\n${desc}`));
+            return;
+          }
+
+          const titleEl = document.getElementById("dialogTitle");
+          const descEl = document.getElementById("dialogDesc");
+          const iconEl = document.getElementById("dialogIcon");
+          const iconWrap = document.getElementById("dialogIconWrap");
+          const btnCancel = document.getElementById("dialogBtnCancel");
+          const btnConfirm = document.getElementById("dialogBtnConfirm");
+
+          if (titleEl) titleEl.textContent = title;
+          if (descEl) descEl.textContent = desc;
+          if (iconEl) iconEl.className = `bi ${icon}`;
+          if (iconWrap) {
+            iconWrap.style.color = iconColor;
+            iconWrap.style.backgroundColor = iconBg;
+          }
+          if (btnCancel) {
+            btnCancel.textContent = cancelText;
+            btnCancel.style.display = "inline-flex";
+          }
+          if (btnConfirm) {
+            btnConfirm.textContent = confirmText;
+            btnConfirm.style.background = confirmBg || "";
+          }
+
+          modal.style.display = "flex";
+          requestAnimationFrame(() => modal.classList.add("active"));
+
+          const cleanUp = () => {
+            modal.classList.remove("active");
+            setTimeout(() => {
+              modal.style.display = "none";
+              if (btnConfirm) btnConfirm.onclick = null;
+              if (btnCancel) btnCancel.onclick = null;
+            }, 200);
+          };
+
+          if (btnConfirm) {
+            btnConfirm.onclick = () => {
+              cleanUp();
+              resolve(true);
+            };
+          }
+          if (btnCancel) {
+            btnCancel.onclick = () => {
+              cleanUp();
+              resolve(false);
+            };
+          }
+        });
+      }
+
+      function showLinguistAlert({
+        title = "Thông báo",
+        desc = "",
+        buttonText = "Đã hiểu",
+        icon = "bi-info-circle-fill",
+        iconColor = "#6366f1",
+        iconBg = "rgba(99, 102, 241, 0.12)",
+      } = {}) {
+        return new Promise((resolve) => {
+          const modal = document.getElementById("linguistDialogModal");
+          if (!modal) {
+            alert(`${title}\n\n${desc}`);
+            resolve(true);
+            return;
+          }
+
+          const titleEl = document.getElementById("dialogTitle");
+          const descEl = document.getElementById("dialogDesc");
+          const iconEl = document.getElementById("dialogIcon");
+          const iconWrap = document.getElementById("dialogIconWrap");
+          const btnCancel = document.getElementById("dialogBtnCancel");
+          const btnConfirm = document.getElementById("dialogBtnConfirm");
+
+          if (titleEl) titleEl.textContent = title;
+          if (descEl) descEl.textContent = desc;
+          if (iconEl) iconEl.className = `bi ${icon}`;
+          if (iconWrap) {
+            iconWrap.style.color = iconColor;
+            iconWrap.style.backgroundColor = iconBg;
+          }
+          if (btnCancel) {
+            btnCancel.style.display = "none";
+          }
+          if (btnConfirm) {
+            btnConfirm.textContent = buttonText;
+            btnConfirm.style.background = "";
+          }
+
+          modal.style.display = "flex";
+          requestAnimationFrame(() => modal.classList.add("active"));
+
+          const cleanUp = () => {
+            modal.classList.remove("active");
+            setTimeout(() => {
+              modal.style.display = "none";
+              if (btnConfirm) btnConfirm.onclick = null;
+            }, 200);
+          };
+
+          if (btnConfirm) {
+            btnConfirm.onclick = () => {
+              cleanUp();
+              resolve(true);
+            };
+          }
+        });
+      }
+
+      window.showLinguistConfirm = showLinguistConfirm;
+      window.showLinguistAlert = showLinguistAlert;
+
+      async function showPage(name, syncUrl = true) {
         let authRedirectMsg = null;
         // Auth Guard: Redirect unauthenticated guest to login
         if (PROTECTED_PAGES.includes(name) && !currentUser) {
@@ -320,6 +450,47 @@
 
         const pageEl = document.getElementById("page-" + name);
         if (!pageEl) return;
+
+        // Navigation away confirmation for in-progress Free Talk or Scenarios sessions
+        if (previousPageName === "freetalk" && name !== "freetalk" && name !== "summary") {
+          if (typeof freeTalkTurnCount !== "undefined" && freeTalkTurnCount > 0) {
+            const wantToEnd = await showLinguistConfirm({
+              title: "Kết thúc bài học Free Talk?",
+              desc: "Bạn có phiên đàm thoại Free Talk chưa kết thúc. Bạn có muốn kết thúc để xem bảng điểm và nhận xét AI trước khi chuyển trang không?",
+              confirmText: "Kết Thúc & Xem Tổng Kết",
+              cancelText: "Tiếp tục học",
+              icon: "bi-flag-fill",
+              iconColor: "#e11d48",
+              iconBg: "rgba(225, 29, 72, 0.12)",
+              confirmBg: "linear-gradient(135deg, #ef4444, #dc2626)"
+            });
+            if (wantToEnd) {
+              performEndFreeTalkSession();
+              return;
+            } else {
+              return; // Stay on current page
+            }
+          }
+        } else if (previousPageName === "conversation" && name !== "conversation" && name !== "summary") {
+          if (typeof currentSessionFeedbackList !== "undefined" && currentSessionFeedbackList.length > 0) {
+            const wantToEnd = await showLinguistConfirm({
+              title: "Kết thúc bài học kịch bản?",
+              desc: "Bạn có bài học tình huống đang thực hành dở dang. Bạn có muốn kết thúc bài học để lưu kết quả và xem tổng kết trước khi chuyển trang không?",
+              confirmText: "Kết Thúc & Xem Tổng Kết",
+              cancelText: "Tiếp tục bài học",
+              icon: "bi-flag-fill",
+              iconColor: "#6366f1",
+              iconBg: "rgba(99, 102, 241, 0.12)",
+              confirmBg: "linear-gradient(135deg, #6366f1, #4f46e5)"
+            });
+            if (wantToEnd) {
+              endLesson();
+              return;
+            } else {
+              return; // Stay on current page
+            }
+          }
+        }
 
         document
           .querySelectorAll(".page")
@@ -352,20 +523,6 @@
           window.history.replaceState({}, "", url);
         }
 
-        if (previousPageName === "freetalk" && name !== "freetalk" && name !== "summary") {
-          if (freeTalkTurnCount > 0) {
-            const wantToEnd = confirm(
-              "Bạn đang có phiên Free Talk chưa kết thúc. Bạn có muốn chọn 'End Session' để xem tổng kết bài học trước khi chuyển trang không?"
-            );
-            if (wantToEnd) {
-              endFreeTalkSession();
-              return;
-            } else {
-              currentFreeTalkSessionId = null;
-              freeTalkTurnCount = 0;
-            }
-          }
-        }
         previousPageName = name;
 
         if (name === "scenarios") {
@@ -1021,6 +1178,36 @@
         }
       }
 
+      // Scenario interactive confirmation
+      window.confirmEndScenarioLesson = async function () {
+        if (!currentSessionFeedbackList || currentSessionFeedbackList.length === 0) {
+          await showLinguistAlert({
+            title: "Chưa có lượt đối thoại nào",
+            desc: "Bạn chưa thực hiện tương tác nào với AI trong kịch bản này. Hãy gửi tin nhắn hoặc nói vào micro để bắt đầu luyện tập trước khi kết thúc nhé!",
+            buttonText: "Đã hiểu",
+            icon: "bi-chat-dots-fill",
+            iconColor: "#6366f1",
+            iconBg: "rgba(99, 102, 241, 0.12)"
+          });
+          return;
+        }
+
+        const confirmed = await showLinguistConfirm({
+          title: "Kết thúc bài học kịch bản?",
+          desc: `Bạn đã thực hiện ${currentSessionFeedbackList.length} lượt đối thoại. Bạn có muốn kết thúc bài học ngay bây giờ để nhận đánh giá chi tiết và lưu kết quả không?`,
+          confirmText: "Kết Thúc & Xem Tổng Kết",
+          cancelText: "Tiếp tục luyện tập",
+          icon: "bi-flag-fill",
+          iconColor: "#10b981",
+          iconBg: "rgba(16, 185, 129, 0.12)",
+          confirmBg: "linear-gradient(135deg, #10b981, #059669)"
+        });
+
+        if (confirmed) {
+          endLesson();
+        }
+      };
+
       // End Lesson & Aggregate Summary Function
       function endLesson() {
         // 1. Calculate average scores
@@ -1152,6 +1339,12 @@
 
         // 8. Navigate to summary page
         showPage("summary");
+
+        // Clear active session state
+        currentSessionFeedbackList = [];
+        currentSessionScores = { grammar: [], pronunciation: [], vocab: [], overall: [] };
+        currentSessionVocabList = [];
+        currentSessionId = null;
       }
 
       async function ensureActiveSession() {
@@ -2923,12 +3116,17 @@
             const profUpBtn = document.getElementById("prof-upgrade-btn");
             if (profUpBtn) profUpBtn.style.display = "none";
 
-            setTimeout(() => {
+            setTimeout(async () => {
               closePaymentModal();
-              alert(
-                "🎉 Congratulations! Your payment has been processed and your account is upgraded to VIP (Unlimited Practice)!",
-              );
-            }, 1000);
+              await showLinguistAlert({
+                title: "Nâng cấp VIP thành công! 🎉",
+                desc: "Chúc mừng bạn! Giao dịch thanh toán đã hoàn tất và tài khoản của bạn đã được nâng cấp lên gói VIP (Luyện tập không giới hạn)!",
+                buttonText: "Bắt đầu trải nghiệm",
+                icon: "bi-stars",
+                iconColor: "#eab308",
+                iconBg: "rgba(234, 179, 8, 0.15)"
+              });
+            }, 600);
           } else {
             if (globalErr) {
               globalErr.textContent =
@@ -3260,7 +3458,6 @@
       let isFreeTalkRecording = false;
       let freeTalkVisualizerAnimationId = null;
       let freeTalkTurnCount = 0;
-      let previousPageName = "dashboard";
 
       const FREE_TALK_STARTERS_DB = {
         English: [
@@ -3378,16 +3575,23 @@
         if (btn) btn.style.display = show ? "none" : "inline-flex";
       };
 
-      window.setFreeTalkPersona = function (persona) {
+      window.setFreeTalkPersona = async function (persona) {
         if (persona === currentFreeTalkPersona) return;
 
         // If user already interacted in this session, enforce ending the session first!
         if (freeTalkTurnCount > 0) {
-          const wantToEnd = confirm(
-            "Bạn đang có bài học dở dang với persona hiện tại. Hãy chọn 'End Session' để xem tổng kết bài học trước khi chuyển persona!\n\nBạn có muốn Kết Thúc Bài Học (End Session) ngay bây giờ không?"
-          );
+          const wantToEnd = await showLinguistConfirm({
+            title: "Chuyển sang Persona khác?",
+            desc: "Bạn đang có bài học dở dang với persona hiện tại. Bạn có muốn kết thúc và lưu phiên học này trước khi đổi persona không?",
+            confirmText: "Kết Thúc & Xem Điểm",
+            cancelText: "Ở lại tiếp tục",
+            icon: "bi-person-badge-fill",
+            iconColor: "#8b5cf6",
+            iconBg: "rgba(139, 92, 246, 0.12)",
+            confirmBg: "linear-gradient(135deg, #8b5cf6, #7c3aed)"
+          });
           if (wantToEnd) {
-            endFreeTalkSession();
+            performEndFreeTalkSession();
           }
           return;
         }
@@ -3444,11 +3648,20 @@
 
       window.confirmNewFreeTalkTopic = async function () {
         if (freeTalkTurnCount > 0) {
-          const wantToEnd = confirm(
-            "Bạn đang có phiên học dở dang. Bạn có muốn chọn 'End Session' để xem tổng kết bài học trước khi đổi chủ đề mới không?"
-          );
+          const wantToEnd = await showLinguistConfirm({
+            title: "Bắt đầu chủ đề mới?",
+            desc: "Bạn đang có phiên học dở dang. Bạn có muốn kết thúc để xem tổng kết bài học trước khi đổi chủ đề mới không?",
+            confirmText: "Kết Thúc & Xem Điểm",
+            cancelText: "Ở lại tiếp tục",
+            icon: "bi-arrow-clockwise",
+            iconColor: "#f59e0b",
+            iconBg: "rgba(245, 158, 11, 0.12)",
+            confirmBg: "linear-gradient(135deg, #f59e0b, #d97706)"
+          });
           if (wantToEnd) {
-            endFreeTalkSession();
+            performEndFreeTalkSession();
+            return;
+          } else {
             return;
           }
         }
@@ -3569,12 +3782,7 @@
         return null;
       }
 
-      window.endFreeTalkSession = function () {
-        if (freeTalkTurnCount === 0 && currentSessionFeedbackList.length === 0) {
-          alert("Bạn chưa thực hiện tương tác nào với AI trong phiên này. Hãy gửi tin nhắn hoặc nói vào micro để bắt đầu bài học trước khi kết thúc nhé!");
-          return;
-        }
-
+      function performEndFreeTalkSession() {
         const targetLang = (currentUser && currentUser.target_language) || "English";
         const personaLabels = {
           friendly: "Friendly Pal",
@@ -3599,6 +3807,36 @@
         // Clear free talk tracking state
         currentFreeTalkSessionId = null;
         freeTalkTurnCount = 0;
+      }
+      window.performEndFreeTalkSession = performEndFreeTalkSession;
+
+      window.endFreeTalkSession = async function () {
+        if (freeTalkTurnCount === 0 && (!currentSessionFeedbackList || currentSessionFeedbackList.length === 0)) {
+          await showLinguistAlert({
+            title: "Chưa có lượt đối thoại nào",
+            desc: "Bạn chưa thực hiện tương tác nào với AI trong phiên này. Hãy gửi tin nhắn hoặc nói vào micro để bắt đầu bài học trước khi kết thúc nhé!",
+            buttonText: "Đã hiểu",
+            icon: "bi-chat-quote-fill",
+            iconColor: "#6366f1",
+            iconBg: "rgba(99, 102, 241, 0.12)"
+          });
+          return;
+        }
+
+        const confirmed = await showLinguistConfirm({
+          title: "Kết thúc phiên Free Talk?",
+          desc: `Bạn đã hoàn thành ${freeTalkTurnCount || (currentSessionFeedbackList ? currentSessionFeedbackList.length : 0)} lượt đàm thoại. Bạn có muốn kết thúc phiên để xem bảng điểm và nhận xét AI không?`,
+          confirmText: "Kết Thúc & Xem Điểm",
+          cancelText: "Tiếp tục trò chuyện",
+          icon: "bi-flag-fill",
+          iconColor: "#e11d48",
+          iconBg: "rgba(225, 29, 72, 0.12)",
+          confirmBg: "linear-gradient(135deg, #ef4444, #dc2626)"
+        });
+
+        if (confirmed) {
+          performEndFreeTalkSession();
+        }
       };
 
       window.handleFreeTalkTextSubmit = function (e) {
