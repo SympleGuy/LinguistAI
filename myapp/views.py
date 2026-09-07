@@ -6,7 +6,10 @@ from django.utils.decorators import method_decorator
 from django.views import View
 import json
 import uuid
+import time
+import sys
 from pathlib import Path
+from collections import defaultdict, Counter
 from django.conf import settings
 from .supabase_client import supabase_admin, supabase
 from django.contrib.auth.hashers import make_password, check_password
@@ -15,6 +18,9 @@ from django.contrib.auth import get_user_model
 User = get_user_model()
 from django.utils import timezone
 from datetime import timedelta
+from django.db.models import Count
+from django.db.models.signals import post_save, post_delete
+from django.dispatch import receiver
 from .ai_services import (
     generate_ai_conversation_response,
     generate_grammar_and_feedback,
@@ -22,22 +28,74 @@ from .ai_services import (
     generate_tts_elevenlabs
 )
 
+# In-memory caching for scenarios to avoid re-reading and re-parsing JSON repeatedly
+_SCENARIOS_CACHE = {
+    'timestamp': 0,
+    'scenarios': []
+}
+_SCENARIOS_CACHE_TTL = 60  # 60 seconds TTL
+
+def invalidate_scenarios_cache():
+    _SCENARIOS_CACHE['timestamp'] = 0
+    _SCENARIOS_CACHE['scenarios'] = []
+
+@receiver(post_save, sender=Scenario)
+@receiver(post_delete, sender=Scenario)
+def _on_scenario_mutation(sender, **kwargs):
+    invalidate_scenarios_cache()
+
+def get_cached_scenarios():
+    now = time.time()
+    is_testing = 'test' in sys.argv
+    if is_testing or not _SCENARIOS_CACHE['scenarios'] or (now - _SCENARIOS_CACHE['timestamp']) > _SCENARIOS_CACHE_TTL:
+        scenarios = Scenario.objects.all().order_by('id')
+        scenario_list = []
+        for scenario in scenarios:
+            scenario_data = {
+                "id": str(scenario.id),
+                "title": scenario.title if scenario.title is not None else "",
+                "system_prompt": scenario.system_prompt if scenario.system_prompt is not None else "",
+                "video_url": scenario.video_url if scenario.video_url is not None else "",
+                "category": "Daily Life",
+                "cefr": "Beginner",
+                "emoji": "💬",
+                "lang": "English",
+                "description": ""
+            }
+            if scenario.system_prompt:
+                try:
+                    parsed = json.loads(scenario.system_prompt)
+                    if isinstance(parsed, dict):
+                        scenario_data["description"] = parsed.get("description", "")
+                        scenario_data["category"] = parsed.get("category", "Daily Life")
+                        scenario_data["cefr"] = parsed.get("cefr", "Beginner")
+                        scenario_data["emoji"] = parsed.get("emoji", "💬")
+                        scenario_data["lang"] = parsed.get("lang", "English")
+                        scenario_data["system_prompt"] = parsed.get("prompt", scenario.system_prompt)
+                except Exception:
+                    pass
+            scenario_list.append(scenario_data)
+        if not is_testing:
+            _SCENARIOS_CACHE['scenarios'] = scenario_list
+            _SCENARIOS_CACHE['timestamp'] = now
+        return scenario_list
+    return _SCENARIOS_CACHE['scenarios']
+
 
 def calculate_user_streak(user_id):
     """
     Calculate consecutive active learning days (streak).
     Counts distinct days where the user completed a session or interaction.
+    Uses 90-day indexed cutoff to eliminate full historical table scans.
     """
     try:
-        user_sessions = LearningSession.objects.filter(user_id=user_id).values_list('id', flat=True)
-
-        session_dates = set(
-            LearningSession.objects.filter(user_id=user_id, started_at__isnull=False)
-            .values_list('started_at__date', flat=True)
-        )
+        cutoff = timezone.now() - timedelta(days=90)
+        recent_sessions = LearningSession.objects.filter(user_id=user_id, started_at__gte=cutoff)
+        session_dates = set(recent_sessions.values_list('started_at__date', flat=True))
+        recent_session_ids = list(recent_sessions.values_list('id', flat=True))
 
         log_dates = set(
-            InteractionLog.objects.filter(session_id__in=user_sessions, created_at__isnull=False)
+            InteractionLog.objects.filter(session_id__in=recent_session_ids, created_at__gte=cutoff)
             .values_list('created_at__date', flat=True)
         )
 
@@ -59,6 +117,20 @@ def calculate_user_streak(user_id):
         while current_check in active_dates:
             streak += 1
             current_check -= timedelta(days=1)
+
+        # Rare edge case: if user reached 90 days unbroken, check earlier history
+        if streak >= 90:
+            all_sessions = LearningSession.objects.filter(user_id=user_id).values_list('id', flat=True)
+            all_dates = set(
+                LearningSession.objects.filter(user_id=user_id, started_at__isnull=False)
+                .values_list('started_at__date', flat=True)
+            ).union(
+                set(InteractionLog.objects.filter(session_id__in=all_sessions, created_at__isnull=False)
+                    .values_list('created_at__date', flat=True))
+            )
+            while current_check in all_dates:
+                streak += 1
+                current_check -= timedelta(days=1)
 
         return streak
     except Exception as e:
@@ -464,33 +536,7 @@ def scenarios_list(request):
             if not req_cefr and not all_levels:
                 req_cefr = app_user.proficiency_level or ''
 
-    scenarios = Scenario.objects.all().order_by('id')
-    scenario_list = []
-    for scenario in scenarios:
-        scenario_data = {
-            "id": str(scenario.id),
-            "title": scenario.title if scenario.title is not None else "",
-            "system_prompt": scenario.system_prompt if scenario.system_prompt is not None else "",
-            "video_url": scenario.video_url if scenario.video_url is not None else "",
-            "category": "Daily Life",
-            "cefr": "Beginner",
-            "emoji": "💬",
-            "lang": "English",
-            "description": ""
-        }
-        if scenario.system_prompt:
-            try:
-                parsed = json.loads(scenario.system_prompt)
-                if isinstance(parsed, dict):
-                    scenario_data["description"] = parsed.get("description", "")
-                    scenario_data["category"] = parsed.get("category", "Daily Life")
-                    scenario_data["cefr"] = parsed.get("cefr", "Beginner")
-                    scenario_data["emoji"] = parsed.get("emoji", "💬")
-                    scenario_data["lang"] = parsed.get("lang", "English")
-                    scenario_data["system_prompt"] = parsed.get("prompt", scenario.system_prompt)
-            except Exception:
-                pass
-        scenario_list.append(scenario_data)
+    scenario_list = get_cached_scenarios()
 
     if not show_all and (req_lang or req_cefr):
         filtered_list = []
@@ -886,8 +932,11 @@ class SubmitAudioResponseView(View):
 
             try:
                 scenario = Scenario.objects.get(id=session.scenario_id)
+                base_prompt = scenario.system_prompt or ""
             except Scenario.DoesNotExist:
-                return JsonResponse({"error": "Associated scenario not found"}, status=404)
+                # Graceful fallback for Free Talk or missing scenario — use first available
+                fallback = Scenario.objects.first()
+                base_prompt = (fallback.system_prompt or "") if fallback else ""
 
             app_user = AppUser.objects.filter(id=session.user_id).first()
             user_level = app_user.proficiency_level if (app_user and app_user.proficiency_level) else "Beginner"
@@ -902,9 +951,14 @@ class SubmitAudioResponseView(View):
                     context_history.append({"role": "assistant", "content": log.ai_response_text})
 
             persona = request.POST.get('persona', '')
-            base_prompt = scenario.system_prompt or ""
             if persona:
-                base_prompt += f" [Persona: {persona}]"
+                persona_prompts = {
+                    "friendly": "You are a warm, encouraging language practice partner. Keep responses conversational, friendly and under 3 sentences.",
+                    "career": "You are a professional Career Coach helping with workplace English. Give practical, professional feedback in 2-3 sentences.",
+                    "debate": "You are a sharp Debate Partner. Challenge the user's viewpoint constructively and keep it engaging in 2-3 sentences.",
+                    "strict": "You are a rigorous language professor. Correct errors explicitly and demand precision. Keep responses to 2-3 sentences.",
+                }
+                base_prompt = persona_prompts.get(persona, base_prompt) or base_prompt
 
             ai_response = generate_ai_conversation_response(
                 scenario_prompt=base_prompt,
@@ -986,12 +1040,12 @@ class DashboardView(View):
             app_user = AppUser.objects.filter(id=user_id).first()
 
             # Get user's learning sessions
-            sessions = LearningSession.objects.filter(user_id=user_id).order_by('-started_at')
-            session_ids = list(sessions.values_list('id', flat=True))
+            sessions = list(LearningSession.objects.filter(user_id=user_id).order_by('-started_at'))
+            session_ids = [s.id for s in sessions]
 
-            # Get logs for calculating averages
-            logs = InteractionLog.objects.filter(session_id__in=session_ids)
-            active_session_ids = set(logs.values_list('session_id', flat=True))
+            # Fetch only required fields from logs (avoids reading heavy text/audio fields)
+            logs = list(InteractionLog.objects.filter(session_id__in=session_ids).values('session_id', 'detailed_feedback'))
+            active_session_ids = {log['session_id'] for log in logs}
 
             # Only count and display sessions with actual interactions or scores
             valid_sessions = [s for s in sessions if s.id in active_session_ids or (s.overall_score is not None and s.overall_score > 0)]
@@ -1000,22 +1054,26 @@ class DashboardView(View):
             g_scores = []
             p_scores = []
             for log in logs:
-                if log.detailed_feedback and isinstance(log.detailed_feedback, dict):
-                    if "grammar_score" in log.detailed_feedback:
-                        g_scores.append(log.detailed_feedback["grammar_score"])
-                    if "pronunciation_score" in log.detailed_feedback:
-                        p_scores.append(log.detailed_feedback["pronunciation_score"])
+                fb = log.get('detailed_feedback')
+                if fb and isinstance(fb, dict):
+                    if "grammar_score" in fb:
+                        g_scores.append(fb["grammar_score"])
+                    if "pronunciation_score" in fb:
+                        p_scores.append(fb["pronunciation_score"])
 
             avg_grammar = round(sum(g_scores) / len(g_scores)) if g_scores else 0
             avg_pronunciation = round(sum(p_scores) / len(p_scores)) if p_scores else 0
+
+            # Batch fetch scenarios to eliminate N+1 queries
+            scenarios_map = {s.id: s for s in Scenario.objects.all().only('id', 'title', 'system_prompt')}
 
             recent_sessions = []
             for session in valid_sessions[:10]:
                 title = "Practice Session"
                 emoji = "💬"
                 lang = "English"
-                try:
-                    scenario = Scenario.objects.get(id=session.scenario_id)
+                scenario = scenarios_map.get(session.scenario_id)
+                if scenario:
                     title = scenario.title if scenario.title else "Practice Session"
                     if scenario.system_prompt:
                         try:
@@ -1024,8 +1082,6 @@ class DashboardView(View):
                             lang = parsed.get("lang", "English")
                         except Exception:
                             pass
-                except Scenario.DoesNotExist:
-                    pass
 
                 recent_sessions.append({
                     "session_id": str(session.id),
@@ -1063,17 +1119,23 @@ class SessionHistoryView(View):
     def get(self, request, user_id):
         """Get learning session history for a user"""
         try:
-            sessions = LearningSession.objects.filter(user_id=user_id).order_by('-started_at')
+            sessions = list(LearningSession.objects.filter(user_id=user_id).order_by('-started_at'))
+            session_ids = [s.id for s in sessions]
+
+            # Batch fetch scenarios and pre-aggregate interaction counts in 1 query
+            scenarios_map = {s.id: s for s in Scenario.objects.all().only('id', 'title', 'system_prompt')}
+            interaction_counts = dict(
+                InteractionLog.objects.filter(session_id__in=session_ids)
+                .values('session_id')
+                .annotate(cnt=Count('id'))
+                .values_list('session_id', 'cnt')
+            )
+
             session_history = []
             for session in sessions:
-                title = "Unknown Scenario"
-                prompt = ""
-                try:
-                    scenario = Scenario.objects.get(id=session.scenario_id)
-                    title = scenario.title if scenario.title else "Unknown Scenario"
-                    prompt = scenario.system_prompt if scenario.system_prompt else ""
-                except Scenario.DoesNotExist:
-                    pass
+                scenario = scenarios_map.get(session.scenario_id)
+                title = scenario.title if (scenario and scenario.title) else "Unknown Scenario"
+                prompt = scenario.system_prompt if (scenario and scenario.system_prompt) else ""
 
                 session_history.append({
                     "session_id": str(session.id),
@@ -1085,7 +1147,7 @@ class SessionHistoryView(View):
                     "started_at": session.started_at.isoformat() if session.started_at else None,
                     "ended_at": None,
                     "overall_score": session.overall_score,
-                    "interaction_count": InteractionLog.objects.filter(session_id=session.id).count()
+                    "interaction_count": interaction_counts.get(session.id, 0)
                 })
 
             return JsonResponse({
@@ -1179,9 +1241,9 @@ class UserAnalyticsView(View):
         """
         Aggregate learning analytics, performance trends, and daily stats for Chart.js.
         GET /api/user/<uuid:user_id>/analytics/
+        Optimized to fetch only needed columns and perform single-pass aggregation.
         """
         try:
-            from datetime import timedelta
             app_user = AppUser.objects.filter(id=user_id).first()
             if not app_user:
                 return JsonResponse({"error": "User not found"}, status=404)
@@ -1190,8 +1252,39 @@ class UserAnalyticsView(View):
             total_sessions = sessions.count()
             session_ids = list(sessions.values_list('id', flat=True))
 
-            logs = InteractionLog.objects.filter(session_id__in=session_ids).order_by('created_at')
-            total_turns = logs.count()
+            # Fetch only created_at and detailed_feedback (avoids loading massive audio/transcript fields)
+            logs = list(
+                InteractionLog.objects.filter(session_id__in=session_ids)
+                .values('created_at', 'detailed_feedback')
+                .order_by('created_at')
+            )
+            total_turns = len(logs)
+
+            # Single-pass data grouping and overall score gathering
+            logs_by_date = defaultdict(list)
+            all_g = []
+            all_p = []
+            all_v = []
+            corrections_list = []
+
+            for log in logs:
+                created_at = log.get('created_at')
+                fb = log.get('detailed_feedback')
+
+                if created_at:
+                    logs_by_date[created_at.date()].append(fb)
+
+                if fb and isinstance(fb, dict):
+                    if "grammar_score" in fb:
+                        all_g.append(fb["grammar_score"])
+                    if "pronunciation_score" in fb:
+                        all_p.append(fb["pronunciation_score"])
+                    if "vocabulary_score" in fb:
+                        all_v.append(fb["vocabulary_score"])
+                    if "corrections" in fb and isinstance(fb["corrections"], list):
+                        for c in fb["corrections"]:
+                            if isinstance(c, dict) and "explanation" in c:
+                                corrections_list.append(c.get("explanation", ""))
 
             # Build 7-day timeline (from today - 6 days up to today)
             today = timezone.now().date()
@@ -1204,30 +1297,26 @@ class UserAnalyticsView(View):
 
             for i in range(6, -1, -1):
                 d = today - timedelta(days=i)
-                day_name = d.strftime("%a")  # Mon, Tue, etc.
-                date_str = d.isoformat()
-                days_labels.append(day_name)
-                dates_list.append(date_str)
+                days_labels.append(d.strftime("%a"))
+                dates_list.append(d.isoformat())
 
-                # Filter logs on this date
-                day_logs = [log for log in logs if log.created_at and log.created_at.date() == d]
-                turns_count = len(day_logs)
+                day_feedbacks = logs_by_date.get(d, [])
+                turns_count = len(day_feedbacks)
                 turns_series.append(turns_count)
 
                 g_day_scores = []
                 p_day_scores = []
                 v_day_scores = []
 
-                for l in day_logs:
-                    if l.detailed_feedback and isinstance(l.detailed_feedback, dict):
-                        if "grammar_score" in l.detailed_feedback:
-                            g_day_scores.append(l.detailed_feedback["grammar_score"])
-                        if "pronunciation_score" in l.detailed_feedback:
-                            p_day_scores.append(l.detailed_feedback["pronunciation_score"])
-                        if "vocabulary_score" in l.detailed_feedback:
-                            v_day_scores.append(l.detailed_feedback["vocabulary_score"])
+                for fb in day_feedbacks:
+                    if fb and isinstance(fb, dict):
+                        if "grammar_score" in fb:
+                            g_day_scores.append(fb["grammar_score"])
+                        if "pronunciation_score" in fb:
+                            p_day_scores.append(fb["pronunciation_score"])
+                        if "vocabulary_score" in fb:
+                            v_day_scores.append(fb["vocabulary_score"])
 
-                # If user had activity, calculate actual average; otherwise 0
                 g_avg = round(sum(g_day_scores) / len(g_day_scores)) if g_day_scores else 0
                 p_avg = round(sum(p_day_scores) / len(p_day_scores)) if p_day_scores else 0
                 v_avg = round(sum(v_day_scores) / len(v_day_scores)) if v_day_scores else 0
@@ -1236,31 +1325,11 @@ class UserAnalyticsView(View):
                 pron_series.append(min(100, p_avg))
                 vocab_series.append(min(100, v_avg))
 
-            # Overall averages
-            all_g = []
-            all_p = []
-            all_v = []
-            corrections_list = []
-
-            for log in logs:
-                if log.detailed_feedback and isinstance(log.detailed_feedback, dict):
-                    if "grammar_score" in log.detailed_feedback:
-                        all_g.append(log.detailed_feedback["grammar_score"])
-                    if "pronunciation_score" in log.detailed_feedback:
-                        all_p.append(log.detailed_feedback["pronunciation_score"])
-                    if "vocabulary_score" in log.detailed_feedback:
-                        all_v.append(log.detailed_feedback["vocabulary_score"])
-                    if "corrections" in log.detailed_feedback and isinstance(log.detailed_feedback["corrections"], list):
-                        for c in log.detailed_feedback["corrections"]:
-                            if isinstance(c, dict) and "explanation" in c:
-                                corrections_list.append(c.get("explanation", ""))
-
             avg_grammar = round(sum(all_g) / len(all_g)) if all_g else 0
             avg_pron = round(sum(all_p) / len(all_p)) if all_p else 0
             avg_vocab = round(sum(all_v) / len(all_v)) if all_v else 0
 
             # Count top common mistakes
-            from collections import Counter
             top_mistakes = [item[0] for item in Counter(corrections_list).most_common(3) if item[0]]
 
             analytics_data = {

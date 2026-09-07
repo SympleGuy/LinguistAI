@@ -29,6 +29,10 @@ class User(models.Model):
         verbose_name = 'User'
         verbose_name_plural = 'Users'
         db_table = 'users'
+        indexes = [
+            models.Index(fields=['email'], name='user_email_idx'),
+            models.Index(fields=['username'], name='user_username_idx'),
+        ]
 
     def __str__(self):
         return self.username or f"User {self.id}"
@@ -69,6 +73,7 @@ class LearningSession(models.Model):
         indexes = [
             models.Index(fields=['user_id']),
             models.Index(fields=['started_at']),
+            models.Index(fields=['user_id', '-started_at'], name='sess_user_started_idx'),
         ]
 
     def __str__(self):
@@ -95,6 +100,7 @@ class InteractionLog(models.Model):
         indexes = [
             models.Index(fields=['session_id']),
             models.Index(fields=['created_at']),
+            models.Index(fields=['session_id', 'created_at'], name='log_sess_created_idx'),
         ]
 
 

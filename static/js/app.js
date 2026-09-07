@@ -287,7 +287,7 @@
           localStorage.getItem("linguist_user_id") ||
           "";
         const headers = Object.assign({}, options.headers || {});
-        if (userId && userId !== "00000000-0000-0000-0000-000000000001") {
+        if (userId) {
           headers["X-User-ID"] = userId;
         }
         return fetch(
@@ -599,7 +599,16 @@
         renderScenarios();
       }
 
-      async function loadScenariosFromAPI() {
+      let lastScenariosUrl = "";
+      let lastScenariosLoadedAt = 0;
+
+      function invalidateScenariosCache() {
+        lastScenariosUrl = "";
+        lastScenariosLoadedAt = 0;
+      }
+      window.invalidateScenariosCache = invalidateScenariosCache;
+
+      async function loadScenariosFromAPI(force = false) {
         try {
           let url = "/api/scenarios/";
           if (currentUser) {
@@ -610,6 +619,11 @@
             } else {
               url = `/api/scenarios/?lang=${encodeURIComponent(userLang)}&cefr=${encodeURIComponent(userCefr)}&user_id=${currentUserId}`;
             }
+          }
+
+          const now = Date.now();
+          if (!force && url === lastScenariosUrl && SCENARIOS.length > 0 && (now - lastScenariosLoadedAt < 30000)) {
+            return;
           }
 
           const res = await apiFetch(url);
@@ -632,6 +646,8 @@
                 ],
                 vocab: s.vocab || [],
               }));
+              lastScenariosUrl = url;
+              lastScenariosLoadedAt = Date.now();
             }
           }
         } catch (e) {
@@ -1351,6 +1367,7 @@
         }
 
         // 8. Navigate to summary page
+        invalidateDashboardCache();
         showPage("summary");
 
         // Clear active session state
@@ -1966,6 +1983,7 @@
             aiMsg.className = "msg-wrap";
             const curLang = document.getElementById("conv-lang")?.textContent || "English";
             const voiceId = "ai-voice-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
+            const voicePill = createAiVoicePillHtml(data.ai_audio_url || "", voiceId, data.ai_response || "", curLang);
             aiMsg.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response}</div>`;
             ml.appendChild(aiMsg);
             const pillWrap = document.createElement("div");
@@ -2243,8 +2261,20 @@
         });
       }
 
-      async function loadDashboardData() {
+      let lastDashboardLoadedAt = 0;
+      let lastDashboardUserId = "";
+
+      function invalidateDashboardCache() {
+        lastDashboardLoadedAt = 0;
+      }
+      window.invalidateDashboardCache = invalidateDashboardCache;
+
+      async function loadDashboardData(force = false) {
         if (!currentUserId) return;
+        const now = Date.now();
+        if (!force && currentUserId === lastDashboardUserId && (now - lastDashboardLoadedAt < 15000)) {
+          return;
+        }
         try {
           const [dashRes, analyticsRes] = await Promise.allSettled([
             apiFetch(`/api/dashboard/${currentUserId}/`),
@@ -2253,6 +2283,8 @@
 
           if (dashRes.status === "fulfilled" && dashRes.value.ok) {
             const data = await dashRes.value.json();
+            lastDashboardLoadedAt = Date.now();
+            lastDashboardUserId = currentUserId;
             const welcome = document.getElementById("dash-welcome");
             if (welcome)
               welcome.textContent = `Welcome back, ${data.username}! 🔥`;
@@ -2586,6 +2618,9 @@
           if (res.ok && data.status === "success") {
             currentUser = data.user;
             localStorage.setItem("linguist_user", JSON.stringify(currentUser));
+            invalidateScenariosCache();
+            invalidateDashboardCache();
+            loadScenariosFromAPI(true);
             if (feedbackEl) {
               feedbackEl.style.display = "block";
               feedbackEl.style.background = "#ecfdf5";
@@ -3778,6 +3813,7 @@
         try {
           const activeUid = (currentUser && currentUser.id) || currentUserId || localStorage.getItem("linguist_user_id");
           const freeTalkScenario = SCENARIOS.find(s => s.category === "Open Talk" || (s.title || "").toLowerCase().includes("free talk")) || { id: 27 };
+          console.log(`[Free Talk] Creating session for user=${activeUid}, scenario=${freeTalkScenario.id}`);
           const res = await apiFetch("/api/sessions/start/", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -3787,7 +3823,12 @@
           if (res.ok) {
             const data = await res.json();
             currentFreeTalkSessionId = data.session_id;
+            console.log(`[Free Talk] Session created: ${currentFreeTalkSessionId}`);
             return currentFreeTalkSessionId;
+          } else {
+            let errBody = "";
+            try { const errData = await res.json(); errBody = JSON.stringify(errData); } catch (_) {}
+            console.error(`[Free Talk] Session start failed — HTTP ${res.status}: ${errBody}`);
           }
         } catch (e) {
           console.warn("Could not lazily create Free Talk session:", e);
@@ -4100,12 +4141,17 @@
         const formData = new FormData();
         const activeUid = (currentUser && currentUser.id) || currentUserId || localStorage.getItem("linguist_user_id");
         formData.append("user_id", activeUid);
-        formData.append("audio_file", audioBlob, "freetalk_voice.webm");
+        formData.append("audio", audioBlob, "freetalk_voice.webm");
         formData.append("persona", currentFreeTalkPersona);
 
         try {
-          await ensureFreeTalkSession();
-          const res = await apiFetch(`/api/sessions/${currentFreeTalkSessionId || 1}/respond-audio/`, {
+          const sessionId = await ensureFreeTalkSession();
+          if (!sessionId) {
+            console.error("[Free Talk] Could not obtain a valid session ID — aborting audio submit.");
+            if (micStatus) micStatus.textContent = "Session error. Please refresh the page and try again.";
+            return;
+          }
+          const res = await apiFetch(`/api/sessions/${sessionId}/respond-audio/`, {
             method: "POST",
             credentials: "include",
             body: formData,
@@ -4145,7 +4191,10 @@
             if (micStatus) micStatus.textContent = "Daily turns limit reached!";
             openPaymentModal();
           } else {
-            if (micStatus) micStatus.textContent = "Error processing audio. Please try again.";
+            let errDetail = "";
+            try { const errData = await res.json(); errDetail = errData.error || ""; } catch (_) {}
+            console.error(`[Free Talk] Audio API error — HTTP ${res.status}: ${errDetail}`);
+            if (micStatus) micStatus.textContent = `Error processing audio (${res.status}). Please try again.`;
           }
         } catch (e) {
           console.error("Free Talk audio upload failed:", e);
