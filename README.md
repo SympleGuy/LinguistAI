@@ -41,7 +41,7 @@
 - **Custom Interactive Dialog System**: Full replacement of browser-native popups (`alert()` and `confirm()`) with glassmorphic modal dialogs (`#linguistDialogModal`) featuring async confirmation workflows.
 - **Strict Session Management**: Turn-based progress tracking preventing ghost or 0-turn empty records in PostgreSQL. Validates turns before concluding, switching personas, or navigating away.
 - **Role-Based Access Control (RBAC)**: Enforces `USER` and `ADMIN` role boundaries with dedicated permission guards and admin authentication.
-- **Automated Audio Lifecycle Maintenance**: Background cron garbage collection (`scripts/run_cleanup_cron.sh` & `cleanup_audio_files`) purging orphaned audio files older than 30 days while retaining transcripts and evaluation metadata.
+- **Cloud Audio Storage**: User voice recordings are stored in Supabase Storage (`user-audio` bucket) with public CDN streaming and resilient local fallback.
 
 ---
 
@@ -300,10 +300,8 @@ LinguistAI/
 │   │   ├── app.js                  # Frontend SPA controller & audio/dialog logic
 │   │   └── admin_dashboard.js      # Admin telemetry & portal management logic
 │   └── audio/                      # Transient audio storage directory
-├── scripts/
-│   └── run_cleanup_cron.sh         # Audio file garbage collection shell script
 ├── docs/
-│   └── CRON_SETUP.md               # Automated cron setup documentation
+│   └── AUDIO_STORAGE_GUIDE.md      # Cloud audio storage setup documentation
 ├── linguistai_project/
 │   ├── settings.py                 # Django settings & middleware registration
 │   ├── urls.py                     # Root URL routing configuration

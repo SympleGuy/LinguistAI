@@ -917,6 +917,50 @@ class SubmitResponseView(View):
             return JsonResponse({"error": str(e)}, status=500)
 
 
+def upload_user_audio_to_storage(audio_bytes, filename):
+    """
+    Upload user audio recording to Supabase Storage ('user-audio' bucket).
+    Falls back gracefully to local media storage if Supabase Storage is unavailable.
+    Returns: public URL string.
+    """
+    ext = Path(filename).suffix.lower() or ".webm"
+    mime_map = {
+        ".webm": "audio/webm",
+        ".wav": "audio/wav",
+        ".mp3": "audio/mpeg",
+        ".ogg": "audio/ogg",
+        ".m4a": "audio/mp4"
+    }
+    content_type = mime_map.get(ext, "audio/webm")
+
+    # 1. Primary path: Supabase cloud storage
+    client = supabase_admin or supabase
+    if client:
+        try:
+            client.storage.from_("user-audio").upload(
+                path=filename,
+                file=audio_bytes,
+                file_options={"content-type": content_type}
+            )
+            public_url = client.storage.from_("user-audio").get_public_url(filename)
+            if public_url:
+                return public_url.rstrip("?")
+        except Exception as err:
+            print(f"[Supabase Storage Notice] Upload attempt note: {err}")
+
+    # 2. Resilient fallback: Local filesystem media storage
+    try:
+        audio_dir = Path(settings.MEDIA_ROOT) / "user_audio"
+        audio_dir.mkdir(parents=True, exist_ok=True)
+        saved_path = audio_dir / filename
+        with open(saved_path, "wb") as f:
+            f.write(audio_bytes)
+        return f"{settings.MEDIA_URL}user_audio/{filename}"
+    except Exception as local_err:
+        print(f"[Local Audio Fallback Notice]: {local_err}")
+        return ""
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class SubmitAudioResponseView(View):
     def post(self, request, session_id):
@@ -953,17 +997,12 @@ class SubmitAudioResponseView(View):
             user_audio_url = ""
 
             if audio_file:
-                audio_dir = Path(settings.MEDIA_ROOT) / "user_audio"
-                audio_dir.mkdir(parents=True, exist_ok=True)
                 ext = Path(audio_file.name).suffix or ".webm"
                 saved_filename = f"user_{uuid.uuid4().hex[:10]}{ext}"
-                saved_path = audio_dir / saved_filename
-
                 audio_bytes = audio_file.read()
-                with open(saved_path, "wb") as f:
-                    f.write(audio_bytes)
 
-                user_audio_url = f"{settings.MEDIA_URL}user_audio/{saved_filename}"
+                # Upload to Supabase Storage with local fallback
+                user_audio_url = upload_user_audio_to_storage(audio_bytes, saved_filename)
 
                 if not user_transcript:
                     user_transcript = transcribe_audio_gemini(audio_bytes, filename=saved_filename)
