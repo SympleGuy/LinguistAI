@@ -730,11 +730,20 @@
           >
             <i class="bi bi-chevron-left"></i> Back to Scenarios
           </button>
-          <div
-            style="display: grid; grid-template-columns: 1fr 300px; gap: 20px"
-          >
+          <!-- Mobile Tab Switcher for Conversation -->
+          <div class="conv-mobile-tabs" id="conv-mobile-tabs">
+            <button class="conv-tab-btn active" id="conv-tab-btn-chat" onclick="switchConvMobileTab('chat')">
+              <i class="bi bi-chat-dots-fill"></i> Conversation
+            </button>
+            <button class="conv-tab-btn" id="conv-tab-btn-feedback" onclick="switchConvMobileTab('feedback')">
+              <i class="bi bi-lightning-charge-fill"></i> Feedback & Vocab
+            </button>
+          </div>
+          <div class="conv-main-layout" id="conv-main-layout">
             <!-- Chat -->
             <div
+              id="conv-chat-container"
+              class="conv-chat-container"
               style="
                 background: #fff;
                 border: 1px solid var(--border);
@@ -851,7 +860,7 @@
               </div>
             </div>
             <!-- Feedback -->
-            <div style="display: flex; flex-direction: column; gap: 16px">
+            <div id="conv-side-panel" class="conv-side-panel" style="display: flex; flex-direction: column; gap: 16px">
               <div class="fb-panel">
                 <div
                   style="
@@ -949,6 +958,16 @@
             </div>
           </div>
 
+          <!-- Mobile Tab Switcher for Free Talk -->
+          <div class="conv-mobile-tabs ft-mobile-tabs" id="ft-mobile-tabs">
+            <button class="conv-tab-btn active" id="ft-tab-btn-chat" onclick="switchFreeTalkMobileTab('chat')">
+              <i class="bi bi-chat-dots-fill"></i> Free Talk
+            </button>
+            <button class="conv-tab-btn" id="ft-tab-btn-feedback" onclick="switchFreeTalkMobileTab('feedback')">
+              <i class="bi bi-lightning-charge-fill"></i> Live Feedback
+            </button>
+          </div>
+
           <div class="freetalk-grid-layout">
             <!-- Chat Box -->
             <div class="freetalk-chat-box">
@@ -1000,7 +1019,7 @@
             </div>
 
             <!-- Side Feedback & Vocabulary -->
-            <div style="display: flex; flex-direction: column; gap: 16px;">
+            <div id="ft-side-panel" class="freetalk-side-panel" style="display: flex; flex-direction: column; gap: 16px;">
               <div class="fb-panel">
                 <div style="font-weight: 700; font-size: 0.85rem; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;">
                   <i class="bi bi-lightning-charge-fill" style="color: #f59e0b"></i> Live Feedback
@@ -1039,15 +1058,7 @@
             </p>
 
             <!-- Score Grid -->
-            <div
-              style="
-                display: grid;
-                grid-template-columns: repeat(4, 1fr);
-                gap: 12px;
-                margin-top: 24px;
-              "
-              id="sum-scores-grid"
-            >
+            <div class="summary-scores-grid" id="sum-scores-grid">
               <div class="summary-score-item">
                 <div class="summary-score-val" id="sum-overall-score">90%</div>
                 <div class="summary-score-lbl">Overall Score</div>
@@ -1282,14 +1293,7 @@
           </div>
 
           <!-- Stats -->
-          <div
-            style="
-              display: grid;
-              grid-template-columns: repeat(4, 1fr);
-              gap: 14px;
-              margin-bottom: 24px;
-            "
-          >
+          <div class="dash-stats-grid">
             <div class="stat-card">
               <div
                 style="
@@ -1348,14 +1352,7 @@
             </div>
           </div>
 
-          <div
-            style="
-              display: grid;
-              grid-template-columns: 1fr 1fr;
-              gap: 20px;
-              margin-bottom: 20px;
-            "
-          >
+          <div class="dash-charts-grid">
             <!-- Chart -->
             <div
               style="
@@ -1800,9 +1797,7 @@
                 margin-bottom: 16px;
               "
             ></div>
-            <div
-              style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px"
-            >
+            <div class="profile-form-grid">
               <div>
                 <label class="form-label">Display Name</label
                 ><input
@@ -2392,6 +2387,33 @@
         </div>
       </div>
     </div>
+
+    <!-- ======================================================= -->
+    <!-- MOBILE BOTTOM NAVIGATION BAR                            -->
+    <!-- ======================================================= -->
+    <nav class="mobile-bottom-nav" id="mobile-bottom-nav" aria-label="Mobile Navigation">
+      <button class="mobile-nav-item active" id="bnl-scenarios" onclick="showPage('scenarios')">
+        <i class="bi bi-book"></i>
+        <span>Scenarios</span>
+      </button>
+      <button class="mobile-nav-item" id="bnl-freetalk" onclick="showPage('freetalk')">
+        <i class="bi bi-chat-dots-fill"></i>
+        <span>Free Talk</span>
+      </button>
+      <button class="mobile-nav-item" id="bnl-flashcards" onclick="showPage('flashcards')">
+        <i class="bi bi-card-text"></i>
+        <span>Practice</span>
+      </button>
+      <button class="mobile-nav-item" id="bnl-dashboard" onclick="showPage('dashboard')">
+        <i class="bi bi-grid-1x2"></i>
+        <span>Dashboard</span>
+      </button>
+      <button class="mobile-nav-item" id="bnl-profile" onclick="showPage('profile')">
+        <i class="bi bi-person"></i>
+        <span>Profile</span>
+      </button>
+    </nav>
+
     <script src="/static/js/app.js"></script>
   </body>
 </html>

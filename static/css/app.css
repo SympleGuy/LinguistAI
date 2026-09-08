@@ -2788,5 +2788,371 @@
         opacity: 0.95;
       }
 
+      /* ═══════════════════════════════════════════════════════════════
+         RESPONSIVE GRID LAYOUT DEFAULTS (DESKTOP)
+         ═══════════════════════════════════════════════════════════════ */
+      .summary-scores-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .dash-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 24px;
+      }
+
+      .dash-charts-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .profile-form-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+
+      .conv-main-layout {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 20px;
+      }
+
+      .conv-mobile-tabs {
+        display: none;
+      }
+
+      .mobile-bottom-nav {
+        display: none;
+      }
+
+      /* ═══════════════════════════════════════════════════════════════
+         MOBILE RESPONSIVE BREAKPOINT (max-width: 767.98px)
+         ═══════════════════════════════════════════════════════════════ */
+      @media (max-width: 767.98px) {
+        /* Mobile safe padding to prevent bottom nav collision */
+        body {
+          padding-bottom: env(safe-area-inset-bottom, 0);
+        }
+
+        .inner-page {
+          padding: 20px 0 88px 0;
+        }
+
+        .section-wrap {
+          padding: 0 16px;
+        }
+
+        .lnav .inner {
+          padding: 0 16px;
+        }
+
+        /* Top Navbar adjustments on mobile */
+        .lnav #inner-nav {
+          display: none !important;
+        }
+
+        .btn-try {
+          padding: 6px 14px;
+          font-size: 0.8rem;
+        }
+
+        .btn-signin {
+          padding: 6px 10px;
+          font-size: 0.82rem;
+        }
+
+        /* Fixed Mobile Bottom Navigation Bar */
+        .mobile-bottom-nav {
+          position: fixed;
+          bottom: 0;
+          left: 0;
+          right: 0;
+          height: 62px;
+          background: rgba(255, 255, 255, 0.94);
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          border-top: 1px solid rgba(226, 232, 240, 0.9);
+          display: flex !important;
+          align-items: center;
+          justify-content: space-around;
+          z-index: 1030;
+          padding: 0 6px;
+          padding-bottom: env(safe-area-inset-bottom, 0);
+          box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.06);
+        }
+
+        .mobile-nav-item {
+          flex: 1;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          gap: 3px;
+          background: none;
+          border: none;
+          color: #64748b;
+          padding: 6px 0;
+          font-family: "DM Sans", sans-serif;
+          font-size: 0.7rem;
+          font-weight: 600;
+          cursor: pointer;
+          transition: color 0.15s ease, transform 0.15s ease;
+          text-decoration: none;
+          user-select: none;
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        .mobile-nav-item i {
+          font-size: 1.25rem;
+          transition: transform 0.15s ease, color 0.15s ease;
+        }
+
+        .mobile-nav-item.active {
+          color: var(--primary);
+        }
+
+        .mobile-nav-item.active i {
+          transform: scale(1.12);
+        }
+
+        /* Conversation & Free Talk Mobile Layout */
+        .conv-main-layout {
+          grid-template-columns: 1fr !important;
+          gap: 16px;
+        }
+
+        .freetalk-grid-layout {
+          grid-template-columns: 1fr !important;
+          gap: 16px;
+        }
+
+        .conv-mobile-tabs {
+          display: flex !important;
+          gap: 8px;
+          margin-bottom: 14px;
+          background: #f1f5f9;
+          padding: 4px;
+          border-radius: 12px;
+        }
+
+        .conv-tab-btn {
+          flex: 1;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 8px 12px;
+          border-radius: 9px;
+          border: none;
+          background: transparent;
+          color: #64748b;
+          font-family: "DM Sans", sans-serif;
+          font-size: 0.8rem;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+
+        .conv-tab-btn.active {
+          background: #ffffff;
+          color: var(--primary);
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Toggle between chat & side panel on mobile */
+        .conv-chat-container.mobile-hidden,
+        .freetalk-chat-box.mobile-hidden {
+          display: none !important;
+        }
+
+        .conv-side-panel {
+          display: none !important;
+        }
+
+        .conv-side-panel.mobile-visible {
+          display: flex !important;
+        }
+
+        .freetalk-side-panel {
+          display: none !important;
+        }
+
+        .freetalk-side-panel.mobile-visible {
+          display: flex !important;
+        }
+
+        /* Banner & Header responsive */
+        #conv-banner {
+          height: 120px !important;
+          font-size: 3rem !important;
+        }
+
+        .freetalk-header-bar {
+          flex-direction: column !important;
+          align-items: flex-start !important;
+          gap: 12px !important;
+        }
+
+        /* Persona Pills Horizontal Scroll */
+        .persona-pills-list {
+          flex-wrap: nowrap !important;
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 8px;
+        }
+
+        .persona-pill {
+          flex-shrink: 0;
+          min-width: 145px;
+        }
+
+        /* Scenario Filters & Search */
+        #scen-filters {
+          flex-wrap: nowrap !important;
+          overflow-x: auto !important;
+          -webkit-overflow-scrolling: touch;
+          padding-bottom: 8px;
+        }
+
+        .search-input {
+          width: 100% !important;
+        }
+
+        .scen-turn-card {
+          flex-direction: column !important;
+          align-items: stretch !important;
+          gap: 14px !important;
+        }
+
+        .scen-turn-right {
+          width: 100% !important;
+          justify-content: space-between !important;
+        }
+
+        .btn-turn-upgrade {
+          width: 100% !important;
+          justify-content: center !important;
+        }
+
+        /* Dashboard Metrics */
+        .dash-stats-grid {
+          grid-template-columns: repeat(2, 1fr) !important;
+          gap: 10px !important;
+        }
+
+        .stat-card {
+          padding: 14px !important;
+        }
+
+        .stat-val {
+          font-size: 1.35rem !important;
+        }
+
+        .dash-charts-grid {
+          grid-template-columns: 1fr !important;
+          gap: 16px !important;
+        }
+
+        /* Summary Page */
+        .summary-scores-grid {
+          grid-template-columns: repeat(2, 1fr) !important;
+          gap: 10px !important;
+        }
+
+        .summary-grid {
+          grid-template-columns: 1fr !important;
+          gap: 16px !important;
+        }
+
+        /* Profile & Settings */
+        .profile-form-grid {
+          grid-template-columns: 1fr !important;
+          gap: 12px !important;
+        }
+
+        /* Landing Page Mobile */
+        .hero {
+          padding: 48px 0 60px 0 !important;
+        }
+
+        .hero-h1 {
+          font-size: 2rem !important;
+        }
+
+        .hero-p {
+          font-size: 0.95rem !important;
+        }
+
+        .hero-btns {
+          flex-direction: column !important;
+          width: 100%;
+        }
+
+        .hero-btns button {
+          width: 100% !important;
+          justify-content: center;
+        }
+
+        .hero-trust {
+          flex-direction: column !important;
+          gap: 8px !important;
+          align-items: center;
+        }
+
+        .feat-grid {
+          grid-template-columns: 1fr !important;
+          gap: 16px !important;
+          margin-top: 36px !important;
+        }
+
+        .pricing-grid {
+          grid-template-columns: 1fr !important;
+          gap: 20px !important;
+          margin-top: 36px !important;
+        }
+      }
+
+      /* ═══════════════════════════════════════════════════════════════
+         TABLET BREAKPOINT (768px <= width <= 991.98px)
+         ═══════════════════════════════════════════════════════════════ */
+      @media (min-width: 768px) and (max-width: 991.98px) {
+        .dash-stats-grid {
+          grid-template-columns: repeat(2, 1fr);
+          gap: 12px;
+        }
+
+        .dash-charts-grid {
+          grid-template-columns: 1fr;
+          gap: 16px;
+        }
+
+        .conv-main-layout {
+          grid-template-columns: 1fr 270px;
+          gap: 16px;
+        }
+
+        .freetalk-grid-layout {
+          grid-template-columns: 1fr 270px;
+          gap: 16px;
+        }
+
+        .summary-scores-grid {
+          grid-template-columns: repeat(4, 1fr);
+          gap: 10px;
+        }
+
+        .hero-h1 {
+          font-size: 2.5rem;
+        }
+      }
+
+
 
 

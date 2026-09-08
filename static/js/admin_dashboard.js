@@ -195,6 +195,16 @@ let currentSection = 'overview';
             }
           });
 
+          // Auto-close sidebar on mobile/tablet after navigating
+          if (window.innerWidth < 992) {
+            const sidebar = document.getElementById('adminSidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            if (sidebar && sidebar.classList.contains('open')) {
+              sidebar.classList.remove('open');
+              if (backdrop) backdrop.classList.remove('active');
+            }
+          }
+
           const titles = {
             overview: 'Platform Overview & Telemetry',
             users: 'Learners & User Management',

@@ -514,7 +514,17 @@
         ["scenarios", "freetalk", "dashboard", "profile", "flashcards"].forEach((n) => {
           const el = document.getElementById("nl-" + n);
           if (el) el.classList.toggle("active", n === name);
+          const bEl = document.getElementById("bnl-" + n);
+          if (bEl) bEl.classList.toggle("active", n === name);
         });
+
+        // mobile bottom navigation visibility
+        const mobileNav = document.getElementById("mobile-bottom-nav");
+        if (mobileNav) {
+          const hideNav = isAuthPage || (isLanding && !currentUser);
+          mobileNav.style.display = hideNav ? "none" : "";
+        }
+
         window.scrollTo(0, 0);
 
         if (syncUrl && window.history && window.history.replaceState) {
@@ -531,9 +541,11 @@
         }
         if (name === "freetalk") {
           initFreeTalkPage();
+          switchFreeTalkMobileTab("chat");
         }
         if (name === "conversation") {
           updateDailyTurnUI();
+          switchConvMobileTab("chat");
         }
         if (name === "dashboard") loadDashboardData();
         if (name === "profile") loadProfileData();
@@ -556,6 +568,44 @@
           showPage("dashboard");
         } else {
           showPage("landing");
+        }
+      }
+
+      function switchConvMobileTab(tab) {
+        const chatBtn = document.getElementById("conv-tab-btn-chat");
+        const fbBtn = document.getElementById("conv-tab-btn-feedback");
+        const chatBox = document.getElementById("conv-chat-container");
+        const sidePanel = document.getElementById("conv-side-panel");
+
+        if (tab === "chat") {
+          if (chatBtn) chatBtn.classList.add("active");
+          if (fbBtn) fbBtn.classList.remove("active");
+          if (chatBox) chatBox.classList.remove("mobile-hidden");
+          if (sidePanel) sidePanel.classList.remove("mobile-visible");
+        } else {
+          if (chatBtn) chatBtn.classList.remove("active");
+          if (fbBtn) fbBtn.classList.add("active");
+          if (chatBox) chatBox.classList.add("mobile-hidden");
+          if (sidePanel) sidePanel.classList.add("mobile-visible");
+        }
+      }
+
+      function switchFreeTalkMobileTab(tab) {
+        const chatBtn = document.getElementById("ft-tab-btn-chat");
+        const fbBtn = document.getElementById("ft-tab-btn-feedback");
+        const chatBox = document.querySelector(".freetalk-chat-box");
+        const sidePanel = document.getElementById("ft-side-panel");
+
+        if (tab === "chat") {
+          if (chatBtn) chatBtn.classList.add("active");
+          if (fbBtn) fbBtn.classList.remove("active");
+          if (chatBox) chatBox.classList.remove("mobile-hidden");
+          if (sidePanel) sidePanel.classList.remove("mobile-visible");
+        } else {
+          if (chatBtn) chatBtn.classList.remove("active");
+          if (fbBtn) fbBtn.classList.add("active");
+          if (chatBox) chatBox.classList.add("mobile-hidden");
+          if (sidePanel) sidePanel.classList.add("mobile-visible");
         }
       }
 
@@ -605,6 +655,11 @@
       function invalidateScenariosCache() {
         lastScenariosUrl = "";
         lastScenariosLoadedAt = 0;
+        try {
+          Object.keys(sessionStorage).forEach((k) => {
+            if (k.startsWith("linguist_scenarios_")) sessionStorage.removeItem(k);
+          });
+        } catch (e) {}
       }
       window.invalidateScenariosCache = invalidateScenariosCache;
 
@@ -621,7 +676,22 @@
             }
           }
 
+          const cacheKey = `linguist_scenarios_${url}`;
           const now = Date.now();
+
+          // SWR: Instant render from sessionStorage if memory is cold
+          if (!force && (!SCENARIOS || SCENARIOS.length === 0)) {
+            try {
+              const cached = sessionStorage.getItem(cacheKey);
+              if (cached) {
+                SCENARIOS = JSON.parse(cached);
+                if (document.getElementById("page-scenarios")?.classList.contains("active")) {
+                  renderScenarios();
+                }
+              }
+            } catch (e) {}
+          }
+
           if (!force && url === lastScenariosUrl && SCENARIOS.length > 0 && (now - lastScenariosLoadedAt < 30000)) {
             return;
           }
@@ -648,6 +718,14 @@
               }));
               lastScenariosUrl = url;
               lastScenariosLoadedAt = Date.now();
+
+              try {
+                sessionStorage.setItem(cacheKey, JSON.stringify(SCENARIOS));
+              } catch (e) {}
+
+              if (document.getElementById("page-scenarios")?.classList.contains("active")) {
+                renderScenarios();
+              }
             }
           }
         } catch (e) {
@@ -1635,7 +1713,13 @@
 
         stopAllAiVoicePlaybacks(voiceId);
 
-        // If audioUrl is missing, fetch from backend TTS API
+        // Instant zero-latency speech synthesis fallback for auto-play when audio URL is absent
+        if (!audioUrl && auto) {
+          playSpeechSynthesisFallback(voiceId, text, lang, speed);
+          return;
+        }
+
+        // If audioUrl is missing and user triggered playback manually, attempt TTS API fetch
         if (!audioUrl && text) {
           try {
             updateVoicePillUIState(voiceId, true);
@@ -1681,56 +1765,83 @@
       }
 
       function playSpeechSynthesisFallback(voiceId, text, lang, speed = 1.0) {
-        const langCodeMap = {
-          English: "en",
-          French: "fr",
-          Spanish: "es",
-          German: "de",
-          Japanese: "ja",
+        const fullLangMap = {
+          English: "en-US",
+          French: "fr-FR",
+          Spanish: "es-ES",
+          German: "de-DE",
+          Japanese: "ja-JP",
           Chinese: "zh-CN",
-          Korean: "ko",
-          Vietnamese: "vi",
+          Korean: "ko-KR",
+          Vietnamese: "vi-VN",
         };
-        const langCode = langCodeMap[lang] || "en";
+        const langCode = fullLangMap[lang] || "en-US";
+        const langShort = langCode.split('-')[0];
 
-        if (window.speechSynthesis && window.speechSynthesis.getVoices().length > 0) {
-          try {
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.resume();
-            const utter = new SpeechSynthesisUtterance(text);
-            const fullLangMap = {
-              English: "en-US",
-              French: "fr-FR",
-              Spanish: "es-ES",
-              German: "de-DE",
-              Japanese: "ja-JP",
-              Chinese: "zh-CN",
-              Korean: "ko-KR",
-              Vietnamese: "vi-VN",
-            };
-            utter.lang = fullLangMap[lang] || "en-US";
-            utter.rate = speed === 0.75 ? 0.75 : 1.0;
-            activeSpeakingVoiceId = voiceId;
+        if (window.speechSynthesis) {
+          const doSpeak = (voices) => {
+            try {
+              window.speechSynthesis.cancel();
+              const utter = new SpeechSynthesisUtterance(text);
+              utter.lang = langCode;
+              utter.rate = speed === 0.75 ? 0.75 : 1.0;
+              activeSpeakingVoiceId = voiceId;
 
-            utter.onstart = () => updateVoicePillUIState(voiceId, true);
-            utter.onend = () => {
-              updateVoicePillUIState(voiceId, false);
-              activeSpeakingVoiceId = null;
-            };
-            utter.onerror = () => {
-              activeSpeakingVoiceId = null;
-              playDirectStreamTTS(voiceId, text, langCode, speed);
-            };
+              // Prefer premium voices: Google > Microsoft > Apple > default
+              const langVoices = voices.filter(v =>
+                v.lang.startsWith(langShort) || v.lang.startsWith(langCode)
+              );
+              const premiumVoice = langVoices.find(v =>
+                v.name.includes('Google') || v.name.includes('Microsoft') ||
+                v.name.includes('Samantha') || v.name.includes('Natural') ||
+                v.name.includes('Enhanced') || v.name.includes('Premium')
+              ) || langVoices[0];
+              if (premiumVoice) utter.voice = premiumVoice;
 
-            updateVoicePillUIState(voiceId, true);
-            window.speechSynthesis.speak(utter);
+              utter.onstart = () => updateVoicePillUIState(voiceId, true);
+              utter.onend = () => {
+                updateVoicePillUIState(voiceId, false);
+                activeSpeakingVoiceId = null;
+              };
+              utter.onerror = () => {
+                activeSpeakingVoiceId = null;
+                playDirectStreamTTS(voiceId, text, langShort, speed);
+              };
+
+              updateVoicePillUIState(voiceId, true);
+              window.speechSynthesis.speak(utter);
+              return true;
+            } catch (e) {
+              console.warn("Speech synthesis error:", e);
+              return false;
+            }
+          };
+
+          const voices = window.speechSynthesis.getVoices();
+          if (voices && voices.length > 0) {
+            if (doSpeak(voices)) return;
+          } else {
+            // Voices not yet loaded — wait for them
+            const onVoicesChanged = () => {
+              window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+              const loadedVoices = window.speechSynthesis.getVoices();
+              if (!doSpeak(loadedVoices)) {
+                playDirectStreamTTS(voiceId, text, langShort, speed);
+              }
+            };
+            window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+            // Timeout fallback if voiceschanged never fires
+            setTimeout(() => {
+              window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+              if (activeSpeakingVoiceId !== voiceId) {
+                playDirectStreamTTS(voiceId, text, langShort, speed);
+              }
+            }, 1500);
             return;
-          } catch (e) {
-            console.warn("Speech synthesis error, falling back to direct stream:", e);
           }
         }
 
-        playDirectStreamTTS(voiceId, text, langCode, speed);
+        playDirectStreamTTS(voiceId, text, langShort, speed);
       }
 
       function playDirectStreamTTS(voiceId, text, langCode, speed = 1.0) {
@@ -2266,51 +2377,43 @@
 
       function invalidateDashboardCache() {
         lastDashboardLoadedAt = 0;
+        try {
+          if (currentUserId) {
+            sessionStorage.removeItem(`linguist_dash_${currentUserId}`);
+            sessionStorage.removeItem(`linguist_analytics_${currentUserId}`);
+          }
+        } catch (e) {}
       }
       window.invalidateDashboardCache = invalidateDashboardCache;
 
-      async function loadDashboardData(force = false) {
-        if (!currentUserId) return;
-        const now = Date.now();
-        if (!force && currentUserId === lastDashboardUserId && (now - lastDashboardLoadedAt < 15000)) {
-          return;
-        }
-        try {
-          const [dashRes, analyticsRes] = await Promise.allSettled([
-            apiFetch(`/api/dashboard/${currentUserId}/`),
-            apiFetch(`/api/user/${currentUserId}/analytics/`),
-          ]);
+      function renderDashboardStats(data) {
+        if (!data) return;
+        const welcome = document.getElementById("dash-welcome");
+        if (welcome && data.username)
+          welcome.textContent = `Welcome back, ${data.username}! 🔥`;
 
-          if (dashRes.status === "fulfilled" && dashRes.value.ok) {
-            const data = await dashRes.value.json();
-            lastDashboardLoadedAt = Date.now();
-            lastDashboardUserId = currentUserId;
-            const welcome = document.getElementById("dash-welcome");
-            if (welcome)
-              welcome.textContent = `Welcome back, ${data.username}! 🔥`;
+        const sSess = document.getElementById("dash-stat-sessions");
+        if (sSess && data.total_sessions !== undefined) sSess.textContent = data.total_sessions;
 
-            const sSess = document.getElementById("dash-stat-sessions");
-            if (sSess) sSess.textContent = data.total_sessions;
+        const sGram = document.getElementById("dash-stat-grammar");
+        if (sGram && data.average_grammar_score !== undefined) sGram.textContent = `${data.average_grammar_score}%`;
 
-            const sGram = document.getElementById("dash-stat-grammar");
-            if (sGram) sGram.textContent = `${data.average_grammar_score}%`;
+        const sPron = document.getElementById("dash-stat-pron");
+        if (sPron && data.average_pronunciation_score !== undefined)
+          sPron.textContent = `${data.average_pronunciation_score}%`;
 
-            const sPron = document.getElementById("dash-stat-pron");
-            if (sPron)
-              sPron.textContent = `${data.average_pronunciation_score}%`;
+        const sStreak = document.getElementById("dash-stat-streak");
+        if (sStreak && data.streak_days !== undefined) sStreak.textContent = `${data.streak_days} days`;
 
-            const sStreak = document.getElementById("dash-stat-streak");
-            if (sStreak) sStreak.textContent = `${data.streak_days} days`;
-
-            const recList = document.getElementById("dash-recent-list");
-            if (recList && Array.isArray(data.recent_sessions)) {
-              if (data.recent_sessions.length === 0) {
-                recList.innerHTML =
-                  '<div style="color:var(--muted-fg);font-size:.85rem">No sessions completed yet. Try starting a scenario!</div>';
-              } else {
-                recList.innerHTML = data.recent_sessions
-                  .map(
-                    (s) => `
+        const recList = document.getElementById("dash-recent-list");
+        if (recList && Array.isArray(data.recent_sessions)) {
+          if (data.recent_sessions.length === 0) {
+            recList.innerHTML =
+              '<div style="color:var(--muted-fg);font-size:.85rem">No sessions completed yet. Try starting a scenario!</div>';
+          } else {
+            recList.innerHTML = data.recent_sessions
+              .map(
+                (s) => `
             <div class="sess-row" style="cursor:pointer;" onclick="viewPastSessionSummary('${s.session_id}')" title="Click to view full lesson summary">
               <div class="sess-icon">${s.emoji || "💬"}</div>
               <div style="flex:1">
@@ -2326,21 +2429,68 @@
               </button>
             </div>
           `,
-                  )
-                  .join("");
-              }
+              )
+              .join("");
+          }
+        }
+      }
+
+      async function loadDashboardData(force = false) {
+        if (!currentUserId) return;
+        const now = Date.now();
+        const dashKey = `linguist_dash_${currentUserId}`;
+        const analyticsKey = `linguist_analytics_${currentUserId}`;
+
+        // Step 1: Stale-While-Revalidate (SWR) Instant Render from Cache
+        if (!force) {
+          try {
+            const cachedDash = sessionStorage.getItem(dashKey);
+            if (cachedDash) {
+              renderDashboardStats(JSON.parse(cachedDash));
             }
+            const cachedAnalytics = sessionStorage.getItem(analyticsKey);
+            if (cachedAnalytics) {
+              renderAnalyticsChart(JSON.parse(cachedAnalytics));
+            }
+          } catch (e) {}
+
+          // If cache is fresh (<15s) and user has not changed, skip network revalidation
+          if (currentUserId === lastDashboardUserId && (now - lastDashboardLoadedAt < 15000)) {
+            return;
+          }
+        }
+
+        // Step 2: Parallel Background Fresh Fetch & Revalidation
+        try {
+          const [dashRes, analyticsRes] = await Promise.allSettled([
+            apiFetch(`/api/dashboard/${currentUserId}/`),
+            apiFetch(`/api/user/${currentUserId}/analytics/`),
+          ]);
+
+          if (dashRes.status === "fulfilled" && dashRes.value.ok) {
+            const data = await dashRes.value.json();
+            lastDashboardLoadedAt = Date.now();
+            lastDashboardUserId = currentUserId;
+            renderDashboardStats(data);
+            try {
+              sessionStorage.setItem(dashKey, JSON.stringify(data));
+            } catch (e) {}
           }
 
           if (analyticsRes.status === "fulfilled" && analyticsRes.value.ok) {
             const analyticsData = await analyticsRes.value.json();
             renderAnalyticsChart(analyticsData);
-          } else {
+            try {
+              sessionStorage.setItem(analyticsKey, JSON.stringify(analyticsData));
+            } catch (e) {}
+          } else if (!sessionStorage.getItem(analyticsKey)) {
             renderAnalyticsChart(null);
           }
         } catch (e) {
           console.warn("Could not load dashboard data", e);
-          renderAnalyticsChart(null);
+          if (!sessionStorage.getItem(analyticsKey)) {
+            renderAnalyticsChart(null);
+          }
         }
       }
 
@@ -3506,6 +3656,8 @@
       let isFreeTalkRecording = false;
       let freeTalkVisualizerAnimationId = null;
       let freeTalkTurnCount = 0;
+      let freeTalkSpeechRecognizer = null;
+      let freeTalkLiveSpeechTranscript = "";
 
       const FREE_TALK_STARTERS_DB = {
         English: [
@@ -4096,8 +4248,11 @@
           isFreeTalkRecording = false;
           if (micBtn) micBtn.classList.remove("recording");
           if (micIcon) micIcon.className = "bi bi-mic-fill";
-          if (micStatus) micStatus.textContent = "Processing your voice with Gemini AI...";
+          if (micStatus) { micStatus.textContent = "Processing your voice with Gemini AI..."; micStatus.style.color = ""; }
           stopFreeTalkAudioVisualizer();
+          if (freeTalkSpeechRecognizer) {
+            try { freeTalkSpeechRecognizer.stop(); } catch (_) {}
+          }
           if (freeTalkMediaRecorder && freeTalkMediaRecorder.state !== "inactive") {
             freeTalkMediaRecorder.stop();
           }
@@ -4108,21 +4263,69 @@
         try {
           const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
           freeTalkAudioChunks = [];
+          freeTalkLiveSpeechTranscript = "";
           freeTalkMediaRecorder = new MediaRecorder(stream);
+
+          // Start live SpeechRecognition for real-time text display (same as Scenarios)
+          const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+          if (SpeechRecognition) {
+            try {
+              freeTalkSpeechRecognizer = new SpeechRecognition();
+              freeTalkSpeechRecognizer.continuous = true;
+              freeTalkSpeechRecognizer.interimResults = true;
+              const ftLangCodeMap = {
+                English: "en-US",
+                French: "fr-FR",
+                Spanish: "es-ES",
+                German: "de-DE",
+                Japanese: "ja-JP",
+                Chinese: "zh-CN",
+                Korean: "ko-KR",
+                Vietnamese: "vi-VN",
+              };
+              const ftCurLang = (currentUser && currentUser.target_language) || "English";
+              freeTalkSpeechRecognizer.lang = ftLangCodeMap[ftCurLang] || "en-US";
+              freeTalkSpeechRecognizer.onresult = (event) => {
+                let finalStr = "";
+                let interimStr = "";
+                for (let i = event.resultIndex; i < event.results.length; ++i) {
+                  if (event.results[i].isFinal) {
+                    finalStr += event.results[i][0].transcript + " ";
+                  } else {
+                    interimStr += event.results[i][0].transcript;
+                  }
+                }
+                if (finalStr) freeTalkLiveSpeechTranscript += finalStr;
+                const liveDisplay = (freeTalkLiveSpeechTranscript + interimStr).trim();
+                if (micStatus && liveDisplay) {
+                  micStatus.textContent = `🎙️ "${liveDisplay}"`;
+                }
+              };
+              freeTalkSpeechRecognizer.start();
+            } catch (re) {
+              console.warn("[Free Talk] SpeechRecognition init warning:", re);
+            }
+          }
+
           freeTalkMediaRecorder.ondataavailable = (e) => {
             if (e.data.size > 0) freeTalkAudioChunks.push(e.data);
           };
           freeTalkMediaRecorder.onstop = async () => {
             stream.getTracks().forEach((track) => track.stop());
+            if (freeTalkSpeechRecognizer) {
+              try { freeTalkSpeechRecognizer.stop(); } catch (_) {}
+              freeTalkSpeechRecognizer = null;
+            }
             const audioBlob = new Blob(freeTalkAudioChunks, { type: "audio/webm" });
-            await submitFreeTalkAudio(audioBlob);
+            await submitFreeTalkAudio(audioBlob, freeTalkLiveSpeechTranscript.trim());
           };
 
           freeTalkMediaRecorder.start();
           isFreeTalkRecording = true;
           if (micBtn) micBtn.classList.add("recording");
           if (micIcon) micIcon.className = "bi bi-stop-fill";
-          if (micStatus) micStatus.textContent = "Listening... Speak freely in your target language!";
+          if (micStatus) micStatus.textContent = "🔴 Listening... Speak freely in your target language!";
+          if (micStatus) micStatus.style.color = "#dc2626";
           startFreeTalkAudioVisualizer(stream);
         } catch (err) {
           console.warn("Microphone access failed for Free Talk:", err);
@@ -4130,9 +4333,9 @@
         }
       };
 
-      async function submitFreeTalkAudio(audioBlob) {
+      async function submitFreeTalkAudio(audioBlob, liveTranscript) {
         const micStatus = document.getElementById("ft-mic-status");
-        if (micStatus) micStatus.textContent = "Transcribing & evaluating voice...";
+        if (micStatus) { micStatus.textContent = "Transcribing & evaluating voice..."; micStatus.style.color = ""; }
 
         // Auto-hide starters once message is sent
         toggleFreeTalkStarters(false);
@@ -4143,6 +4346,7 @@
         formData.append("user_id", activeUid);
         formData.append("audio", audioBlob, "freetalk_voice.webm");
         formData.append("persona", currentFreeTalkPersona);
+        if (liveTranscript) formData.append("user_transcript", liveTranscript);
 
         try {
           const sessionId = await ensureFreeTalkSession();

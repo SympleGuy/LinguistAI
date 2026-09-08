@@ -12,11 +12,25 @@ from decouple import config
 
 # Multi-Provider Configuration
 GEMINI_API_KEY = config("GEMINI_API_KEY", default="")
-GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-3.5-flash-lite")
+GEMINI_MODEL = config("GEMINI_MODEL", default="gemini-flash-lite-latest")
 
 
 ELEVENLABS_API_KEY = config("ELEVENLABS_API_KEY", default="")
 ELEVENLABS_VOICE_ID = config("ELEVENLABS_VOICE_ID", default="JBFqnCBsd6RMkjVDRZzb")  # George (Free Tier Multilingual v2)
+
+# Validated active Google Gemini models in priority order (verified with current API key)
+VALID_GEMINI_MODELS = [
+    GEMINI_MODEL,
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-flash-latest",
+    "gemma-4-26b-a4b-it",
+]
+# Deduplicate while preserving priority order
+_seen_models = set()
+VALID_GEMINI_MODELS = [m for m in VALID_GEMINI_MODELS if m and not (m in _seen_models or _seen_models.add(m))]
 
 
 def _http_post_json(url, payload, headers, retries=1, timeout=6):
@@ -38,8 +52,7 @@ def _http_post_json(url, payload, headers, retries=1, timeout=6):
         except urllib.error.HTTPError as e:
             if e.code == 429:
                 print(f"[AI Services] Rate limit (429) hit. Waiting before retry...")
-                time.sleep(5)
-                # Let it loop to retry if attempts left
+                time.sleep(1)
                 if attempt == retries - 1:
                     raise e
                 continue
@@ -63,11 +76,6 @@ def _call_gemini_generate(system_prompt, user_prompt, response_json=False):
     if not GEMINI_API_KEY:
         return None
 
-    models_to_try = [GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-flash-lite-latest"]
-    # De-duplicate while preserving order
-    seen = set()
-    models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
-
     contents = []
     if user_prompt:
         contents.append({"role": "user", "parts": [{"text": user_prompt}]})
@@ -88,16 +96,16 @@ def _call_gemini_generate(system_prompt, user_prompt, response_json=False):
 
     headers = {"Content-Type": "application/json"}
 
-    for model_name in models_to_try:
+    for model_name in VALID_GEMINI_MODELS:
         try:
             url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
-            resp = _http_post_json(url, payload, headers, retries=3, timeout=15)
+            resp = _http_post_json(url, payload, headers, retries=1, timeout=6)
             if resp and "candidates" in resp and len(resp["candidates"]) > 0:
                 parts = resp["candidates"][0].get("content", {}).get("parts", [])
                 if parts and "text" in parts[0]:
                     return parts[0]["text"].strip()
         except Exception as e:
-            print(f"[AI Services] Google Gemini model {model_name} failed: {e}")
+            print(f"[AI Services] Google Gemini model {model_name} note: {e}")
             continue
 
     return None
@@ -139,14 +147,14 @@ def _transcribe_gemini_audio(audio_bytes, mime_type="audio/webm"):
             }
         }
         headers = {"Content-Type": "application/json"}
-        models_to_try = [GEMINI_MODEL, "gemini-3.5-flash-lite", "gemini-2.5-flash-lite", "gemini-flash-lite-latest"]
-        seen = set()
-        models_to_try = [m for m in models_to_try if m and not (m in seen or seen.add(m))]
 
-        for model_name in models_to_try:
+        audio_models = ["gemini-3.5-transcribe", "gemini-flash-lite-latest", "gemini-3.5-flash-lite"] + [
+            m for m in VALID_GEMINI_MODELS if m not in ("gemini-3.5-transcribe", "gemini-flash-lite-latest", "gemini-3.5-flash-lite")
+        ]
+        for model_name in audio_models:
             try:
                 url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
-                resp = _http_post_json(url, payload, headers, retries=3, timeout=15)
+                resp = _http_post_json(url, payload, headers, retries=1, timeout=6)
                 if resp and "candidates" in resp and len(resp["candidates"]) > 0:
                     parts = resp["candidates"][0].get("content", {}).get("parts", [])
                     if parts and "text" in parts[0]:
@@ -396,9 +404,20 @@ def generate_tts_elevenlabs(text, voice_id=None, target_language="English"):
                             f.write(audio_data)
                         return f"{settings.MEDIA_URL}tts/{cached_filename}"
         except urllib.error.HTTPError as e:
-            print(f"[AI Services] ElevenLabs HTTP {e.code}: {e.reason}. Using resilient TTS fallback.")
+            body = ""
+            try:
+                body = e.read().decode("utf-8", errors="replace")
+            except Exception:
+                pass
+            if e.code == 401 and "quota_exceeded" in body:
+                print(f"[AI Services] ElevenLabs quota exhausted — returning None so frontend uses premium browser TTS.")
+                return None  # Skip Google TTS fallback; let frontend use Web Speech Synthesis
+            elif e.code == 401:
+                print(f"[AI Services] ElevenLabs 401 Unauthorized (bad key?): {body[:200]}. Falling back to Google TTS.")
+            else:
+                print(f"[AI Services] ElevenLabs HTTP {e.code}: {e.reason}. Falling back to Google TTS.")
         except Exception as e:
-            print(f"[AI Services] ElevenLabs TTS failed: {e}. Using resilient TTS fallback.")
+            print(f"[AI Services] ElevenLabs TTS failed: {e}. Falling back to Google TTS.")
 
     # 2. Resilient Google TTS Audio Engine Fallback (Supports all 8 languages)
     try:

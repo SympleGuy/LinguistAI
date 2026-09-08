@@ -61,5 +61,11 @@ docs/backend_tasks.md
 docs/*tasks*.md
 docs/*TASKS*.md
 
-# Agents
+# Agents & Skills
+.agent/
 .agents/
+.superpowers/
+AGENTS.md
+agents.md
+GEMINI.md
+gemini.md
