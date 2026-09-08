@@ -2,12 +2,12 @@
 
 [![Django](https://img.shields.io/badge/Django-4.2%20LTS-092E20?style=for-the-badge&logo=django&logoColor=white)](https://www.djangoproject.com/)
 [![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-1.5%20%2F%202.0%20%2F%202.5%20Flash-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)](https://aistudio.google.com/)
+[![Google Gemini](https://img.shields.io/badge/Google%20Gemini-Flash%20Models-8E75B2?style=for-the-badge&logo=googlegemini&logoColor=white)](https://aistudio.google.com/)
 [![ElevenLabs](https://img.shields.io/badge/ElevenLabs-Multilingual%20TTS-000000?style=for-the-badge&logo=elevenlabs&logoColor=white)](https://elevenlabs.io/)
-[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%20%26%20Auth-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL%20%26%20Storage-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
 [![Chart.js](https://img.shields.io/badge/Chart.js-v4.4-FF6384?style=for-the-badge&logo=chartdotjs&logoColor=white)](https://www.chartjs.org/)
 
-> **LinguistAI** is a comprehensive, production-grade spoken language learning platform. It empowers learners to develop conversational fluency through voice-to-voice and text interactions with adaptive AI personas, receiving instant, multi-layered feedback on grammar, pronunciation, and vocabulary.
+> **LinguistAI** is an AI-powered spoken language learning platform. It empowers learners to practice conversational fluency through voice-to-voice and text interactions with adaptive AI personas, receiving instant feedback on grammar, pronunciation, and vocabulary.
 
 ---
 
@@ -15,206 +15,257 @@
 
 1. [Key Features](#key-features)
 2. [Core Modules](#core-modules)
-   - [Structured Scenarios Practice](#1-structured-scenarios-practice)
-   - [Free Talk AI Studio](#2-free-talk-ai-studio)
-   - [Vocabulary Builder & SRS Flashcards](#3-vocabulary-builder--srs-flashcards)
-   - [Interactive Analytics Dashboard](#4-interactive-analytics-dashboard)
-   - [Admin Portal & Telemetry](#5-admin-portal--telemetry)
-3. [AI & Audio Pipeline Architecture](#ai--audio-pipeline-architecture)
-4. [Smart Fallback Simulation Engine](#smart-fallback-simulation-engine)
-5. [Local Setup and Installation Guide](#local-setup-and-installation-guide)
-6. [REST API Specification Directory](#rest-api-specification-directory)
-7. [Database Schema and Security](#database-schema-and-security)
-8. [Automated Testing Suite](#automated-testing-suite)
-9. [Project Directory Layout](#project-directory-layout)
-10. [Capstone Project Information](#capstone-project-information)
+3. [Windows Installation & Setup Guide](#windows-installation--setup-guide)
+   - [Prerequisites](#prerequisites)
+   - [Step 1: Clone Repository](#step-1-clone-repository)
+   - [Step 2: Create & Activate Virtual Environment](#step-2-create--activate-virtual-environment)
+   - [Step 3: Install Dependencies](#step-3-install-dependencies)
+   - [Step 4: Configure Environment Variables (.env)](#step-4-configure-environment-variables-env)
+   - [Step 5: Apply Migrations & Seed Scenarios](#step-5-apply-migrations--seed-scenarios)
+   - [Step 6: Start the Development Server](#step-6-start-the-development-server)
+4. [Windows Troubleshooting & FAQ](#windows-troubleshooting--faq)
+5. [Automated Testing](#automated-testing)
+6. [REST API Directory](#rest-api-directory)
+7. [Project Directory Layout](#project-directory-layout)
+8. [Capstone Project Information](#capstone-project-information)
 
 ---
 
 ## Key Features
 
-- **Exclusive Best-of-Breed AI Pipeline**:
-  - **Conversational Intelligence**: Google Gemini (1.5 Flash / 2.0 Flash / 2.5 Flash) for dynamic, scenario-aware roleplay.
-  - **Linguistic Evaluation**: Google Gemini Structured JSON Schema mode delivering detailed grammar correction, CEFR-appropriate rephrasings, and phonetic pronunciation tips.
-  - **Multimodal Audio Transcription (STT)**: Gemini Multimodal Audio handling varied speaker accents, ambient background noise, and natural cadence.
-  - **Natural Speech Synthesis (TTS)**: ElevenLabs Multilingual v2 models providing ultra-realistic voice output with native intonation.
-- **Custom Interactive Dialog System**: Full replacement of browser-native popups (`alert()` and `confirm()`) with glassmorphic modal dialogs (`#linguistDialogModal`) featuring async confirmation workflows.
-- **Strict Session Management**: Turn-based progress tracking preventing ghost or 0-turn empty records in PostgreSQL. Validates turns before concluding, switching personas, or navigating away.
-- **Role-Based Access Control (RBAC)**: Enforces `USER` and `ADMIN` role boundaries with dedicated permission guards and admin authentication.
-- **Cloud Audio Storage**: User voice recordings are stored in Supabase Storage (`user-audio` bucket) with public CDN streaming and resilient local fallback.
+- **AI-Driven Conversational Intelligence**:
+  - **Conversational Roleplay**: Google Gemini models generate natural, context-aware dialogues.
+  - **Linguistic Evaluation**: Real-time structured evaluation returning grammar scores, phonetic feedback, CEFR-aligned rephrasings, and vocabulary suggestions.
+  - **Speech-to-Text (STT)**: Gemini Multimodal Audio transcription handling diverse accents, natural pauses, and varying recording conditions.
+  - **Natural Speech Synthesis (TTS)**: Realistic audio streaming with ElevenLabs, backed by browser-native speech synthesis fallback.
+  - **Smart Fallback Engine**: If third-party AI keys are unavailable or rate limits are reached, the system smoothly shifts to offline heuristic rules so the app never crashes.
+- **Glassmorphic Interactive UI**: Fully custom modal dialog system replacing browser-native alerts for a seamless modern experience.
+- **Strict Session Management**: Turn-based progress tracking prevents empty or zero-turn session records in the database.
+- **Cloud Audio Storage**: User voice recordings are stored in Supabase Storage (`user-audio` bucket) with public CDN streaming and local disk fallback.
+- **Role-Based Access Control (RBAC)**: Secure separation between regular learners (`USER`) and administrators (`ADMIN`).
 
 ---
 
 ## Core Modules
 
 ### 1. Structured Scenarios Practice
-- **Context-Rich Environments**: Real-world communication simulations including Restaurant Ordering, Airport Check-in, Job Interview, Hotel Reception, Asking for Directions, and Medical Emergencies.
-- **CEFR Alignment**: Dynamic vocabulary complexity automatically adjusting to learner proficiency levels (A1 through C2).
-- **Turn Limit Enforcement**: Configurable daily practice limits (5 free turns per day) with automatic upgrade flow for VIP tier.
+- **Real-World Scenarios**: Includes Restaurant Ordering, Airport Check-in, Job Interview, Hotel Reception, Asking for Directions, and Medical Emergencies.
+- **CEFR Alignment**: Dynamic vocabulary and response complexity calibrated from beginner (A1) to proficient (C2).
+- **Turn Limits**: Configurable daily limits (5 free turns/day) with VIP unlimited practice tier.
 
 ### 2. Free Talk AI Studio
-- **Unscripted Spontaneous Practice**: Open-ended conversational practice with 4 specialized AI personalities:
-  - ☕ **Friendly Pal**: Warm, casual, and encouraging partner for relaxed chats.
-  - 💼 **Career Coach**: Professional interview preparation and workplace communication.
-  - 🧠 **Debate Partner**: Inquisitive and thought-provoking counter-argumentation.
-  - 🎓 **Strict Professor**: Rigorous grammar discipline and subtle nuance correction.
-- **Conversation Starters**: Contextual ice-breaker chips tailored to target languages with randomized shuffling.
-- **Real-time Live Feedback Panel**: Immediate turn-by-turn grammar score, fluency score, correction notes, and audio playback.
+- **Unscripted Conversational Practice**: Chat freely with 4 distinct personas:
+  - ☕ **Friendly Pal**: Warm, casual chats for stress-free practice.
+  - 💼 **Career Coach**: Professional workplace communication and interview coaching.
+  - 🧠 **Debate Partner**: Inquisitive counter-perspectives for advanced critical discussion.
+  - 🎓 **Strict Professor**: Precise grammatical feedback and vocabulary refinement.
+- **Instant Live Feedback**: Score cards for grammar, fluency, and vocabulary with turn-by-turn correction notes.
 
 ### 3. Vocabulary Builder & SRS Flashcards
-- **Automated Extraction**: Words used during conversations are automatically analyzed and extracted with definitions and contextual usage examples.
-- **Spaced Repetition System (SRS)**: Leitner-inspired review scheduling ensuring long-term memory retention.
+- **Contextual Extraction**: High-value vocabulary from conversation turns is automatically saved with translations and example sentences.
+- **Spaced Repetition System (SRS)**: Leitner-based review intervals to optimize memory retention.
 
 ### 4. Interactive Analytics Dashboard
-- **Chart.js Visualizations**: Interactive line and bar charts tracking weekly speaking activity, grammar progress, pronunciation refinement, and vocabulary growth.
-- **Streak & Milestone Tracking**: Daily practice streak counters and historical lesson logs.
+- **Visual Progress**: Interactive Chart.js charts displaying weekly speaking consistency, accuracy trends, and vocabulary growth.
+- **Streaks & Milestones**: Daily practice streak counter and historical learning logs.
 
 ### 5. Admin Portal & Telemetry (`/admin/dashboard/`)
-- **Learner Management**: Real-time user roster, subscription upgrade/downgrade, and manual daily turn limit reset.
-- **Scenario Studio**: Create, edit, test AI system prompts, and seed initial curriculum data.
-- **Session Telemetry**: Audit individual learning sessions, inspect turn-by-turn dialogue logs, and examine AI evaluation payloads.
-- **System Health & Audio Garbage Collection**: Monitor server diagnostics, trigger audio cleanup routines, and export system data (Learners, Sessions, Logs) to CSV and JSON formats.
+- **Learner Management**: Search users, toggle VIP status, and reset daily turn quotas.
+- **Scenario Studio**: Create and update scenarios, inspect AI system prompts, and test prompt generation.
+- **Session Telemetry & Cleanup**: Inspect turn logs, audit AI feedback payloads, and run storage cleanup routines.
 
 ---
 
-## AI & Audio Pipeline Architecture
+## Windows Installation & Setup Guide
 
-LinguistAI consolidates its intelligence pipeline exclusively on **Google Gemini** and **ElevenLabs**:
-
-```
-[ User Microphone / Text Input ]
-               │
-               ▼
-   [ Browser Web Audio API ]
-               │
-       (Audio Blob / WAV)
-               │
-               ▼
-[ Google Gemini Audio Transcription (STT) ]
-               │
-       (User Transcript)
-               │
-               ▼
-  [ Google Gemini Conversational LLM ]  ◄── [ Scenario / Persona Context ]
-               │
-     ┌─────────┴──────────┐
-     ▼                    ▼
-[ AI Text Response ]  [ Google Gemini JSON Evaluation Engine ]
-     │                    │
-     │                    ├─ Grammar Score (0-100%)
-     │                    ├─ Pronunciation Score (0-100%)
-     │                    ├─ Vocabulary Score (0-100%)
-     │                    ├─ Grammar Corrections
-     │                    └─ Extracted Vocabulary
-     ▼
-[ ElevenLabs Natural Voice TTS ]
-     │
- (MP3 Stream)
-     │
-     ▼
-[ Real-Time Web Audio Playback ]
-```
-
-| Task | Primary Engine | Fallback |
-| :--- | :--- | :--- |
-| **Conversational LLM** | Google Gemini 2.5/2.0 Flash (`GEMINI_API_KEY`) | Contextual Simulation Engine |
-| **Linguistic Evaluation** | Google Gemini JSON Schema Mode | Heuristic Rule-Based Evaluator |
-| **Speech-to-Text (STT)** | Google Gemini Multimodal Audio | Preserved Audio Blob |
-| **Text-to-Speech (TTS)** | ElevenLabs Multilingual v2 (`ELEVENLABS_API_KEY`) | Client Speech Synthesis |
-
----
-
-## Smart Fallback Simulation Engine
-
-Engineered in `myapp/ai_services.py`, the **Smart Fallback Simulation Engine** ensures 100% platform availability:
-- If external API keys are absent or rate limits are reached, the system gracefully shifts to deterministic, grammatically sound offline heuristics.
-- All evaluation scores, vocabulary extractions, and conversation turns are processed without raising unhandled runtime exceptions.
-
----
-
-## Local Setup and Installation Guide
+This guide is specifically tailored for **Windows 10 / Windows 11** using **PowerShell** or **Command Prompt (CMD)**.
 
 ### Prerequisites
 
-- **Python 3.11+**
-- **Git**
+1. **Python 3.11 or newer**:
+   - Download the official installer from [python.org](https://www.python.org/downloads/windows/).
+   - ⚠️ **Important**: During installation, check the box: **"Add python.exe to PATH"**.
+   - Verify installation in PowerShell:
+     ```powershell
+     python --version
+     ```
+2. **Git for Windows**:
+   - Download and install from [git-scm.com](https://git-scm.com/).
+   - Verify installation:
+     ```powershell
+     git --version
+     ```
 
 ---
 
-### Step 1: Clone the Repository
+### Step 1: Clone Repository
 
-```bash
+Open **PowerShell** (or Windows Terminal) and run:
+
+```powershell
 git clone https://github.com/SympleGuy/LinguistAI.git
 cd LinguistAI
 ```
 
-### Step 2: Set Up Virtual Environment
+---
 
-```bash
-# Linux / macOS:
-python3 -m venv venv
-source venv/bin/activate
+### Step 2: Create & Activate Virtual Environment
 
-# Windows (PowerShell):
+Create an isolated virtual environment (`venv`) to avoid dependency conflicts:
+
+```powershell
 python -m venv venv
-.\venv\Scripts\Activate.ps1
 ```
 
-### Step 3: Install Dependencies
+Activate the virtual environment:
 
-```bash
-pip install -r requirements.txt
-```
+- **In PowerShell**:
+  ```powershell
+  # If you get a script execution policy error, run this first:
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
 
-### Step 4: Configure Environment Variables
+  # Activate venv:
+  .\venv\Scripts\Activate.ps1
+  ```
+- **In Command Prompt (CMD)**:
+  ```cmd
+  venv\Scripts\activate.bat
+  ```
 
-Create `.env` in the root directory:
-
-```bash
-cp .env.example .env
-```
-
-Set the required environment keys in `.env`:
-
-```env
-SECRET_KEY=your_django_secret_key_here
-DEBUG=True
-DATABASE_URL=sqlite:///db.sqlite3
-
-# Google Gemini API
-GEMINI_API_KEY=your_gemini_api_key_here
-GEMINI_MODEL=gemini-2.5-flash
-
-# ElevenLabs API
-ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
-
-# Supabase Credentials (Optional for local SQLite development)
-SUPABASE_URL=your_supabase_project_url_here
-SUPABASE_ANON_KEY=your_supabase_anon_key_here
-```
-
-### Step 5: Database Migrations & Initial Data
-
-```bash
-python manage.py migrate
-python manage.py seed_scenarios
-```
-
-### Step 6: Start the Development Server
-
-```bash
-python manage.py runserver 127.0.0.1:8000
-```
-
-Access the application in your browser at: `http://127.0.0.1:8000/`
+*(Once activated, you will see `(venv)` at the beginning of your terminal prompt).*
 
 ---
 
-## REST API Specification Directory
+### Step 3: Install Dependencies
 
-All protected routes enforce authentication via Django session or `X-User-ID` header through `ApiAuthenticationMiddleware`.
+Ensure `pip` is up to date and install all project dependencies:
 
-### Learner & Core APIs
+```powershell
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+---
+
+### Step 4: Configure Environment Variables (.env)
+
+Create your local `.env` configuration file from the provided template:
+
+- **In PowerShell**:
+  ```powershell
+  Copy-Item .env.example .env
+  ```
+- **In Command Prompt (CMD)**:
+  ```cmd
+  copy .env.example .env
+  ```
+
+Open `.env` in Notepad or your preferred editor (`notepad .env`) and configure the settings:
+
+```ini
+# Django Security & Debug
+SECRET_KEY=django-insecure-change-this-to-a-random-secret-key-12345
+DEBUG=True
+
+# Database: Default local SQLite requires ZERO setup!
+DATABASE_URL=sqlite:///db.sqlite3
+
+# Google Gemini API Key (Get a free key at https://aistudio.google.com/)
+GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL=gemini-flash-lite-latest
+
+# ElevenLabs API Key (Optional — browser speech synthesis is used if empty)
+ELEVENLABS_API_KEY=your_elevenlabs_api_key_here
+ELEVENLABS_VOICE_ID=JBFqnCBsd6RMkjVDRZzb
+
+# Supabase Storage & Database (Optional for local testing)
+# See docs/AUDIO_STORAGE_GUIDE.md for setting up cloud audio storage
+SUPABASE_URL=your_supabase_project_url_here
+SUPABASE_ANON_KEY=your_supabase_anon_key_here
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key_here
+```
+
+> **Note on Database**: By default, `DATABASE_URL=sqlite:///db.sqlite3` uses a local SQLite database file created automatically on your computer. You do not need PostgreSQL or Docker installed to run the application locally!
+
+---
+
+### Step 5: Apply Migrations & Seed Scenarios
+
+Initialize the database tables and populate the default conversational scenarios:
+
+```powershell
+# Run database migrations
+python manage.py migrate
+
+# Populate default learning scenarios
+python manage.py seed_scenarios
+```
+
+*(Optional)* Create an administrative superuser to access the Django admin portal:
+```powershell
+python manage.py createsuperuser
+```
+
+---
+
+### Step 6: Start the Development Server
+
+Start the local Django server:
+
+```powershell
+python manage.py runserver 127.0.0.1:8000
+```
+
+Open your browser and navigate to:
+👉 **[http://127.0.0.1:8000/](http://127.0.0.1:8000/)**
+
+- **Learner App**: `http://127.0.0.1:8000/`
+- **Admin Dashboard**: `http://127.0.0.1:8000/admin/dashboard/`
+
+---
+
+## Windows Troubleshooting & FAQ
+
+### 1. `Activate.ps1 cannot be loaded because running scripts is disabled`
+- **Cause**: PowerShell's default execution policy restricts external scripts.
+- **Fix**: Run this command in your PowerShell window before activating:
+  ```powershell
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope Process
+  .\venv\Scripts\Activate.ps1
+  ```
+
+### 2. `'python' is not recognized as an internal or external command`
+- **Cause**: Python was installed without checking "Add python.exe to PATH".
+- **Fix**:
+  - Re-run the Python installer, select **Modify**, check **Add Python to environment variables**, and complete the wizard.
+  - Or use the `py` launcher instead: `py -m venv venv` and `py manage.py runserver`.
+
+### 3. Port 8000 is already in use
+- **Cause**: Another process or background server is occupying port 8000.
+- **Fix**: Launch the server on an alternate port:
+  ```powershell
+  python manage.py runserver 127.0.0.1:8080
+  ```
+
+### 4. Audio recording doesn't work in browser
+- **Cause**: Browsers restrict microphone access to secure origins (`localhost`, `127.0.0.1`, or `https://`).
+- **Fix**: Always open the site via `http://127.0.0.1:8000/` (not an external IP) and grant microphone permissions when prompted by your browser.
+
+---
+
+## Automated Testing
+
+Run the automated test suite on Windows to verify the application:
+
+```powershell
+python manage.py test --keepdb
+```
+
+> **Note**: Always include `--keepdb` to preserve the test database schema across test runs and prevent connection-lock errors.
+
+---
+
+## REST API Directory
 
 | Method | Endpoint | Access | Description |
 | :--- | :--- | :--- | :--- |
@@ -226,59 +277,21 @@ All protected routes enforce authentication via Django session or `X-User-ID` he
 | `GET` | `/api/scenarios/` | Public | Retrieve list of curated conversational scenarios |
 | `GET` | `/api/scenarios/<id>/` | Public | Retrieve detailed scenario prompt and CEFR guidelines |
 | `POST` | `/api/sessions/start/` | Protected | Initialize a new conversational session |
-| `POST` | `/api/sessions/<uuid>/respond/` | Protected | Submit text response for turn evaluation and AI audio response |
+| `POST` | `/api/sessions/<uuid>/respond/` | Protected | Submit text response for turn evaluation and AI feedback |
 | `POST` | `/api/sessions/<uuid>/respond-audio/` | Protected | Upload voice recording for STT transcription and feedback |
-| `GET` | `/api/sessions/<uuid>/logs/` | Protected | Retrieve historical interaction logs and feedback for a session |
+| `GET` | `/api/sessions/<uuid>/logs/` | Protected | Retrieve historical interaction logs and feedback |
 | `GET` | `/api/dashboard/<uuid>/` | Protected | Retrieve overall statistics, recent sessions, and streak counts |
 | `GET` | `/api/user/<uuid>/analytics/` | Protected | Retrieve weekly fluency performance series for Chart.js |
 | `POST` | `/api/user/profile/` | Protected | Update user target language or CEFR proficiency level |
 | `GET` | `/api/flashcards/due/` | Protected | Fetch Spaced Repetition System (SRS) cards due for review |
 | `POST` | `/api/flashcards/<uuid>/review/` | Protected | Submit review grading for an SRS vocabulary card |
-| `GET` | `/api/tts/` | Public | Generate ElevenLabs text-to-speech audio for a phrase |
-
-### Admin Telemetry & Management APIs
-
-| Method | Endpoint | Access | Description |
-| :--- | :--- | :--- | :--- |
 | `GET` | `/admin/dashboard/` | Admin | Administrative dashboard web interface |
-| `POST` | `/api/admin/auth/login/` | Public | Authenticate administrator credentials |
-| `GET` | `/api/admin/metrics/` | Admin | Fetch system KPIs (active users, total sessions, audio storage) |
-| `GET` | `/api/admin/users/` | Admin | Search, filter, and paginate all platform learners |
+| `GET` | `/api/admin/metrics/` | Admin | Fetch system KPIs (active users, total sessions, storage) |
+| `GET` | `/api/admin/users/` | Admin | Search, filter, and paginate platform learners |
 | `POST` | `/api/admin/users/<uuid>/reset-turns/` | Admin | Reset daily practice turn counter for a learner |
-| `GET` | `/api/admin/scenarios/` | Admin | List all active conversation scenarios |
-| `POST` | `/api/admin/scenarios/test-prompt/` | Admin | Interactive testbed for scenario system prompts with Gemini |
 | `GET` | `/api/admin/sessions/` | Admin | Audit learning sessions with score filters |
-| `GET` | `/api/admin/sessions/<uuid>/` | Admin | Inspect full dialogue transcript and grammar feedback |
-| `POST` | `/api/admin/system/cleanup-audio/` | Admin | Execute manual audio garbage collection |
+| `POST` | `/api/admin/system/cleanup-audio/` | Admin | Trigger manual audio garbage collection |
 | `GET` | `/api/admin/export/<dataset>/` | Admin | Export platform data (`learners`, `sessions`, `logs`) to CSV/JSON |
-
----
-
-## Database Schema and Security
-
-### 1. 3NF Relational Model
-- **`users`**: UUID primary key, `username`, `email`, `role` (`USER`/`ADMIN`), `target_language`, `proficiency_level`, `subscription_plan`, `today_turns`, `last_turn_date`.
-- **`scenarios`**: `id`, `title`, `system_prompt`, `category`, `cefr`, `emoji`, `lang`, `description`.
-- **`learning_sessions`**: UUID primary key, `user_id` (FK), `scenario_id` (FK), `started_at`, `completed_at`, `overall_score`.
-- **`interaction_logs`**: UUID primary key, `session_id` (FK), `user_transcript`, `ai_response_text`, `ai_audio_url`, `detailed_feedback` (JSONB), `created_at`.
-- **`vocabulary_cards`**: UUID primary key, `user_id` (FK), `word`, `language`, `translation`, `example`, `interval_days`, `due_date`.
-
-### 2. Supabase Row Level Security (RLS)
-The included `supabase_rls_policies.sql` provides database-level multi-tenant isolation:
-- Learners can only access and modify their own sessions, logs, and vocabulary cards (`auth.uid() = user_id`).
-- Administrative operations require verified `ADMIN` role claims.
-
----
-
-## Automated Testing Suite
-
-The codebase includes an automated unit test suite covering authentication, session evaluation, turn rate limits, admin telemetry, audio cleanup, and middleware:
-
-```bash
-python manage.py test --keepdb
-```
-
-**Status**: 23/23 tests passing (100% pass rate).
 
 ---
 
