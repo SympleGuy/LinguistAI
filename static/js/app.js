@@ -4341,6 +4341,32 @@
         toggleFreeTalkStarters(false);
         freeTalkTurnCount++;
 
+        const ml = document.getElementById("ft-msg-list");
+        if (ml) {
+          // If real-time transcript is available, display user message immediately
+          if (liveTranscript) {
+            const userWrap = document.createElement("div");
+            userWrap.className = "msg-wrap msg-user-wrap";
+            userWrap.id = "ft-user-voice-msg";
+            userWrap.innerHTML = `<div class="msg-lbl">👤 You (Voice)</div><div class="msg-bubble msg-user">${liveTranscript}</div>`;
+            ml.appendChild(userWrap);
+          }
+
+          // Render AI typing indicator matching Scenarios flow
+          const typingWrap = document.createElement("div");
+          typingWrap.className = "msg-wrap";
+          typingWrap.id = "ft-ai-typing-wrap";
+          typingWrap.innerHTML = `
+            <div class="msg-lbl">🤖 LinguistAI</div>
+            <div class="typing-indicator" id="ft-ai-typing">
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+              <div class="typing-dot"></div>
+            </div>`;
+          ml.appendChild(typingWrap);
+          ml.scrollTop = ml.scrollHeight;
+        }
+
         const formData = new FormData();
         const activeUid = (currentUser && currentUser.id) || currentUserId || localStorage.getItem("linguist_user_id");
         formData.append("user_id", activeUid);
@@ -4351,6 +4377,8 @@
         try {
           const sessionId = await ensureFreeTalkSession();
           if (!sessionId) {
+            document.getElementById("ft-ai-typing-wrap")?.remove();
+            document.getElementById("ft-user-voice-msg")?.removeAttribute("id");
             console.error("[Free Talk] Could not obtain a valid session ID — aborting audio submit.");
             if (micStatus) micStatus.textContent = "Session error. Please refresh the page and try again.";
             return;
@@ -4361,26 +4389,41 @@
             body: formData,
           });
 
+          // Always dismiss typing indicator once request completes
+          document.getElementById("ft-ai-typing-wrap")?.remove();
+
           if (res.ok) {
             const data = await res.json();
             if (micStatus) micStatus.textContent = "Press the mic to start speaking freely";
 
-            const ml = document.getElementById("ft-msg-list");
             const targetLang = (currentUser && currentUser.target_language) || "English";
             const voiceId = "ft-voice-" + Date.now();
             const voicePill = createAiVoicePillHtml(data.ai_audio_url || "", voiceId, data.ai_response || "", targetLang);
 
             if (ml) {
-              ml.innerHTML += `
-                <div class="msg-wrap msg-user-wrap">
-                  <div class="msg-lbl">👤 You (Voice)</div>
-                  <div class="msg-bubble msg-user">${data.user_transcript || "..."}</div>
-                </div>
-                <div class="msg-wrap">
-                  <div class="msg-lbl">🤖 LinguistAI</div>
-                  <div class="msg-bubble msg-ai">${data.ai_response || "..."}</div>
-                  <div>${voicePill}</div>
-                </div>`;
+              // If user message was not pre-rendered (no liveTranscript), render it now
+              const existingUserMsg = document.getElementById("ft-user-voice-msg");
+              if (!existingUserMsg) {
+                const userWrap = document.createElement("div");
+                userWrap.className = "msg-wrap msg-user-wrap";
+                userWrap.innerHTML = `<div class="msg-lbl">👤 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || "Spoken Audio"}</div>`;
+                ml.appendChild(userWrap);
+              } else {
+                if (data.user_transcript && data.user_transcript !== liveTranscript) {
+                  const bubble = existingUserMsg.querySelector(".msg-bubble");
+                  if (bubble) bubble.textContent = data.user_transcript;
+                }
+                existingUserMsg.removeAttribute("id");
+              }
+
+              // Render AI response bubble
+              const aiWrap = document.createElement("div");
+              aiWrap.className = "msg-wrap";
+              aiWrap.innerHTML = `
+                <div class="msg-lbl">🤖 LinguistAI</div>
+                <div class="msg-bubble msg-ai">${data.ai_response || "..."}</div>
+                <div>${voicePill}</div>`;
+              ml.appendChild(aiWrap);
               ml.scrollTop = ml.scrollHeight;
             }
 
@@ -4392,15 +4435,19 @@
             // Auto-play AI Voice
             playAiVoicePill(voiceId, true);
           } else if (res.status === 403) {
+            document.getElementById("ft-user-voice-msg")?.removeAttribute("id");
             if (micStatus) micStatus.textContent = "Daily turns limit reached!";
             openPaymentModal();
           } else {
+            document.getElementById("ft-user-voice-msg")?.removeAttribute("id");
             let errDetail = "";
             try { const errData = await res.json(); errDetail = errData.error || ""; } catch (_) {}
             console.error(`[Free Talk] Audio API error — HTTP ${res.status}: ${errDetail}`);
             if (micStatus) micStatus.textContent = `Error processing audio (${res.status}). Please try again.`;
           }
         } catch (e) {
+          document.getElementById("ft-ai-typing-wrap")?.remove();
+          document.getElementById("ft-user-voice-msg")?.removeAttribute("id");
           console.error("Free Talk audio upload failed:", e);
           if (micStatus) micStatus.textContent = "Failed to upload audio. Check your connection.";
         }
