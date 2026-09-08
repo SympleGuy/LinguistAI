@@ -187,7 +187,40 @@ class TurnLimitTestCase(TestCase):
 
 class GarbageCollectionCommandTestCase(TestCase):
     def test_cleanup_command(self):
-        call_command("cleanup_audio_files", "--days", 30)
+        from unittest.mock import MagicMock, patch
+        from myapp.models import InteractionLog
+        from django.utils import timezone
+        from datetime import timedelta
+
+        # Create expired interaction log
+        old_time = timezone.now() - timedelta(days=35)
+        expired_log = InteractionLog.objects.create(
+            session_id=uuid.uuid4(),
+            user_transcript="Test speech",
+            user_audio_url="https://supabase.example.com/storage/v1/object/public/user-audio/test.webm",
+            created_at=old_time
+        )
+
+        mock_storage = MagicMock()
+        mock_storage.list.return_value = [
+            {
+                "name": "test.webm",
+                "created_at": "2026-01-01T00:00:00.000Z",
+                "metadata": {"size": 2048}
+            }
+        ]
+        mock_storage.remove.return_value = [{"name": "test.webm"}]
+
+        mock_client = MagicMock()
+        mock_client.storage.from_.return_value = mock_storage
+
+        with patch("myapp.management.commands.cleanup_audio_files.supabase_admin", mock_client), \
+             patch("myapp.management.commands.cleanup_audio_files.supabase", mock_client):
+            call_command("cleanup_audio_files", "--days", 30)
+
+        mock_storage.remove.assert_called_once_with(["test.webm"])
+        expired_log.refresh_from_db()
+        self.assertEqual(expired_log.user_audio_url, "")
 
 
 class UserProfileUpdateTestCase(TestCase):

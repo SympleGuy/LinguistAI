@@ -1126,11 +1126,14 @@ class AdminAudioCleanupApiView(AdminRequiredMixin, View):
     """POST /api/admin/system/cleanup-audio/"""
     def post(self, request):
         try:
-            call_command('cleanup_audio_files')
+            from io import StringIO
+            out = StringIO()
+            call_command('cleanup_audio_files', stdout=out)
             invalidate_admin_cache()
+            output_msg = out.getvalue().strip()
             return JsonResponse({
                 "status": "success",
-                "message": "Audio garbage collection completed successfully. Files older than 30 days removed."
+                "message": output_msg or "Audio garbage collection completed successfully. Files older than 30 days removed."
             })
         except Exception as e:
             return JsonResponse({"error": f"Audio cleanup failed: {str(e)}"}, status=500)
