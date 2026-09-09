@@ -1009,6 +1009,7 @@
       // ── CONVERSATION & SESSION STATE ──────────────────────────────
       let currentScenarioId = 1;
       let currentSessionFeedbackList = [];
+      let currentSessionTurns = [];
       let currentSessionVocabList = [];
       let currentSessionScores = {
         grammar: [],
@@ -1021,6 +1022,7 @@
         currentScenarioId = id;
         currentSessionId = null;
         currentSessionFeedbackList = [];
+        currentSessionTurns = [];
         currentSessionVocabList = [];
         currentSessionScores = {
           grammar: [],
@@ -1444,12 +1446,14 @@
           vocabListDiv.innerHTML = `<div style="text-align:center;color:var(--muted-fg);font-size:0.85rem;padding:20px;">No new words were extracted in this session.</div>`;
         }
 
-        // 8. Navigate to summary page
+        // 8. Render Speech Replay & Navigate to summary page
+        renderSessionSpeechReplay(currentSessionTurns);
         invalidateDashboardCache();
         showPage("summary");
 
         // Clear active session state
         currentSessionFeedbackList = [];
+        currentSessionTurns = [];
         currentSessionScores = { grammar: [], pronunciation: [], vocab: [], overall: [] };
         currentSessionVocabList = [];
         currentSessionId = null;
@@ -1547,6 +1551,17 @@
             if (data.feedback) {
               updateFeedbackUI(data.feedback);
             }
+
+            const inputEl = document.getElementById("chat-input");
+            const sentText = inputEl ? inputEl.value : "";
+            currentSessionTurns.push({
+              turn_number: currentSessionTurns.length + 1,
+              user_transcript: sentText || "Typed Response",
+              user_audio_url: "",
+              ai_response_text: data.ai_response || "",
+              ai_audio_url: data.ai_audio_url || "",
+              detailed_feedback: data.feedback
+            });
           }
         } catch (e) {
           document.getElementById("ai-typing")?.remove();
@@ -1637,9 +1652,129 @@
         }
       }
 
-      // ── SLEEK AI VOICE NOTE PLAYER CONTROLLER ─────────────────────
+      // ── SLEEK AI & LEARNER VOICE PLAYER CONTROLLERS ───────────────
       const activeVoiceAudioMap = {};
       let activeSpeakingVoiceId = null;
+
+      function toggleUserAudio(audioUrl, btn) {
+        if (!audioUrl) return;
+        stopAllAiVoicePlaybacks();
+        let audio = window._currentUserAudio;
+        if (audio && !audio.paused && audio._srcUrl === audioUrl) {
+          audio.pause();
+          if (btn) {
+            btn.innerHTML = '<i class="bi bi-play-circle-fill"></i> Listen to your voice';
+            btn.classList.remove('is-playing');
+          }
+          return;
+        }
+        if (audio) {
+          audio.pause();
+          document.querySelectorAll('.btn-user-voice-replay').forEach(b => {
+            b.innerHTML = '<i class="bi bi-play-circle-fill"></i> Listen to your voice';
+            b.classList.remove('is-playing');
+          });
+        }
+        audio = new Audio(audioUrl);
+        audio._srcUrl = audioUrl;
+        window._currentUserAudio = audio;
+        if (btn) {
+          btn.innerHTML = '<i class="bi bi-pause-circle-fill"></i> Playing your voice...';
+          btn.classList.add('is-playing');
+        }
+        audio.onended = () => {
+          if (btn) {
+            btn.innerHTML = '<i class="bi bi-play-circle-fill"></i> Listen to your voice';
+            btn.classList.remove('is-playing');
+          }
+        };
+        audio.onerror = () => {
+          if (btn) {
+            btn.innerHTML = '<i class="bi bi-play-circle-fill"></i> Listen to your voice';
+            btn.classList.remove('is-playing');
+          }
+        };
+        audio.play().catch(e => console.warn("User audio playback error:", e));
+      }
+      window.toggleUserAudio = toggleUserAudio;
+
+      function renderSessionSpeechReplay(turns) {
+        const wrap = document.getElementById("sum-turns-wrap");
+        const list = document.getElementById("sum-turns-list");
+        if (!wrap || !list) return;
+
+        if (!turns || turns.length === 0) {
+          wrap.style.display = "none";
+          list.innerHTML = "";
+          return;
+        }
+
+        wrap.style.display = "block";
+        list.innerHTML = turns.map((t, idx) => {
+          const turnNum = t.turn_number || (idx + 1);
+          const fb = t.detailed_feedback || {};
+          const userAudio = t.user_audio_url || "";
+          const aiAudio = t.ai_audio_url || "";
+          const gScore = fb.grammar_score !== undefined ? fb.grammar_score : null;
+          const pScore = fb.pronunciation_score !== undefined ? fb.pronunciation_score : null;
+          const corrections = Array.isArray(fb.corrections) ? fb.corrections : [];
+
+          return `
+            <div style="background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 16px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="font-weight: 700; font-size: 0.88rem; color: var(--primary);">
+                  <i class="bi bi-chat-left-text me-1"></i> Turn #${turnNum}
+                </span>
+                <div style="display: flex; gap: 8px;">
+                  ${gScore !== null ? `<span style="font-size: 0.75rem; background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-weight: 600;">Grammar: ${gScore}%</span>` : ''}
+                  ${pScore !== null ? `<span style="font-size: 0.75rem; background: #ecfdf5; color: #065f46; padding: 2px 8px; border-radius: 12px; font-weight: 600;">Pronunciation: ${pScore}%</span>` : ''}
+                </div>
+              </div>
+
+              <!-- Learner Speech -->
+              <div style="background: #fff; border: 1px solid #f3f4f6; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #6b7280; margin-bottom: 4px;">
+                  🧑 YOUR SPOKEN RESPONSE
+                </div>
+                <div style="font-size: 0.9rem; color: #1f2937; margin-bottom: 8px;">
+                  "${t.user_transcript || 'No transcript'}"
+                </div>
+                ${userAudio ? `
+                  <button type="button" class="btn-user-voice-replay" onclick="toggleUserAudio('${userAudio}', this)" style="background: rgba(99, 102, 241, 0.1); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="bi bi-play-circle-fill"></i> Listen to your voice
+                  </button>
+                ` : '<small style="color: #9ca3af; font-style: italic;">(Text response or no recording)</small>'}
+              </div>
+
+              <!-- AI Response -->
+              <div style="background: #fff; border: 1px solid #f3f4f6; border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;">
+                <div style="font-size: 0.75rem; font-weight: 700; color: #059669; margin-bottom: 4px;">
+                  🤖 AI COMPANION MODEL
+                </div>
+                <div style="font-size: 0.9rem; color: #1f2937; margin-bottom: 8px;">
+                  "${t.ai_response_text || t.ai_response || ''}"
+                </div>
+                ${aiAudio ? `
+                  <button type="button" class="btn-user-voice-replay" onclick="toggleUserAudio('${aiAudio}', this)" style="background: rgba(16, 185, 129, 0.1); color: #059669; border: 1px solid rgba(16, 185, 129, 0.25); border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                    <i class="bi bi-volume-up-fill"></i> Listen to AI model pronunciation
+                  </button>
+                ` : ''}
+              </div>
+
+              <!-- Specific Corrections for this turn -->
+              ${corrections.length ? `
+                <div style="background: #fef2f2; border: 1px solid #fee2e2; border-radius: 8px; padding: 8px 12px; font-size: 0.82rem; margin-top: 8px;">
+                  <div style="color: #dc2626; font-weight: 700; margin-bottom: 2px;">
+                    Correction: <span style="text-decoration: line-through;">${corrections[0].original}</span> ➔ <span style="color: #16a34a;">${corrections[0].corrected}</span>
+                  </div>
+                  ${corrections[0].explanation ? `<div style="color: #6b7280; font-size: 0.75rem;">${corrections[0].explanation}</div>` : ''}
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
+      }
+      window.renderSessionSpeechReplay = renderSessionSpeechReplay;
 
       function createAiVoicePillHtml(audioUrl, voiceId, text, lang) {
         const cleanText = (text || "").replace(/"/g, "&quot;");
@@ -1662,6 +1797,15 @@
       }
 
       function stopAllAiVoicePlaybacks(exceptVoiceId = null) {
+        // Pause any user audio playback
+        if (window._currentUserAudio && !window._currentUserAudio.paused) {
+          window._currentUserAudio.pause();
+          document.querySelectorAll('.btn-user-voice-replay').forEach(b => {
+            b.innerHTML = '<i class="bi bi-play-circle-fill"></i> Listen to your voice';
+            b.classList.remove('is-playing');
+          });
+        }
+
         // 1. Stop HTML5 Audio objects
         Object.keys(activeVoiceAudioMap).forEach((id) => {
           if (id !== exceptVoiceId) {
@@ -2083,11 +2227,27 @@
           if (res.ok) {
             const data = await res.json();
 
-            // Show user transcribed message in real-time
+            // Show user transcribed message in real-time with voice replay button
             const userMsg = document.createElement("div");
             userMsg.className = "msg-wrap msg-user-wrap";
-            userMsg.innerHTML = `<div class="msg-lbl">🧑 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || liveTranscript || "Spoken Audio"}</div>`;
+            const userAudioBtn = data.user_audio_url ? `
+              <div style="margin-top: 6px; text-align: right;">
+                <button type="button" class="btn-user-voice-replay" onclick="toggleUserAudio('${data.user_audio_url}', this)" style="background: rgba(99, 102, 241, 0.12); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                  <i class="bi bi-play-circle-fill"></i> Listen to your voice
+                </button>
+              </div>` : '';
+            userMsg.innerHTML = `<div class="msg-lbl">🧑 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || liveTranscript || "Spoken Audio"}</div>${userAudioBtn}`;
             ml.appendChild(userMsg);
+
+            // Track turn for end-of-session replay studio
+            currentSessionTurns.push({
+              turn_number: currentSessionTurns.length + 1,
+              user_transcript: data.user_transcript || liveTranscript || "Spoken Audio",
+              user_audio_url: data.user_audio_url || "",
+              ai_response_text: data.ai_response || "",
+              ai_audio_url: data.ai_audio_url || "",
+              detailed_feedback: data.feedback
+            });
 
             // Show AI response & auto-play synthesized voice using sleek Voice Pill
             const aiMsg = document.createElement("div");
@@ -2664,7 +2824,8 @@
             vocabListDiv.innerHTML = `<div style="text-align:center;color:var(--muted-fg);font-size:0.85rem;padding:20px;">No new words were extracted in this session.</div>`;
           }
 
-          // 8. Open summary page
+          // 8. Render turn-by-turn speech replay studio & open summary page
+          renderSessionSpeechReplay(history);
           showPage("summary");
         } catch (e) {
           console.error("Error loading past session summary:", e);
@@ -4404,14 +4565,30 @@
               // If user message was not pre-rendered (no liveTranscript), render it now
               const existingUserMsg = document.getElementById("ft-user-voice-msg");
               if (!existingUserMsg) {
+                const userAudioBtn = data.user_audio_url ? `
+                  <div style="margin-top: 6px; text-align: right;">
+                    <button type="button" class="btn-user-voice-replay" onclick="toggleUserAudio('${data.user_audio_url}', this)" style="background: rgba(99, 102, 241, 0.12); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                      <i class="bi bi-play-circle-fill"></i> Listen to your voice
+                    </button>
+                  </div>` : '';
                 const userWrap = document.createElement("div");
                 userWrap.className = "msg-wrap msg-user-wrap";
-                userWrap.innerHTML = `<div class="msg-lbl">👤 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || "Spoken Audio"}</div>`;
+                userWrap.innerHTML = `<div class="msg-lbl">👤 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || "Spoken Audio"}</div>${userAudioBtn}`;
                 ml.appendChild(userWrap);
               } else {
                 if (data.user_transcript && data.user_transcript !== liveTranscript) {
                   const bubble = existingUserMsg.querySelector(".msg-bubble");
                   if (bubble) bubble.textContent = data.user_transcript;
+                }
+                if (data.user_audio_url) {
+                  const btnDiv = document.createElement("div");
+                  btnDiv.style.marginTop = "6px";
+                  btnDiv.style.textAlign = "right";
+                  btnDiv.innerHTML = `
+                    <button type="button" class="btn-user-voice-replay" onclick="toggleUserAudio('${data.user_audio_url}', this)" style="background: rgba(99, 102, 241, 0.12); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                      <i class="bi bi-play-circle-fill"></i> Listen to your voice
+                    </button>`;
+                  existingUserMsg.appendChild(btnDiv);
                 }
                 existingUserMsg.removeAttribute("id");
               }

@@ -1126,6 +1126,7 @@ class SubmitAudioResponseView(View):
             return JsonResponse({
                 "interaction_id": str(interaction.id),
                 "user_transcript": user_transcript,
+                "user_audio_url": user_audio_url or "",
                 "ai_response": ai_response,
                 "ai_audio_url": ai_audio_url,
                 "feedback": detailed_feedback,
@@ -1568,6 +1569,7 @@ class SessionLogsView(View):
                 history.append({
                     "id": str(log.id),
                     "user_transcript": log.user_transcript,
+                    "user_audio_url": log.user_audio_url or "",
                     "ai_response_text": log.ai_response_text,
                     "ai_audio_url": log.ai_audio_url,
                     "detailed_feedback": log.detailed_feedback,

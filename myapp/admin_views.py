@@ -1000,7 +1000,6 @@ class AdminSessionDetailApiView(AdminRequiredMixin, View):
             turns_data.append({
                 "turn_number": getattr(log, 'turn_number', idx) or idx,
                 "user_transcript": log.user_transcript,
-                "user_audio_url": log.user_audio_url,
                 "ai_response_text": log.ai_response_text,
                 "ai_audio_url": log.ai_audio_url,
                 "detailed_feedback": log.detailed_feedback,

@@ -211,7 +211,7 @@ let currentSection = 'overview';
             scenarios: 'Scenario Studio & AI Personas',
             sessions: 'Session Replays & Feedback Inspector',
             flashcards: 'Flashcards & Spaced Repetition (SM-2)',
-            maintenance: 'System Health & Maintenance'
+            maintenance: 'Storage & Data Management'
           };
           document.getElementById('currentSectionTitle').textContent = titles[sectionId] || 'Admin Portal';
 
@@ -280,8 +280,10 @@ let currentSection = 'overview';
           }
 
           if (data.ai_status) {
-            document.getElementById('aiLlmLabel').textContent = data.ai_status.llm_engine;
-            document.getElementById('aiTtsLabel').textContent = data.ai_status.tts_engine;
+            const llmLabel = document.getElementById('aiLlmLabel');
+            if (llmLabel) llmLabel.textContent = data.ai_status.llm_engine;
+            const ttsLabel = document.getElementById('aiTtsLabel');
+            if (ttsLabel) ttsLabel.textContent = data.ai_status.tts_engine;
           }
         }
 
@@ -1063,10 +1065,7 @@ let currentSection = 'overview';
                   <small class="text-dim font-mono">${t.created_at ? new Date(t.created_at).toLocaleTimeString() : ''}</small>
                 </div>
                 <div class="p-2 rounded mb-2" style="background: var(--bg-base);">
-                  <div>"${t.user_transcript || '<i class="text-dim">No transcript</i>'}"</div>
-                  ${t.user_audio_url ? `
-                    <audio controls src="${t.user_audio_url}" class="mt-2 w-100" style="height: 32px;"></audio>
-                  ` : ''}
+                  <div class="text-main">"${t.user_transcript || '<i class="text-dim">No transcript</i>'}"</div>
                 </div>
 
                 <div class="turn-speaker text-success"><i class="bi bi-robot me-1"></i>AI Companion Response</div>
