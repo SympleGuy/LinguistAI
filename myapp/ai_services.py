@@ -94,11 +94,14 @@ def _call_gemini_generate(system_prompt, user_prompt, response_json=False):
     if response_json:
         payload["generationConfig"]["responseMimeType"] = "application/json"
 
-    headers = {"Content-Type": "application/json"}
+    headers = {
+        "Content-Type": "application/json",
+        "x-goog-api-key": GEMINI_API_KEY,
+    }
 
     for model_name in VALID_GEMINI_MODELS:
         try:
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
             resp = _http_post_json(url, payload, headers, retries=1, timeout=6)
             if resp and "candidates" in resp and len(resp["candidates"]) > 0:
                 parts = resp["candidates"][0].get("content", {}).get("parts", [])
@@ -146,14 +149,17 @@ def _transcribe_gemini_audio(audio_bytes, mime_type="audio/webm"):
                 "maxOutputTokens": 300
             }
         }
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY,
+        }
 
         audio_models = ["gemini-3.5-transcribe", "gemini-flash-lite-latest", "gemini-3.5-flash-lite"] + [
             m for m in VALID_GEMINI_MODELS if m not in ("gemini-3.5-transcribe", "gemini-flash-lite-latest", "gemini-3.5-flash-lite")
         ]
         for model_name in audio_models:
             try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={GEMINI_API_KEY}"
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
                 resp = _http_post_json(url, payload, headers, retries=1, timeout=6)
                 if resp and "candidates" in resp and len(resp["candidates"]) > 0:
                     parts = resp["candidates"][0].get("content", {}).get("parts", [])
@@ -179,7 +185,7 @@ def generate_ai_conversation_response(scenario_prompt, user_level="Beginner", ta
     if context_history is None:
         context_history = []
 
-    is_free_talk = any(k in (scenario_prompt or "").lower() for k in ["free talk", "open conversation", "trò chuyện tự do", "casual chat", "open talk"])
+    is_free_talk = any(k in (scenario_prompt or "").lower() for k in ["free talk", "open conversation", "free conversation", "casual chat", "open talk"])
 
     if is_free_talk:
         lower_prompt = (scenario_prompt or "").lower()

@@ -113,6 +113,10 @@
               <span>Scenario Studio</span>
               <span class="nav-count-badge" id="navScenarioBadge">-</span>
             </a>
+            <a class="admin-nav-item" onclick="switchSection('freetalk')">
+              <i class="bi bi-chat-dots-fill text-info"></i>
+              <span>Free Talk Studio</span>
+            </a>
 
             <div class="nav-section-label">Learning Data</div>
             <a class="admin-nav-item" onclick="switchSection('sessions')">
@@ -405,26 +409,181 @@
             <!-- ═════════════════════════════════════════════════════════ -->
             <section id="section-scenarios" class="view-section">
               <div class="glass-card mb-4">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
                   <div>
-                    <h2 class="h5 mb-1 fw-bold">Scenario Studio & AI Personas</h2>
-                    <p class="text-dim mb-0" style="font-size: 0.85rem;">Manage conversation prompts, categories, and
-                      test
-                      AI responses in real-time.</p>
+                    <h2 class="h5 mb-1 fw-bold">Scenario Studio & Roleplay Catalog</h2>
+                    <p class="text-dim mb-0" style="font-size: 0.85rem;">Manage roleplay scenarios, target languages,
+                      CEFR levels, and test AI responses.</p>
                   </div>
                   <div class="d-flex gap-2">
-                    <button class="btn btn-subtle" onclick="seedScenariosTrigger()">
-                      <i class="bi bi-database-fill-down me-1"></i>Seed Defaults
-                    </button>
                     <button class="btn btn-glow" onclick="openCreateScenarioModal()">
                       <i class="bi bi-plus-circle-fill me-1"></i>Create Scenario
                     </button>
+                  </div>
+                </div>
+
+                <!-- Scenario Search & Language Filter Pills -->
+                <div class="row g-3 align-items-center pt-3 border-top border-subtle">
+                  <div class="col-12 col-lg-4">
+                    <div class="search-input-wrap">
+                      <span class="search-icon"><i class="bi bi-search"></i></span>
+                      <input type="text" id="scenarioSearchInput" placeholder="Search scenarios by title or keywords..."
+                        oninput="handleScenarioSearch()">
+                    </div>
+                  </div>
+                  <div class="col-12 col-lg-8">
+                    <div class="scenario-filter-pills d-flex flex-wrap gap-2 align-items-center"
+                      id="scenarioLangFilters">
+                      <!-- Dynamic language filter pills rendered by JS -->
+                    </div>
                   </div>
                 </div>
               </div>
 
               <div class="row g-4" id="scenariosGrid">
                 <!-- Scenario Cards Injected Here -->
+              </div>
+            </section>
+
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <!-- SECTION: FREE TALK STUDIO (MINIMALIST & DIRECT EDIT)        -->
+            <!-- ═════════════════════════════════════════════════════════ -->
+            <section id="section-freetalk" class="view-section">
+              <!-- Free Talk Header with Integrated Telemetry -->
+              <div class="glass-card mb-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+                  <div>
+                    <div class="d-flex align-items-center gap-2 mb-1">
+                      <span class="fs-4 text-info">💬</span>
+                      <h2 class="h5 mb-0 fw-bold">Free Talk AI Studio</h2>
+                      <span class="status-badge badge-lang ms-2">Open Conversation Engine</span>
+                    </div>
+                    <p class="text-dim mb-0" style="font-size: 0.85rem;">
+                      Configure master prompt instructions and simulate live conversation responses directly.
+                    </p>
+                  </div>
+                  <!-- Compact Actionable Telemetry Stats -->
+                  <div class="d-flex gap-3 align-items-center flex-wrap">
+                    <div class="d-flex align-items-center gap-2 px-3 py-2 rounded"
+                      style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle);">
+                      <i class="bi bi-chat-dots-fill text-info fs-5"></i>
+                      <div>
+                        <div class="text-dim"
+                          style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+                          Total Sessions</div>
+                        <div class="fw-bold font-mono text-main" id="ftKpiSessions">-</div>
+                      </div>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 px-3 py-2 rounded"
+                      style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle);">
+                      <i class="bi bi-award-fill text-warning fs-5"></i>
+                      <div>
+                        <div class="text-dim"
+                          style="font-size: 0.7rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">
+                          Avg Fluency</div>
+                        <div class="fw-bold font-mono text-success" id="ftKpiAvgScore">-</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Main Workspace: Left = Direct Master Prompt Editor, Right = Live AI Simulator -->
+              <div class="row g-4">
+                <!-- Left: Master System Prompt Editor -->
+                <div class="col-12 col-xl-7">
+                  <div class="glass-card h-100 d-flex flex-column justify-content-between">
+                    <div>
+                      <div
+                        class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-subtle">
+                        <div class="d-flex align-items-center gap-2">
+                          <i class="bi bi-cpu-fill text-primary"></i>
+                          <h3 class="h6 mb-0 fw-bold">Master System Prompt</h3>
+                        </div>
+                      </div>
+
+                      <div class="mb-3">
+                        <label class="form-label text-dim small fw-semibold">AI Master Persona Instructions</label>
+                        <textarea class="form-control form-control-custom font-mono" id="ftDirectPromptInput" rows="10"
+                          style="font-size: 0.84rem; line-height: 1.6;"
+                          placeholder="You are an intelligent, empathetic, and highly versatile language tutor in Free Talk mode..."></textarea>
+                        <small class="text-dim mt-1 d-block" style="font-size: 0.75rem;">
+                          This prompt guides the AI for all unscripted student conversations across all languages.
+                        </small>
+                      </div>
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between pt-3 border-top border-subtle mt-2">
+                      <div class="text-dim small font-mono" id="ftSaveStatusText">
+                        <i class="bi bi-check2-circle text-success me-1"></i>Synchronized with database
+                      </div>
+                      <button class="btn btn-glow" id="btnSaveFreeTalkDirect" onclick="saveFreeTalkDirect()">
+                        <i class="bi bi-check-lg me-1"></i>Save Prompt Changes
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Right: Live AI Persona Simulator -->
+                <div class="col-12 col-xl-5">
+                  <div class="glass-card h-100">
+                    <div
+                      class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-subtle">
+                      <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-terminal-fill text-success"></i>
+                        <h3 class="h6 mb-0 fw-bold">Live AI Simulator</h3>
+                      </div>
+                      <span class="status-badge badge-free">Real-Time Playground</span>
+                    </div>
+
+                    <div class="row g-2 mb-3">
+                      <div class="col-6">
+                        <label class="form-label text-dim small">Target Language</label>
+                        <select class="form-select form-select-custom w-100" id="ftSimLang">
+                          <option value="English">English</option>
+                          <option value="Spanish">Spanish</option>
+                          <option value="French">French</option>
+                          <option value="German">German</option>
+                          <option value="Japanese">Japanese</option>
+                          <option value="Chinese">Chinese</option>
+                          <option value="Korean">Korean</option>
+                          <option value="Vietnamese">Vietnamese</option>
+                        </select>
+                      </div>
+                      <div class="col-6">
+                        <label class="form-label text-dim small">Proficiency Level</label>
+                        <select class="form-select form-select-custom w-100" id="ftSimCefr">
+                          <option value="Beginner">Beginner (A1-A2)</option>
+                          <option value="Intermediate" selected>Intermediate (B1-B2)</option>
+                          <option value="Advanced">Advanced (C1-C2)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="form-label text-dim small">Simulated Learner Message</label>
+                      <div class="input-group">
+                        <input type="text" class="form-control form-control-custom" id="ftSimInput"
+                          placeholder="e.g. Hi! What do you like doing in your free time?"
+                          onkeydown="if(event.key==='Enter') testFreeTalkDirect()">
+                        <button class="btn btn-subtle" type="button" onclick="testFreeTalkDirect()"
+                          id="btnTestFreeTalkDirect">
+                          <i class="bi bi-play-fill text-success"></i>Test
+                        </button>
+                      </div>
+                    </div>
+
+                    <!-- AI Simulation Result Box -->
+                    <div>
+                      <label class="form-label text-dim small">AI Output & Analysis</label>
+                      <div class="p-3 rounded small font-mono" id="ftSimResultBox"
+                        style="background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); min-height: 130px;">
+                        <span class="text-dim">Enter a sample learner message above and click <strong>Test</strong> to
+                          preview AI response and fluency analysis.</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
 

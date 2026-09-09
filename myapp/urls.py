@@ -18,7 +18,6 @@ urlpatterns = [
     path("api/scenarios/", views.scenarios_list, name="scenarios_list"),
     path("api/scenarios/<int:scenario_id>/", views.ScenarioDetailView.as_view(), name="scenario_detail"),
     path("api/sessions/start/", views.StartSessionView.as_view(), name="start_session"),
-    path("api/debug-session/", views.DebugSessionView.as_view(), name="debug_session"),
     path("api/sessions/<uuid:session_id>/respond/", views.SubmitResponseView.as_view(), name="submit_response"),
     path("api/sessions/<uuid:session_id>/respond-audio/", views.SubmitAudioResponseView.as_view(), name="submit_audio_response"),
     path("api/dashboard/<uuid:user_id>/", views.DashboardView.as_view(), name="user_dashboard"),

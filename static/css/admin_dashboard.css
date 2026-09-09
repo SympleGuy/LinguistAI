@@ -892,3 +892,59 @@
       }
     }
 
+    /* ═══════════════════════════════════════════════════════════════ */
+    /* SCENARIO LANGUAGE FILTER PILLS & CHIPS                          */
+    /* ═══════════════════════════════════════════════════════════════ */
+    .scenario-filter-pills {
+      overflow-x: auto;
+      padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .lang-filter-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      user-select: none;
+    }
+
+    .lang-filter-pill:hover {
+      color: var(--text-main);
+      border-color: var(--border-strong);
+      background: rgba(99, 102, 241, 0.08);
+      transform: translateY(-1px);
+    }
+
+    .lang-filter-pill.active {
+      color: #FFFFFF;
+      background: linear-gradient(135deg, var(--primary) 0%, var(--accent-violet) 100%);
+      border-color: transparent;
+      box-shadow: 0 4px 12px var(--primary-glow);
+    }
+
+    .lang-filter-pill .lang-count-badge {
+      font-size: 0.7rem;
+      padding: 1px 6px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.12);
+      color: inherit;
+      font-weight: 700;
+      font-family: var(--font-mono);
+    }
+
+    .lang-filter-pill.active .lang-count-badge {
+      background: rgba(255, 255, 255, 0.25);
+      color: #FFFFFF;
+    }
+
+

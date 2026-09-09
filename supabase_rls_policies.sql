@@ -10,6 +10,7 @@ ALTER TABLE IF EXISTS users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS learning_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS interaction_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE IF EXISTS scenarios ENABLE ROW LEVEL SECURITY;
+ALTER TABLE IF EXISTS vocabulary_cards ENABLE ROW LEVEL SECURITY;
 
 -- ------------------------------------------------------------------------------
 -- 2. POLICIES FOR `users` TABLE
@@ -97,5 +98,29 @@ DROP POLICY IF EXISTS "Allow read access to scenarios for all authenticated and 
 CREATE POLICY "Allow read access to scenarios for all authenticated and anonymous users"
 ON scenarios FOR SELECT
 USING (true);
+
+-- ------------------------------------------------------------------------------
+-- 6. POLICIES FOR `vocabulary_cards` TABLE (Flashcards & Spaced Repetition)
+-- ------------------------------------------------------------------------------
+DROP POLICY IF EXISTS "Users can view their own vocabulary cards" ON vocabulary_cards;
+CREATE POLICY "Users can view their own vocabulary cards"
+ON vocabulary_cards FOR SELECT
+USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can insert their own vocabulary cards" ON vocabulary_cards;
+CREATE POLICY "Users can insert their own vocabulary cards"
+ON vocabulary_cards FOR INSERT
+WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can update their own vocabulary cards" ON vocabulary_cards;
+CREATE POLICY "Users can update their own vocabulary cards"
+ON vocabulary_cards FOR UPDATE
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can delete their own vocabulary cards" ON vocabulary_cards;
+CREATE POLICY "Users can delete their own vocabulary cards"
+ON vocabulary_cards FOR DELETE
+USING (auth.uid() = user_id);
 
 -- End of Supabase RLS Policies Configuration

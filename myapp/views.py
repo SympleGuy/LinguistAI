@@ -36,20 +36,17 @@ _SCENARIOS_CACHE = {
 }
 _SCENARIOS_CACHE_TTL = 60  # 60 seconds TTL
 
-# Short-term dashboard & analytics cache to avoid multi-table remote queries on rapid tab navigation
-_USER_DASHBOARD_CACHE = {}
-_USER_DASHBOARD_CACHE_TTL = 15  # 15 seconds TTL
+from django.core.cache import cache
 
-_USER_ANALYTICS_CACHE = {}
-_USER_ANALYTICS_CACHE_TTL = 15  # 15 seconds TTL
+# Short-term dashboard & analytics cache TTL (15s) using Django's configured cache
+_CACHE_TTL = 15
 
 def invalidate_dashboard_cache(user_id=None):
     if user_id:
-        _USER_DASHBOARD_CACHE.pop(str(user_id), None)
-        _USER_ANALYTICS_CACHE.pop(str(user_id), None)
+        cache.delete(f"user_dashboard_{user_id}")
+        cache.delete(f"user_analytics_{user_id}")
     else:
-        _USER_DASHBOARD_CACHE.clear()
-        _USER_ANALYTICS_CACHE.clear()
+        cache.clear()
 
 def invalidate_scenarios_cache():
     _SCENARIOS_CACHE['timestamp'] = 0
@@ -403,9 +400,19 @@ def api_me(request):
     # Check Django session first
     user_id = request.session.get("supabase_user_id")
 
-    # Fallback: X-User-ID header sent from frontend localStorage
+    # Fallback: Supabase Bearer token verification if header present
     if not user_id:
-        user_id = request.headers.get("X-User-ID", "")
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer ") and len(auth_header.split(" ")) > 1:
+            token = auth_header.split(" ")[1].strip()
+            if supabase:
+                try:
+                    auth_user_resp = supabase.auth.get_user(token)
+                    if auth_user_resp and hasattr(auth_user_resp, 'user') and auth_user_resp.user:
+                        user_id = str(auth_user_resp.user.id)
+                        request.session["supabase_user_id"] = user_id
+                except Exception:
+                    pass
 
     if not user_id:
         return JsonResponse({"authenticated": False}, status=401)
@@ -414,13 +421,7 @@ def api_me(request):
     if not app_user:
         return JsonResponse({"authenticated": False}, status=401)
 
-    # If we got the user via X-User-ID, re-establish Django session for future requests
-    if not request.session.get("supabase_user_id"):
-        request.session["supabase_user_id"] = str(app_user.id)
-        request.session["role"] = app_user.role or "user"
-        request.session.modified = True
-    else:
-        request.session["role"] = app_user.role or "user"
+    request.session["role"] = app_user.role or "user"
 
     user_email = app_user.email or app_user.username
     user_display = app_user.username or user_email
@@ -1145,11 +1146,10 @@ class DashboardView(View):
     def get(self, request, user_id):
         """Get dashboard/progress data for a user with short-term SWR caching"""
         try:
-            now = time.time()
-            uid_str = str(user_id)
-            cached_entry = _USER_DASHBOARD_CACHE.get(uid_str)
-            if cached_entry and (now - cached_entry['timestamp'] < _USER_DASHBOARD_CACHE_TTL):
-                return JsonResponse(cached_entry['data'])
+            cache_key = f"user_dashboard_{user_id}"
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                return JsonResponse(cached_data)
 
             app_user = AppUser.objects.filter(id=user_id).first()
 
@@ -1223,11 +1223,7 @@ class DashboardView(View):
                 "streak_days": calculate_user_streak(user_id)
             }
 
-            _USER_DASHBOARD_CACHE[uid_str] = {
-                'timestamp': now,
-                'data': dashboard_data
-            }
-
+            cache.set(cache_key, dashboard_data, _CACHE_TTL)
             return JsonResponse(dashboard_data)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
@@ -1276,22 +1272,6 @@ class SessionHistoryView(View):
             })
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
-
-
-@method_decorator(csrf_exempt, name='dispatch')
-class DebugSessionView(View):
-    def post(self, request):
-        try:
-            data = json.loads(request.body)
-            return JsonResponse({
-                'received_data': data,
-                'user_id_type': str(type(data.get('user_id'))),
-                'user_id_value': repr(data.get('user_id')),
-                'scenario_id_type': str(type(data.get('scenario_id'))),
-                'scenario_id_value': repr(data.get('scenario_id'))
-            })
-        except Exception as e:
-            return JsonResponse({'error': str(e)}, status=500)
 
 
 @method_decorator(csrf_exempt, name='dispatch')
@@ -1364,11 +1344,10 @@ class UserAnalyticsView(View):
         Optimized to fetch only needed columns and perform single-pass aggregation.
         """
         try:
-            now = time.time()
-            uid_str = str(user_id)
-            cached_entry = _USER_ANALYTICS_CACHE.get(uid_str)
-            if cached_entry and (now - cached_entry['timestamp'] < _USER_ANALYTICS_CACHE_TTL):
-                return JsonResponse(cached_entry['data'])
+            cache_key = f"user_analytics_{user_id}"
+            cached_data = cache.get(cache_key)
+            if cached_data is not None:
+                return JsonResponse(cached_data)
 
             app_user = AppUser.objects.filter(id=user_id).first()
             if not app_user:
@@ -1481,11 +1460,7 @@ class UserAnalyticsView(View):
                 ]
             }
 
-            _USER_ANALYTICS_CACHE[uid_str] = {
-                'timestamp': now,
-                'data': analytics_data
-            }
-
+            cache.set(cache_key, analytics_data, _CACHE_TTL)
             return JsonResponse(analytics_data)
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)

@@ -1,3 +1,14 @@
+// ── UTILITIES ───────────────────────────────────────────────────
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // ── DATA ─────────────────────────────────────────────────────
       let SCENARIOS = [
         {
@@ -1045,7 +1056,7 @@
         ml.innerHTML = `
     <div class="msg-wrap">
       <div class="msg-lbl">🤖 LinguistAI</div>
-      <div class="msg-bubble msg-ai">${initialGreeting}</div>
+      <div class="msg-bubble msg-ai">${escapeHTML(initialGreeting)}</div>
       <div>${initVoicePill}</div>
     </div>`;
         ml.scrollTop = ml.scrollHeight;
@@ -1487,7 +1498,7 @@
         const ml = document.getElementById("msg-list");
         const d = document.createElement("div");
         d.className = "msg-wrap msg-user-wrap";
-        d.innerHTML = `<div class="msg-lbl">🧑 You</div><div class="msg-bubble msg-user">${userText}</div>`;
+        d.innerHTML = `<div class="msg-lbl">🧑 You</div><div class="msg-bubble msg-user">${escapeHTML(userText)}</div>`;
         ml.appendChild(d);
         ml.scrollTop = ml.scrollHeight;
 
@@ -1538,7 +1549,7 @@
             const curLang = document.getElementById("conv-lang")?.textContent || "English";
             const voiceId = "ai-voice-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
             const voicePill = createAiVoicePillHtml(data.ai_audio_url || "", voiceId, data.ai_response, curLang);
-            aiMsg.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response}</div>`;
+            aiMsg.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${escapeHTML(data.ai_response)}</div>`;
             ml.appendChild(aiMsg);
             const pillWrapper = document.createElement("div");
             pillWrapper.innerHTML = voicePill;
@@ -1737,7 +1748,7 @@
                   🧑 YOUR SPOKEN RESPONSE
                 </div>
                 <div style="font-size: 0.9rem; color: #1f2937; margin-bottom: 8px;">
-                  "${t.user_transcript || 'No transcript'}"
+                  "${escapeHTML(t.user_transcript || 'No transcript')}"
                 </div>
                 ${userAudio ? `
                   <button type="button" class="btn-user-voice-replay" onclick="toggleUserAudio('${userAudio}', this)" style="background: rgba(99, 102, 241, 0.1); color: var(--primary); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: 20px; padding: 4px 12px; font-size: 0.78rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
@@ -2236,7 +2247,8 @@
                   <i class="bi bi-play-circle-fill"></i> Listen to your voice
                 </button>
               </div>` : '';
-            userMsg.innerHTML = `<div class="msg-lbl">🧑 You (Voice)</div><div class="msg-bubble msg-user">${data.user_transcript || liveTranscript || "Spoken Audio"}</div>${userAudioBtn}`;
+            const safeUserTranscript = escapeHTML(data.user_transcript || liveTranscript || "Spoken Audio");
+            userMsg.innerHTML = `<div class="msg-lbl">🧑 You (Voice)</div><div class="msg-bubble msg-user">${safeUserTranscript}</div>${userAudioBtn}`;
             ml.appendChild(userMsg);
 
             // Track turn for end-of-session replay studio
@@ -2255,7 +2267,7 @@
             const curLang = document.getElementById("conv-lang")?.textContent || "English";
             const voiceId = "ai-voice-" + Date.now() + "-" + Math.floor(Math.random() * 1000);
             const voicePill = createAiVoicePillHtml(data.ai_audio_url || "", voiceId, data.ai_response || "", curLang);
-            aiMsg.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${data.ai_response}</div>`;
+            aiMsg.innerHTML = `<div class="msg-lbl">🤖 LinguistAI</div><div class="msg-bubble msg-ai">${escapeHTML(data.ai_response)}</div>`;
             ml.appendChild(aiMsg);
             const pillWrap = document.createElement("div");
             pillWrap.innerHTML = voicePill;

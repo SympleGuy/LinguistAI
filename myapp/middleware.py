@@ -16,7 +16,6 @@ PUBLIC_API_ROUTES = [
     "/api/auth/me/",
     "/api/auth/oauth-sync/",
     "/api/scenarios/",
-    "/api/debug-session/",
     "/api/tts/",
 ]
 
@@ -39,10 +38,9 @@ class ApiAuthenticationMiddleware:
             is_admin_api = path.startswith("/api/admin/")
 
             if is_admin_api:
-                # Admin APIs allow access if debug mode or staff/admin user or authenticated admin role
+                # Admin APIs strictly require staff/admin user or authenticated admin role
                 user_id = request.session.get("supabase_user_id")
                 is_authorized = (
-                    settings.DEBUG or
                     (hasattr(request, "user") and request.user.is_authenticated and (request.user.is_staff or request.user.is_superuser)) or
                     request.session.get("role") == "admin" or
                     request.session.get("is_admin")
@@ -64,16 +62,23 @@ class ApiAuthenticationMiddleware:
                 user_id = request.session.get("supabase_user_id")
                 auth_header = request.headers.get("Authorization", "")
                 has_bearer = auth_header.startswith("Bearer ") and len(auth_header.split(" ")) > 1
-                x_user_id = request.headers.get("X-User-ID", "")
 
-                # Attach x_user_id to session if an existing session is present
-                if x_user_id and not user_id and getattr(request, "session", None) and request.session.session_key:
+                # Authenticate Supabase JWT bearer token if session not present
+                if not user_id and has_bearer:
+                    token = auth_header.split(" ")[1].strip()
                     try:
-                        request.session["supabase_user_id"] = x_user_id
+                        from .supabase_client import supabase
+                        if supabase:
+                            auth_user_resp = supabase.auth.get_user(token)
+                            if auth_user_resp and hasattr(auth_user_resp, 'user') and auth_user_resp.user:
+                                user_id = str(auth_user_resp.user.id)
+                                request.session["supabase_user_id"] = user_id
                     except Exception:
                         pass
 
-                if not user_id and not has_bearer and not x_user_id and not (hasattr(request, "user") and request.user.is_authenticated):
+                is_authenticated = bool(user_id) or (hasattr(request, "user") and request.user.is_authenticated)
+
+                if not is_authenticated:
                     return JsonResponse({
                         "error": "Unauthorized access. Authentication required.",
                         "code": 401

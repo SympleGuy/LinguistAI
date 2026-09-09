@@ -1,20 +1,36 @@
 let currentSection = 'overview';
-        let currentDays = 14;
-        let timelineChart = null;
-        let cefrChart = null;
-        let languageChart = null;
-        let userSearchTimeout = null;
+let currentDays = 14;
+let timelineChart = null;
+let cefrChart = null;
+let languageChart = null;
+let userSearchTimeout = null;
 
-        document.addEventListener('DOMContentLoaded', () => {
-          initTheme();
-          updateClock();
-          setInterval(updateClock, 1000);
+// Scenario Studio & Free Talk state
+let allLoadedScenarios = [];
+let activeScenarioLang = 'all';
+let scenarioSearchQuery = '';
+let freeTalkScenarioObj = null;
 
-          // Check URL hash routing
-          const hash = window.location.hash.replace('#', '');
-          if (hash && ['overview', 'users', 'scenarios', 'sessions', 'flashcards', 'maintenance'].includes(hash)) {
-            currentSection = hash;
-          }
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
+  updateClock();
+  setInterval(updateClock, 1000);
+
+  // Check URL hash routing
+  const hash = window.location.hash.replace('#', '');
+  if (hash && ['overview', 'users', 'scenarios', 'freetalk', 'sessions', 'flashcards', 'maintenance'].includes(hash)) {
+    currentSection = hash;
+  }
 
           // Check if already authenticated
           const gate = document.getElementById('adminLoginGate');
@@ -208,7 +224,8 @@ let currentSection = 'overview';
           const titles = {
             overview: 'Platform Overview & Telemetry',
             users: 'Learners & User Management',
-            scenarios: 'Scenario Studio & AI Personas',
+            scenarios: 'Scenario Studio & Roleplay Catalog',
+            freetalk: 'Free Talk AI Studio & Personas',
             sessions: 'Session Replays & Feedback Inspector',
             flashcards: 'Flashcards & Spaced Repetition (SM-2)',
             maintenance: 'Storage & Data Management'
@@ -217,6 +234,7 @@ let currentSection = 'overview';
 
           if (sectionId === 'users') loadUsersData(1);
           if (sectionId === 'scenarios') loadScenariosData();
+          if (sectionId === 'freetalk') loadFreeTalkData();
           if (sectionId === 'sessions') loadSessionsData(1);
           if (sectionId === 'flashcards') loadFlashcardsData();
           if (sectionId === 'maintenance') loadMaintenanceData();
@@ -271,7 +289,12 @@ let currentSection = 'overview';
           document.getElementById('kpiPronAvg').textContent = data.activity.avg_pronunciation;
 
           document.getElementById('navUserBadge').textContent = data.users.total;
-          document.getElementById('navScenarioBadge').textContent = data.scenarios_count || 0;
+          if (allLoadedScenarios.length > 0) {
+            updateScenarioBadges();
+          } else {
+            const totalScenarios = data.scenarios_count || 0;
+            document.getElementById('navScenarioBadge').textContent = Math.max(0, totalScenarios - 1);
+          }
 
           if (data.storage) {
             document.getElementById('maintAudioFilesCount').textContent = data.storage.audio_files_count;
@@ -727,52 +750,139 @@ let currentSection = 'overview';
         // ─────────────────────────────────────────────────────────────────
         // 3. SCENARIOS STUDIO CRUD & AI SIMULATOR
         // ─────────────────────────────────────────────────────────────────
-        function renderScenariosGrid(scenarios) {
+        function isFreeTalkScenario(s) {
+          if (!s) return false;
+          return s.category === 'Open Talk' || (s.title || '').toLowerCase().includes('free talk');
+        }
+
+        function handleScenarioSearch() {
+          const input = document.getElementById('scenarioSearchInput');
+          scenarioSearchQuery = (input ? input.value : '').trim().toLowerCase();
+          renderFilteredScenariosGrid();
+        }
+
+        function filterScenariosByLang(lang) {
+          activeScenarioLang = lang;
+          renderScenarioLangFilterPills();
+          renderFilteredScenariosGrid();
+        }
+
+        function clearScenarioFilters() {
+          activeScenarioLang = 'all';
+          scenarioSearchQuery = '';
+          const input = document.getElementById('scenarioSearchInput');
+          if (input) input.value = '';
+          renderScenarioLangFilterPills();
+          renderFilteredScenariosGrid();
+        }
+
+        function renderScenarioLangFilterPills() {
+          const container = document.getElementById('scenarioLangFilters');
+          if (!container) return;
+
+          const roleplayScenarios = allLoadedScenarios.filter(s => !isFreeTalkScenario(s));
+          const counts = { all: roleplayScenarios.length };
+
+          roleplayScenarios.forEach(s => {
+            const lang = s.lang || 'English';
+            counts[lang] = (counts[lang] || 0) + 1;
+          });
+
+          const availableLangs = Object.keys(counts).filter(k => k !== 'all').sort();
+          const allOptions = ['all', ...availableLangs];
+
+          container.innerHTML = allOptions.map(lang => `
+            <button type="button" class="lang-filter-pill ${activeScenarioLang === lang ? 'active' : ''}" onclick="filterScenariosByLang('${lang}')">
+              <span>${lang === 'all' ? 'All Languages' : lang}</span>
+              <span class="lang-count-badge">${counts[lang] || 0}</span>
+            </button>
+          `).join('');
+        }
+
+        function renderFilteredScenariosGrid() {
           const grid = document.getElementById('scenariosGrid');
           if (!grid) return;
-          if (!scenarios || !scenarios.length) {
+
+          let scenarios = allLoadedScenarios.filter(s => !isFreeTalkScenario(s));
+
+          if (activeScenarioLang !== 'all') {
+            scenarios = scenarios.filter(s => (s.lang || 'English').toLowerCase() === activeScenarioLang.toLowerCase());
+          }
+
+          if (scenarioSearchQuery) {
+            scenarios = scenarios.filter(s => {
+              const t = (s.title || '').toLowerCase();
+              const d = (s.description || '').toLowerCase();
+              const c = (s.category || '').toLowerCase();
+              const p = (s.prompt || '').toLowerCase();
+              return t.includes(scenarioSearchQuery) || d.includes(scenarioSearchQuery) || c.includes(scenarioSearchQuery) || p.includes(scenarioSearchQuery);
+            });
+          }
+
+          if (!scenarios.length) {
             grid.innerHTML = `
-          <div class="col-12 text-center py-5">
-            <p class="text-dim">No practice scenarios configured.</p>
-            <button class="btn btn-glow" onclick="seedScenariosTrigger()">Seed Default Scenarios</button>
-          </div>
-        `;
+              <div class="col-12 text-center py-5">
+                <i class="bi bi-filter-circle fs-1 text-dim mb-3 d-block"></i>
+                <h3 class="h6 text-dim mb-2">No matching scenarios found</h3>
+                <p class="text-dim small mb-3">Try adjusting your search query or selecting another language filter.</p>
+                <button class="btn btn-subtle btn-sm" onclick="clearScenarioFilters()">
+                  <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Filters
+                </button>
+              </div>
+            `;
             return;
           }
 
-          grid.innerHTML = scenarios.map(s => `
-        <div class="col-12 col-md-6 col-xl-4">
-          <div class="glass-card h-100 d-flex flex-column justify-content-between">
-            <div>
-              <div class="d-flex align-items-center justify-content-between mb-2">
-                <span class="fs-3">${s.emoji || '💬'}</span>
-                <div class="d-flex gap-1">
-                  <span class="status-badge badge-lang">${s.lang}</span>
-                  <span class="status-badge badge-cefr">${s.cefr}</span>
+          grid.innerHTML = scenarios.map(s => {
+            const safeTitle = escapeHTML(s.title || 'Untitled Scenario');
+            const safeEscapedTitle = safeTitle.replace(/'/g, "\\'");
+            return `
+            <div class="col-12 col-md-6 col-xl-4">
+              <div class="glass-card h-100 d-flex flex-column justify-content-between">
+                <div>
+                  <div class="d-flex align-items-center justify-content-between mb-2">
+                    <span class="fs-3">${escapeHTML(s.emoji || '💬')}</span>
+                    <div class="d-flex gap-1">
+                      <span class="status-badge badge-lang">${escapeHTML(s.lang || 'English')}</span>
+                      <span class="status-badge badge-cefr">${escapeHTML(s.cefr || 'Beginner')}</span>
+                    </div>
+                  </div>
+                  <h3 class="h6 mb-1 text-main fw-bold">${safeTitle}</h3>
+                  <small class="text-dim d-block mb-3" style="font-size: 0.8rem;">${escapeHTML(s.description || 'No description')}</small>
+                  
+                  <div class="p-2 rounded mb-3 font-mono text-dim" style="background: var(--bg-surface-elevated); font-size: 0.72rem; max-height: 70px; overflow: hidden; text-overflow: ellipsis;">
+                    ${escapeHTML(s.prompt ? s.prompt.slice(0, 110) + '...' : 'No prompt set')}
+                  </div>
+                </div>
+
+                <div class="d-flex align-items-center justify-content-between pt-2 border-top border-subtle">
+                  <small class="text-dim font-mono"><i class="bi bi-play-circle me-1"></i>${s.sessions_count || 0} plays (${s.avg_score || 0}%)</small>
+                  <div class="btn-group btn-group-sm">
+                    <button class="btn btn-subtle p-1 px-2" title="Edit Scenario" onclick="openEditScenarioModalById(${s.id})">
+                      <i class="bi bi-pencil"></i>
+                    </button>
+                    <button class="btn btn-subtle p-1 px-2 text-danger" title="Delete Scenario" onclick="deleteScenario(${s.id}, '${safeEscapedTitle}')">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
                 </div>
               </div>
-              <h3 class="h6 mb-1 text-main fw-bold">${s.title}</h3>
-              <small class="text-dim d-block mb-3" style="font-size: 0.8rem;">${s.description || 'No description'}</small>
-              
-              <div class="p-2 rounded mb-3 font-mono text-dim" style="background: var(--bg-surface-elevated); font-size: 0.72rem; max-height: 70px; overflow: hidden; text-overflow: ellipsis;">
-                ${s.prompt ? s.prompt.slice(0, 110) + '...' : 'No prompt set'}
-              </div>
             </div>
+          `;
+          }).join('');
+        }
 
-            <div class="d-flex align-items-center justify-content-between pt-2 border-top border-subtle">
-              <small class="text-dim font-mono"><i class="bi bi-play-circle me-1"></i>${s.sessions_count} plays (${s.avg_score}%)</small>
-              <div class="btn-group btn-group-sm">
-                <button class="btn btn-subtle p-1 px-2" title="Edit Scenario" onclick='openEditScenarioModal(${JSON.stringify(s)})'>
-                  <i class="bi bi-pencil"></i>
-                </button>
-                <button class="btn btn-subtle p-1 px-2 text-danger" title="Delete Scenario" onclick="deleteScenario(${s.id}, '${s.title}')">
-                  <i class="bi bi-trash"></i>
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      `).join('');
+        function openEditScenarioModalById(id) {
+          const scenario = allLoadedScenarios.find(s => s.id === id);
+          if (scenario) {
+            openEditScenarioModal(scenario);
+          }
+        }
+
+        function updateScenarioBadges() {
+          const roleplayCount = allLoadedScenarios.filter(s => !isFreeTalkScenario(s)).length;
+          const navBadge = document.getElementById('navScenarioBadge');
+          if (navBadge) navBadge.textContent = roleplayCount;
         }
 
         async function loadScenariosData() {
@@ -781,7 +891,11 @@ let currentSection = 'overview';
             const cached = localStorage.getItem('linguist_admin_scenarios');
             if (cached) {
               const parsed = JSON.parse(cached);
-              renderScenariosGrid(parsed);
+              allLoadedScenarios = parsed;
+              freeTalkScenarioObj = allLoadedScenarios.find(isFreeTalkScenario) || null;
+              updateScenarioBadges();
+              renderScenarioLangFilterPills();
+              renderFilteredScenariosGrid();
             }
           } catch (e) { }
 
@@ -790,10 +904,181 @@ let currentSection = 'overview';
             const res = await fetch('/api/admin/scenarios/');
             if (!res.ok) return;
             const data = await res.json();
-            renderScenariosGrid(data.scenarios);
-            localStorage.setItem('linguist_admin_scenarios', JSON.stringify(data.scenarios));
+            allLoadedScenarios = data.scenarios || [];
+            freeTalkScenarioObj = allLoadedScenarios.find(isFreeTalkScenario) || null;
+            localStorage.setItem('linguist_admin_scenarios', JSON.stringify(allLoadedScenarios));
+            updateScenarioBadges();
+            renderScenarioLangFilterPills();
+            renderFilteredScenariosGrid();
+            if (currentSection === 'freetalk') {
+              loadFreeTalkData();
+            }
           } catch (e) {
             console.error('Error loading scenarios:', e);
+          }
+        }
+
+        // ─────────────────────────────────────────────────────────────────
+        // FREE TALK STUDIO CONTROLLER & DIRECT AI SIMULATOR
+        // ─────────────────────────────────────────────────────────────────
+        async function loadFreeTalkData() {
+          if (!allLoadedScenarios.length) {
+            await loadScenariosData();
+          }
+
+          freeTalkScenarioObj = allLoadedScenarios.find(isFreeTalkScenario) || {
+            id: 27,
+            title: 'Free Talk AI Studio',
+            emoji: '💬',
+            category: 'Open Talk',
+            cefr: 'Adaptive (All Levels)',
+            lang: 'English',
+            description: 'Spontaneous unscripted conversational practice.',
+            prompt: 'You are an intelligent, empathetic, and highly versatile language tutor in Free Talk mode. Engage the learner naturally without forcing any scripted scenario or storyline. Keep your answers concise, authentic, and culturally natural.',
+            sessions_count: 0,
+            avg_score: 0
+          };
+
+          const sessionsEl = document.getElementById('ftKpiSessions');
+          if (sessionsEl) sessionsEl.textContent = freeTalkScenarioObj.sessions_count || 0;
+
+          const scoreEl = document.getElementById('ftKpiAvgScore');
+          if (scoreEl) scoreEl.textContent = `${freeTalkScenarioObj.avg_score || 0}%`;
+
+          const idEl = document.getElementById('ftScenarioId');
+          if (idEl) idEl.textContent = freeTalkScenarioObj.id || 27;
+
+          const promptInput = document.getElementById('ftDirectPromptInput');
+          if (promptInput) {
+            promptInput.value = freeTalkScenarioObj.prompt || '';
+          }
+
+          const saveStatus = document.getElementById('ftSaveStatusText');
+          if (saveStatus) {
+            saveStatus.innerHTML = '<i class="bi bi-check2-circle text-success me-1"></i>Synchronized with database';
+          }
+        }
+
+        async function saveFreeTalkDirect() {
+          const promptInput = document.getElementById('ftDirectPromptInput');
+          if (!promptInput) return;
+
+          const prompt = promptInput.value.trim();
+          if (!prompt) {
+            showToast('Prompt instructions cannot be empty', 'error');
+            return;
+          }
+
+          const btn = document.getElementById('btnSaveFreeTalkDirect');
+          const saveStatus = document.getElementById('ftSaveStatusText');
+          if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Saving...';
+          }
+          if (saveStatus) {
+            saveStatus.innerHTML = '<span class="spinner-border spinner-border-sm me-1 text-primary"></span>Saving to database...';
+          }
+
+          const id = freeTalkScenarioObj ? freeTalkScenarioObj.id : 27;
+          const payload = {
+            title: freeTalkScenarioObj?.title || 'Free Talk AI Studio',
+            emoji: freeTalkScenarioObj?.emoji || '💬',
+            category: 'Open Talk',
+            cefr: 'Beginner',
+            lang: 'English',
+            description: freeTalkScenarioObj?.description || 'Spontaneous unscripted conversational practice.',
+            prompt: prompt
+          };
+
+          try {
+            const url = id ? `/api/admin/scenarios/${id}/` : `/api/admin/scenarios/`;
+            const method = id ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+              method,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (!res.ok) {
+              showToast(data.error || 'Failed to save Free Talk prompt', 'error');
+              if (saveStatus) saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle text-danger me-1"></i>Failed to save changes';
+              return;
+            }
+
+            if (freeTalkScenarioObj) {
+              freeTalkScenarioObj.prompt = prompt;
+            }
+            showToast('Free Talk prompt saved successfully!', 'success');
+            if (saveStatus) {
+              saveStatus.innerHTML = '<i class="bi bi-check2-circle text-success me-1"></i>Saved at ' + new Date().toLocaleTimeString();
+            }
+            loadScenariosData();
+            loadMetrics();
+          } catch (e) {
+            showToast('Error saving Free Talk: ' + e, 'error');
+            if (saveStatus) saveStatus.innerHTML = '<i class="bi bi-exclamation-triangle text-danger me-1"></i>Connection error';
+          } finally {
+            if (btn) {
+              btn.disabled = false;
+              btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Save Prompt Changes';
+            }
+          }
+        }
+
+        async function testFreeTalkDirect() {
+          const prompt = (document.getElementById('ftDirectPromptInput')?.value || '').trim() || 'You are a friendly conversation partner in Free Talk mode.';
+          const userMsg = (document.getElementById('ftSimInput')?.value || '').trim();
+          const lang = document.getElementById('ftSimLang')?.value || 'English';
+          const cefr = document.getElementById('ftSimCefr')?.value || 'Intermediate';
+          const resultBox = document.getElementById('ftSimResultBox');
+          const btn = document.getElementById('btnTestFreeTalkDirect');
+
+          if (!userMsg) {
+            showToast('Please enter a sample message to simulate', 'info');
+            document.getElementById('ftSimInput')?.focus();
+            return;
+          }
+
+          if (btn) btn.disabled = true;
+          if (resultBox) {
+            resultBox.innerHTML = '<span class="spinner-border spinner-border-sm me-2 text-primary"></span>Generating AI response in <strong>' + lang + '</strong> (' + cefr + ')...';
+          }
+
+          try {
+            const res = await fetch('/api/admin/scenarios/test-prompt/', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ prompt, user_message: userMsg, cefr, lang })
+            });
+            const data = await res.json();
+            if (res.ok) {
+              const fb = data.feedback || {};
+              resultBox.innerHTML = `
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="text-primary fw-bold small"><i class="bi bi-robot me-1"></i>AI Persona (${data.target_language || lang}):</span>
+                  <span class="status-badge badge-lang">${data.target_language || lang} • ${data.cefr || cefr}</span>
+                </div>
+                <div class="p-2 rounded mb-2 text-main bg-dark bg-opacity-50 border border-subtle">
+                  "${data.ai_reply || 'No response generated'}"
+                </div>
+                <div class="d-flex flex-wrap gap-2 small font-mono text-dim">
+                  <span>Grammar: <strong class="text-info">${fb.grammar_score ?? 85}%</strong></span>
+                  <span>•</span>
+                  <span>Pronunciation: <strong class="text-success">${fb.pronunciation_score ?? 90}%</strong></span>
+                  <span>•</span>
+                  <span>Vocabulary: <strong class="text-warning">${fb.vocabulary_score ?? 80}%</strong></span>
+                </div>
+                ${fb.comments ? `<div class="text-dim small mt-1"><em>${fb.comments}</em></div>` : ''}
+              `;
+            } else {
+              resultBox.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error: ${data.error || 'AI simulation failed'}</span>`;
+            }
+          } catch (e) {
+            resultBox.innerHTML = `<span class="text-danger"><i class="bi bi-exclamation-triangle me-1"></i>Error: ${e}</span>`;
+          } finally {
+            if (btn) btn.disabled = false;
           }
         }
 

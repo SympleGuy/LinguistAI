@@ -315,6 +315,32 @@ class MiddlewareSecurityTestCase(TestCase):
         self.assertEqual(data.get("code"), 500)
         self.assertIn("Internal server error", data.get("error"))
 
+    def test_unauthenticated_request_with_spoofed_x_user_id_header_rejected(self):
+        """Requests with spoofed X-User-ID header without valid session must be rejected with 401"""
+        start_payload = {"user_id": str(self.user.id), "scenario_id": 10}
+        res = self.client.post(
+            reverse("start_session"),
+            data=json.dumps(start_payload),
+            content_type="application/json",
+            HTTP_X_USER_ID=str(self.user.id)
+        )
+        self.assertEqual(res.status_code, 401)
+
+    def test_admin_api_denies_unauthenticated_even_when_debug_true(self):
+        """Admin API endpoints must reject unauthenticated requests even if DEBUG=True"""
+        from django.conf import settings
+        with self.settings(DEBUG=True):
+            res = self.client.get(reverse("admin_users"))
+            self.assertIn(res.status_code, [401, 403])
+
+    def test_debug_session_endpoint_removed(self):
+        """The legacy debug-session endpoint must not exist in production routes"""
+        session = self.client.session
+        session["supabase_user_id"] = str(self.user.id)
+        session.save()
+        res = self.client.post("/api/debug-session/", data="{}", content_type="application/json")
+        self.assertEqual(res.status_code, 404)
+
 
 class UserAnalyticsTestCase(TestCase):
     def setUp(self):
@@ -474,6 +500,24 @@ class AdminDashboardViewsTestCase(TestCase):
             },
             created_at=timezone.now()
         )
+
+    def test_admin_login_rejects_backdoor_password(self):
+        """Ensure admin login with 'admin123' fails when that is not the user's real password"""
+        from django.contrib.auth.hashers import make_password
+        admin_user = AppUser.objects.create(
+            username="realadmin",
+            email="realadmin@example.com",
+            password_hash=make_password("SuperSecretRealPassword!"),
+            role="admin",
+            created_at=timezone.now()
+        )
+        login_url = reverse("admin_api_login")
+        payload = {
+            "email": "realadmin@example.com",
+            "password": "admin123"
+        }
+        res = self.client.post(login_url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(res.status_code, 401)
 
     def test_admin_dashboard_renders(self):
         res = self.client.get(reverse("admin_dashboard"))
@@ -637,6 +681,28 @@ class AdminDashboardViewsTestCase(TestCase):
         call_command("set_user_role", self.user.email, "user")
         self.user.refresh_from_db()
         self.assertEqual(self.user.role, "user")
+
+
+class AIServicesSecurityTestCase(TestCase):
+    @patch("myapp.ai_services._http_post_json")
+    def test_gemini_api_uses_header_and_omits_key_from_url(self, mock_post):
+        """Verify that Gemini API calls pass API key in headers and not in query string"""
+        from myapp import ai_services
+        mock_post.return_value = {
+            "candidates": [{
+                "content": {"parts": [{"text": "Bonjour! Comment puis-je vous aider?"}]}
+            }]
+        }
+        with patch.object(ai_services, "GEMINI_API_KEY", "test_gemini_key_12345"):
+            resp = ai_services._call_gemini_generate("You are a tutor", "Hello")
+            self.assertIsNotNone(resp)
+            self.assertTrue(mock_post.called)
+            called_url, called_payload, called_headers = mock_post.call_args[0][:3]
+            # Key must NOT be in URL query string
+            self.assertNotIn("?key=", called_url)
+            self.assertNotIn("test_gemini_key_12345", called_url)
+            # Key must be in headers
+            self.assertEqual(called_headers.get("x-goog-api-key"), "test_gemini_key_12345")
 
 
 

@@ -147,10 +147,6 @@ class AdminLoginApiView(View):
             authenticated = False
             if app_user.password_hash and check_password(password, app_user.password_hash):
                 authenticated = True
-            elif password == "admin123" and app_user.role == "admin":  # Bootstrap fallback
-                authenticated = True
-                app_user.password_hash = make_password(password)
-                app_user.save(update_fields=['password_hash'])
 
             if authenticated:
                 if app_user.role != "admin":

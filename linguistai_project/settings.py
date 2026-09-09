@@ -11,7 +11,11 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-ALLOWED_HOSTS = ['*']  # For development - restrict in production
+ALLOWED_HOSTS = config(
+    'ALLOWED_HOSTS',
+    default='*',
+    cast=lambda v: [s.strip() for s in v.split(',') if s.strip()]
+)
 
 # Application definition
 INSTALLED_APPS = [
@@ -119,9 +123,25 @@ SUPABASE_URL = config('SUPABASE_URL', default='')
 SUPABASE_ANON_KEY = config('SUPABASE_ANON_KEY', default='')
 SUPABASE_SERVICE_ROLE_KEY = config('SUPABASE_SERVICE_ROLE_KEY', default='')
 
-# Session cookie settings — ensure cookies work for local HTTP development
+# Session cookie settings — secure in production, permissive in dev
 SESSION_COOKIE_SAMESITE = 'Lax'   # Allows cookie to be sent on same-site requests
-SESSION_COOKIE_SECURE = False      # Set to True only if using HTTPS in production
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=not DEBUG, cast=bool)
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7  # 7 days
 SESSION_SAVE_EVERY_REQUEST = True  # Refresh session on every request to keep it alive
+
+# CSRF cookie settings
+CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=not DEBUG, cast=bool)
+CSRF_COOKIE_HTTPONLY = False  # Allows frontend JS to read token if needed
+
+# In-memory performance cache with bounded memory and LRU eviction
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'linguistai-cache',
+        'TIMEOUT': 300,
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+        }
+    }
+}
