@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from decouple import config
 
@@ -63,7 +64,14 @@ import dj_database_url
 # Database configuration: PostgreSQL via Supabase URL if provided, otherwise fallback to SQLite for dev
 DATABASE_URL = config('DATABASE_URL', default=config('SUPABASE_DB_URL', default=''))
 
-if DATABASE_URL:
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'test_db.sqlite3',
+        }
+    }
+elif DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
