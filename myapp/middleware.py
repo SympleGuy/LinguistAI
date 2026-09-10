@@ -17,6 +17,7 @@ PUBLIC_API_ROUTES = [
     "/api/auth/oauth-sync/",
     "/api/scenarios/",
     "/api/tts/",
+    "/api/admin/auth/login/",
 ]
 
 
@@ -35,7 +36,7 @@ class ApiAuthenticationMiddleware:
         # Only check requests targeting the /api/ prefix
         if path.startswith("/api/"):
             is_public = any(path.startswith(pub_route) for pub_route in PUBLIC_API_ROUTES)
-            is_admin_api = path.startswith("/api/admin/")
+            is_admin_api = path.startswith("/api/admin/") and not is_public
 
             if is_admin_api:
                 # Admin APIs strictly require staff/admin user or authenticated admin role

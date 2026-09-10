@@ -123,6 +123,11 @@ class AdminLoginApiView(View):
 
         # 1. Check Django Auth User (Superuser/Staff)
         django_user = authenticate(request, username=identifier, password=password)
+        if not django_user and "@" in identifier:
+            matched_auth = AuthUser.objects.filter(email__iexact=identifier).first()
+            if matched_auth:
+                django_user = authenticate(request, username=matched_auth.username, password=password)
+
         if django_user and (django_user.is_staff or django_user.is_superuser):
             django_login(request, django_user)
             request.session["role"] = "admin"

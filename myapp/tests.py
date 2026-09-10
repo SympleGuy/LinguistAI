@@ -519,6 +519,27 @@ class AdminDashboardViewsTestCase(TestCase):
         res = self.client.post(login_url, data=json.dumps(payload), content_type="application/json")
         self.assertEqual(res.status_code, 401)
 
+    def test_unauthenticated_admin_can_login_successfully(self):
+        """Ensure an unauthenticated client can access /api/admin/auth/login/ and authenticate"""
+        from django.contrib.auth.hashers import make_password
+        admin_user = AppUser.objects.create(
+            username="testadmin2",
+            email="testadmin2@example.com",
+            password_hash=make_password("ValidPassword123!"),
+            role="admin",
+            created_at=timezone.now()
+        )
+        fresh_client = Client()
+        login_url = reverse("admin_api_login")
+        payload = {
+            "email": "testadmin2@example.com",
+            "password": "ValidPassword123!"
+        }
+        res = fresh_client.post(login_url, data=json.dumps(payload), content_type="application/json")
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.json()["status"], "success")
+        self.assertEqual(fresh_client.session.get("role"), "admin")
+
     def test_admin_dashboard_renders(self):
         res = self.client.get(reverse("admin_dashboard"))
         self.assertEqual(res.status_code, 200)
