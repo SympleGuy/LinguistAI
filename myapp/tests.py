@@ -705,5 +705,32 @@ class AIServicesSecurityTestCase(TestCase):
             self.assertEqual(called_headers.get("x-goog-api-key"), "test_gemini_key_12345")
 
 
+class AIServicesEmojiStrippingTestCase(TestCase):
+    def test_strip_emojis_removes_various_emojis(self):
+        """Verify strip_emojis removes emojis, emoticons, and symbols while keeping text intact"""
+        from myapp.ai_services import strip_emojis
 
+        sample_cases = [
+            ("Hello world! 😊🌟", "Hello world!"),
+            ("Bonjour! 🥐🥖 Comment ça va? 👍", "Bonjour! Comment ça va?"),
+            ("Xin chào bạn nhé! 👋🇻🇳 Rất vui được gặp bạn! 🎉", "Xin chào bạn nhé! Rất vui được gặp bạn!"),
+            ("Great job! 👏 Keep going! 🚀🔥", "Great job! Keep going!"),
+            ("No emojis here at all.", "No emojis here at all."),
+            ("  🎯 Multi-space   and emoji ✨ test 🎈  ", "Multi-space and emoji test"),
+        ]
+        for input_text, expected in sample_cases:
+            result = strip_emojis(input_text)
+            self.assertEqual(result, expected)
 
+    @patch("myapp.ai_services.urllib.request.urlopen")
+    def test_generate_tts_strips_emojis_before_generating(self, mock_urlopen):
+        """Verify generate_tts_elevenlabs strips emojis prior to speech generation"""
+        from myapp.ai_services import generate_tts_elevenlabs
+        mock_response = MagicMock()
+        mock_response.status = 200
+        mock_response.read.return_value = b"fake-audio-bytes-at-least-500-bytes" * 20
+        mock_urlopen.return_value.__enter__.return_value = mock_response
+
+        # Pure emojis string should return None because stripped text is empty
+        empty_res = generate_tts_elevenlabs("😊🎉✨")
+        self.assertIsNone(empty_res)

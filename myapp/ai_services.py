@@ -1,4 +1,5 @@
 import os
+import re
 import json
 import uuid
 import time
@@ -354,6 +355,31 @@ LANGUAGE_VOICE_MAP = {
     "Vietnamese": config("ELEVENLABS_VOICE_VI", default="JBFqnCBsd6RMkjVDRZzb"),
 }
 
+EMOJI_PATTERN = re.compile(
+    "["
+    "\U00010000-\U0010FFFF"  # Supplementary planes (emojis, pictographs, flags)
+    "\u200D"                 # Zero-width joiner
+    "\uFE0E-\uFE0F"          # Variation selectors
+    "\u2600-\u27BF"          # Miscellaneous symbols and dingbats
+    "\u2300-\u23FF"          # Miscellaneous technical
+    "\u2B50-\u2B55"          # Star and circle symbols
+    "]+",
+    flags=re.UNICODE,
+)
+
+
+def strip_emojis(text: str) -> str:
+    """
+    Remove Unicode emojis and decorative symbols from text,
+    collapsing spaces and preserving standard punctuation and accents.
+    """
+    if not text:
+        return ""
+    cleaned = EMOJI_PATTERN.sub("", text)
+    cleaned = re.sub(r"[ \t]+", " ", cleaned)
+    cleaned = re.sub(r"\s+([,.?!:;])", r"\1", cleaned)
+    return cleaned.strip()
+
 
 def generate_tts_elevenlabs(text, voice_id=None, target_language="English"):
     """
@@ -365,7 +391,10 @@ def generate_tts_elevenlabs(text, voice_id=None, target_language="English"):
     if not text or not text.strip():
         return None
 
-    clean_text = text.strip()
+    clean_text = strip_emojis(text)
+    if not clean_text:
+        return None
+
     tts_dir = Path(settings.MEDIA_ROOT) / "tts"
     tts_dir.mkdir(parents=True, exist_ok=True)
 

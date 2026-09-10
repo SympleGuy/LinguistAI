@@ -1919,7 +1919,90 @@ function escapeHTML(str) {
         playSpeechSynthesisFallback(voiceId, text, lang, speed);
       }
 
+      function stripEmojisForSpeech(text) {
+        if (!text) return "";
+        return text
+          .replace(
+            /[\p{Extended_Pictographic}\uFE0E\uFE0F\u200D\u2600-\u27BF\u2300-\u23FF\u2B50-\u2B55\uE000-\uF8FF]/gu,
+            ""
+          )
+          .replace(/\s+/g, " ")
+          .replace(/\s+([,.?!:;])/g, "$1")
+          .trim();
+      }
+
+      function selectFemaleVoice(voices, langShort, langCode) {
+        if (!voices || voices.length === 0) return null;
+
+        const langVoices = voices.filter(
+          (v) =>
+            v.lang.toLowerCase().startsWith(langShort.toLowerCase()) ||
+            v.lang.toLowerCase().startsWith(langCode.toLowerCase())
+        );
+        const pool = langVoices.length > 0 ? langVoices : voices;
+
+        const isMale = (v) => {
+          const n = (v.name || "").toLowerCase();
+          if (
+            n.includes("female") ||
+            n.includes("woman") ||
+            n.includes("girl") ||
+            n.includes("fém")
+          ) {
+            return false;
+          }
+          return (
+            /\b(male|david|guy|george|mark|richard|stefan|daniel|thomas|fred|oliver|arthur|alex)\b/i.test(n) ||
+            n.includes(" uk english male") ||
+            n.includes(" male")
+          );
+        };
+
+        const femalePool = pool.filter((v) => !isMale(v));
+        const searchList = femalePool.length > 0 ? femalePool : pool;
+
+        // 1. Highest priority: Google Female voices (Google UK English Female, Google US English, etc.)
+        const googleFemale = searchList.find((v) => {
+          const n = (v.name || "").toLowerCase();
+          return (
+            n.includes("google") &&
+            (n.includes("female") || n.includes("us english") || !isMale(v))
+          );
+        });
+        if (googleFemale) return googleFemale;
+
+        // 2. Premium Female voices (Microsoft / Apple / Natural)
+        const premiumFemale = searchList.find((v) => {
+          const n = (v.name || "").toLowerCase();
+          return (
+            n.includes("female") ||
+            n.includes("zira") ||
+            n.includes("jenny") ||
+            n.includes("samantha") ||
+            n.includes("aria") ||
+            n.includes("karen") ||
+            n.includes("victoria") ||
+            n.includes("moira") ||
+            n.includes("tessa") ||
+            (n.includes("natural") && !isMale(v))
+          );
+        });
+        if (premiumFemale) return premiumFemale;
+
+        // 3. Any non-male voice in language
+        if (femalePool.length > 0) return femalePool[0];
+
+        // Fallback
+        return pool[0];
+      }
+
       function playSpeechSynthesisFallback(voiceId, text, lang, speed = 1.0) {
+        const cleanSpeech = stripEmojisForSpeech(text);
+        if (!cleanSpeech) {
+          updateVoicePillUIState(voiceId, false);
+          return;
+        }
+
         const fullLangMap = {
           English: "en-US",
           French: "fr-FR",
@@ -1931,27 +2014,20 @@ function escapeHTML(str) {
           Vietnamese: "vi-VN",
         };
         const langCode = fullLangMap[lang] || "en-US";
-        const langShort = langCode.split('-')[0];
+        const langShort = langCode.split("-")[0];
 
         if (window.speechSynthesis) {
           const doSpeak = (voices) => {
             try {
               window.speechSynthesis.cancel();
-              const utter = new SpeechSynthesisUtterance(text);
+              const utter = new SpeechSynthesisUtterance(cleanSpeech);
               utter.lang = langCode;
               utter.rate = speed === 0.75 ? 0.75 : 1.0;
               activeSpeakingVoiceId = voiceId;
 
-              // Prefer premium voices: Google > Microsoft > Apple > default
-              const langVoices = voices.filter(v =>
-                v.lang.startsWith(langShort) || v.lang.startsWith(langCode)
-              );
-              const premiumVoice = langVoices.find(v =>
-                v.name.includes('Google') || v.name.includes('Microsoft') ||
-                v.name.includes('Samantha') || v.name.includes('Natural') ||
-                v.name.includes('Enhanced') || v.name.includes('Premium')
-              ) || langVoices[0];
-              if (premiumVoice) utter.voice = premiumVoice;
+              // Strictly prefer Female voices (Google Female > Premium Female > non-male)
+              const femaleVoice = selectFemaleVoice(voices, langShort, langCode);
+              if (femaleVoice) utter.voice = femaleVoice;
 
               utter.onstart = () => updateVoicePillUIState(voiceId, true);
               utter.onend = () => {
@@ -1960,7 +2036,7 @@ function escapeHTML(str) {
               };
               utter.onerror = () => {
                 activeSpeakingVoiceId = null;
-                playDirectStreamTTS(voiceId, text, langShort, speed);
+                playDirectStreamTTS(voiceId, cleanSpeech, langShort, speed);
               };
 
               updateVoicePillUIState(voiceId, true);
@@ -1978,30 +2054,35 @@ function escapeHTML(str) {
           } else {
             // Voices not yet loaded — wait for them
             const onVoicesChanged = () => {
-              window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+              window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
               const loadedVoices = window.speechSynthesis.getVoices();
               if (!doSpeak(loadedVoices)) {
-                playDirectStreamTTS(voiceId, text, langShort, speed);
+                playDirectStreamTTS(voiceId, cleanSpeech, langShort, speed);
               }
             };
-            window.speechSynthesis.addEventListener('voiceschanged', onVoicesChanged);
+            window.speechSynthesis.addEventListener("voiceschanged", onVoicesChanged);
             // Timeout fallback if voiceschanged never fires
             setTimeout(() => {
-              window.speechSynthesis.removeEventListener('voiceschanged', onVoicesChanged);
+              window.speechSynthesis.removeEventListener("voiceschanged", onVoicesChanged);
               if (activeSpeakingVoiceId !== voiceId) {
-                playDirectStreamTTS(voiceId, text, langShort, speed);
+                playDirectStreamTTS(voiceId, cleanSpeech, langShort, speed);
               }
             }, 1500);
             return;
           }
         }
 
-        playDirectStreamTTS(voiceId, text, langShort, speed);
+        playDirectStreamTTS(voiceId, cleanSpeech, langShort, speed);
       }
 
       function playDirectStreamTTS(voiceId, text, langCode, speed = 1.0) {
         try {
-          const streamUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent((text || "").substring(0, 200))}`;
+          const cleanSpeech = stripEmojisForSpeech(text);
+          if (!cleanSpeech) {
+            updateVoicePillUIState(voiceId, false);
+            return;
+          }
+          const streamUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${langCode}&client=tw-ob&q=${encodeURIComponent(cleanSpeech.substring(0, 200))}`;
           const audio = new Audio(streamUrl);
           activeVoiceAudioMap[voiceId] = audio;
           audio.playbackRate = speed;
@@ -2057,8 +2138,10 @@ function escapeHTML(str) {
       function speakAiResponse(text, langName) {
         if (!window.speechSynthesis) return;
         try {
+          const cleanSpeech = stripEmojisForSpeech(text);
+          if (!cleanSpeech) return;
           window.speechSynthesis.cancel();
-          const utter = new SpeechSynthesisUtterance(text);
+          const utter = new SpeechSynthesisUtterance(cleanSpeech);
           const langCodeMap = {
             English: "en-US",
             French: "fr-FR",
@@ -2069,8 +2152,13 @@ function escapeHTML(str) {
             Korean: "ko-KR",
             Vietnamese: "vi-VN",
           };
-          utter.lang = langCodeMap[langName] || "en-US";
+          const langCode = langCodeMap[langName] || "en-US";
+          const langShort = langCode.split("-")[0];
+          utter.lang = langCode;
           utter.rate = 0.95;
+          const voices = window.speechSynthesis.getVoices();
+          const femaleVoice = selectFemaleVoice(voices, langShort, langCode);
+          if (femaleVoice) utter.voice = femaleVoice;
           window.speechSynthesis.speak(utter);
         } catch (e) {
           console.warn("Speech synthesis error:", e);
