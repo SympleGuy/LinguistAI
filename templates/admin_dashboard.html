@@ -490,7 +490,7 @@
 
               <!-- Main Workspace: Left = Direct Master Prompt Editor, Right = Live AI Simulator -->
               <div class="row g-4">
-                <!-- Left: Master System Prompt Editor -->
+                <!-- Left: Master System Prompt & 4 Personas Editor -->
                 <div class="col-12 col-xl-7">
                   <div class="glass-card h-100 d-flex flex-column justify-content-between">
                     <div>
@@ -498,16 +498,41 @@
                         class="d-flex align-items-center justify-content-between mb-3 pb-2 border-bottom border-subtle">
                         <div class="d-flex align-items-center gap-2">
                           <i class="bi bi-cpu-fill text-primary"></i>
-                          <h3 class="h6 mb-0 fw-bold">Master System Prompt</h3>
+                          <h3 class="h6 mb-0 fw-bold" id="ftPromptCardTitle">Free Talk Persona & Prompt Studio</h3>
+                        </div>
+                        <span class="status-badge badge-lang" id="ftActivePersonaBadge">GLOBAL MASTER</span>
+                      </div>
+
+                      <!-- Persona Selection Pills / Tabs -->
+                      <div class="mb-3">
+                        <label class="form-label text-dim small fw-semibold">Select Persona to Configure</label>
+                        <div class="d-flex flex-wrap gap-2" id="ftPersonaTabs">
+                          <button type="button" class="btn btn-sm btn-subtle active" id="tab-persona-master" onclick="switchFreeTalkPersonaTab('master')">
+                            <i class="bi bi-globe me-1"></i>Master Prompt
+                          </button>
+                          <button type="button" class="btn btn-sm btn-subtle" id="tab-persona-friendly" onclick="switchFreeTalkPersonaTab('friendly')">
+                            <span>😊</span> Friendly Pal
+                          </button>
+                          <button type="button" class="btn btn-sm btn-subtle" id="tab-persona-career" onclick="switchFreeTalkPersonaTab('career')">
+                            <span>💼</span> Career Coach
+                          </button>
+                          <button type="button" class="btn btn-sm btn-subtle" id="tab-persona-debate" onclick="switchFreeTalkPersonaTab('debate')">
+                            <span>🧠</span> Debate Partner
+                          </button>
+                          <button type="button" class="btn btn-sm btn-subtle" id="tab-persona-strict" onclick="switchFreeTalkPersonaTab('strict')">
+                            <span>🎓</span> Strict Professor
+                          </button>
                         </div>
                       </div>
 
                       <div class="mb-3">
-                        <label class="form-label text-dim small fw-semibold">AI Master Persona Instructions</label>
-                        <textarea class="form-control form-control-custom font-mono" id="ftDirectPromptInput" rows="10"
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                          <label class="form-label text-dim small fw-semibold mb-0" id="ftPromptLabel">AI Master Global Instructions</label>
+                        </div>
+                        <textarea class="form-control form-control-custom font-mono" id="ftDirectPromptInput" rows="9"
                           style="font-size: 0.84rem; line-height: 1.6;"
-                          placeholder="You are an intelligent, empathetic, and highly versatile language tutor in Free Talk mode..."></textarea>
-                        <small class="text-dim mt-1 d-block" style="font-size: 0.75rem;">
+                          placeholder="Configure AI instructions for this persona..."></textarea>
+                        <small class="text-dim mt-1 d-block" id="ftPromptHint" style="font-size: 0.75rem;">
                           This prompt guides the AI for all unscripted student conversations across all languages.
                         </small>
                       </div>
@@ -518,7 +543,7 @@
                         <i class="bi bi-check2-circle text-success me-1"></i>Synchronized with database
                       </div>
                       <button class="btn btn-glow" id="btnSaveFreeTalkDirect" onclick="saveFreeTalkDirect()">
-                        <i class="bi bi-check-lg me-1"></i>Save Prompt Changes
+                        <i class="bi bi-check-lg me-1"></i>Save All Personas
                       </button>
                     </div>
                   </div>
@@ -537,7 +562,7 @@
                     </div>
 
                     <div class="row g-2 mb-3">
-                      <div class="col-6">
+                      <div class="col-4">
                         <label class="form-label text-dim small">Target Language</label>
                         <select class="form-select form-select-custom w-100" id="ftSimLang">
                           <option value="English">English</option>
@@ -550,12 +575,21 @@
                           <option value="Vietnamese">Vietnamese</option>
                         </select>
                       </div>
-                      <div class="col-6">
-                        <label class="form-label text-dim small">Proficiency Level</label>
+                      <div class="col-4">
+                        <label class="form-label text-dim small">CEFR Level</label>
                         <select class="form-select form-select-custom w-100" id="ftSimCefr">
                           <option value="Beginner">Beginner (A1-A2)</option>
                           <option value="Intermediate" selected>Intermediate (B1-B2)</option>
                           <option value="Advanced">Advanced (C1-C2)</option>
+                        </select>
+                      </div>
+                      <div class="col-4">
+                        <label class="form-label text-dim small">AI Persona</label>
+                        <select class="form-select form-select-custom w-100" id="ftSimPersona">
+                          <option value="friendly" selected>😊 Friendly</option>
+                          <option value="career">💼 Career</option>
+                          <option value="debate">🧠 Debate</option>
+                          <option value="strict">🎓 Strict</option>
                         </select>
                       </div>
                     </div>

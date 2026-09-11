@@ -921,6 +921,74 @@ document.addEventListener('DOMContentLoaded', () => {
         // ─────────────────────────────────────────────────────────────────
         // FREE TALK STUDIO CONTROLLER & DIRECT AI SIMULATOR
         // ─────────────────────────────────────────────────────────────────
+        let currentFreeTalkPersonaTab = 'master';
+        const freeTalkPersonasData = {
+          master: 'Free Talk Mode: You are a friendly, witty, and engaging conversational partner. Talk freely about any topic.',
+          friendly: 'AI Persona: Friendly Pal. Warm, relatable, humorous, and curious friend chatting casually about life, hobbies, and ideas.',
+          career: 'AI Persona: Career Coach & Professional Mentor. Maintain a polished, ambitious, and encouraging tone suitable for business, careers, and interviews.',
+          debate: 'AI Persona: Intellectual Debate Partner. Offer intriguing, polite counter-arguments and thought-provoking perspectives to encourage deep reasoning.',
+          strict: 'AI Persona: Academic Professor. Emphasize precise diction, eloquent expression, and grammatical elegance while being supportive.'
+        };
+
+        const PERSONA_CONFIG_META = {
+          master: {
+            label: 'AI Master Global Instructions',
+            badge: 'GLOBAL MASTER',
+            hint: 'This master guideline governs overall AI persona behavior, response length, and error handling for all unscripted student conversations.'
+          },
+          friendly: {
+            label: 'Friendly Pal Persona Prompt',
+            badge: '😊 FRIENDLY PAL',
+            hint: 'Configures the warm, approachable, empathetic casual friend persona.'
+          },
+          career: {
+            label: 'Career Coach Persona Prompt',
+            badge: '💼 CAREER COACH',
+            hint: 'Configures the ambitious, professional interview, networking, and workplace mentor persona.'
+          },
+          debate: {
+            label: 'Debate Partner Persona Prompt',
+            badge: '🧠 DEBATE PARTNER',
+            hint: 'Configures the intellectually stimulating, polite counter-argument debate persona.'
+          },
+          strict: {
+            label: 'Strict Professor Persona Prompt',
+            badge: '🎓 STRICT PROFESSOR',
+            hint: 'Configures the academic, linguistically precise grammar professor persona.'
+          }
+        };
+
+        function switchFreeTalkPersonaTab(tabKey) {
+          // 1. Sync current textarea input to in-memory store
+          const input = document.getElementById('ftDirectPromptInput');
+          if (input && currentFreeTalkPersonaTab) {
+            freeTalkPersonasData[currentFreeTalkPersonaTab] = input.value.trim();
+          }
+
+          currentFreeTalkPersonaTab = tabKey;
+
+          // 2. Update Tab Pills UI
+          document.querySelectorAll('#ftPersonaTabs button').forEach(b => b.classList.remove('active'));
+          const activeBtn = document.getElementById(`tab-persona-${tabKey}`);
+          if (activeBtn) activeBtn.classList.add('active');
+
+          // 3. Update Labels & Badges
+          const meta = PERSONA_CONFIG_META[tabKey] || PERSONA_CONFIG_META.master;
+          const labelEl = document.getElementById('ftPromptLabel');
+          const badgeEl = document.getElementById('ftActivePersonaBadge');
+          const hintEl = document.getElementById('ftPromptHint');
+
+          if (labelEl) labelEl.textContent = meta.label;
+          if (badgeEl) badgeEl.textContent = meta.badge;
+          if (hintEl) hintEl.textContent = meta.hint;
+
+          // 4. Update Textarea Value
+          if (input) {
+            input.value = freeTalkPersonasData[tabKey] || '';
+          }
+        }
+        window.switchFreeTalkPersonaTab = switchFreeTalkPersonaTab;
+
         async function loadFreeTalkData() {
           if (!allLoadedScenarios.length) {
             await loadScenariosData();
@@ -935,6 +1003,7 @@ document.addEventListener('DOMContentLoaded', () => {
             lang: 'English',
             description: 'Spontaneous unscripted conversational practice.',
             prompt: 'You are an intelligent, empathetic, and highly versatile language tutor in Free Talk mode. Engage the learner naturally without forcing any scripted scenario or storyline. Keep your answers concise, authentic, and culturally natural.',
+            personas: {},
             sessions_count: 0,
             avg_score: 0
           };
@@ -948,10 +1017,18 @@ document.addEventListener('DOMContentLoaded', () => {
           const idEl = document.getElementById('ftScenarioId');
           if (idEl) idEl.textContent = freeTalkScenarioObj.id || 27;
 
-          const promptInput = document.getElementById('ftDirectPromptInput');
-          if (promptInput) {
-            promptInput.value = freeTalkScenarioObj.prompt || '';
+          // Hydrate in-memory personas data from scenario object if present
+          if (freeTalkScenarioObj.prompt) {
+            freeTalkPersonasData.master = freeTalkScenarioObj.prompt;
           }
+          if (freeTalkScenarioObj.personas && typeof freeTalkScenarioObj.personas === 'object') {
+            if (freeTalkScenarioObj.personas.friendly) freeTalkPersonasData.friendly = freeTalkScenarioObj.personas.friendly;
+            if (freeTalkScenarioObj.personas.career) freeTalkPersonasData.career = freeTalkScenarioObj.personas.career;
+            if (freeTalkScenarioObj.personas.debate) freeTalkPersonasData.debate = freeTalkScenarioObj.personas.debate;
+            if (freeTalkScenarioObj.personas.strict) freeTalkPersonasData.strict = freeTalkScenarioObj.personas.strict;
+          }
+
+          switchFreeTalkPersonaTab('master');
 
           const saveStatus = document.getElementById('ftSaveStatusText');
           if (saveStatus) {
@@ -961,12 +1038,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function saveFreeTalkDirect() {
           const promptInput = document.getElementById('ftDirectPromptInput');
-          if (!promptInput) return;
-
-          const prompt = promptInput.value.trim();
-          if (!prompt) {
-            showToast('Prompt instructions cannot be empty', 'error');
-            return;
+          if (promptInput && currentFreeTalkPersonaTab) {
+            freeTalkPersonasData[currentFreeTalkPersonaTab] = promptInput.value.trim();
           }
 
           const btn = document.getElementById('btnSaveFreeTalkDirect');
@@ -987,7 +1060,13 @@ document.addEventListener('DOMContentLoaded', () => {
             cefr: 'Beginner',
             lang: 'English',
             description: freeTalkScenarioObj?.description || 'Spontaneous unscripted conversational practice.',
-            prompt: prompt
+            prompt: freeTalkPersonasData.master || 'Free Talk Mode: You are a friendly, witty, and engaging conversational partner. Talk freely about any topic.',
+            personas: {
+              friendly: freeTalkPersonasData.friendly,
+              career: freeTalkPersonasData.career,
+              debate: freeTalkPersonasData.debate,
+              strict: freeTalkPersonasData.strict
+            }
           };
 
           try {
@@ -1008,9 +1087,10 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             if (freeTalkScenarioObj) {
-              freeTalkScenarioObj.prompt = prompt;
+              freeTalkScenarioObj.prompt = payload.prompt;
+              freeTalkScenarioObj.personas = payload.personas;
             }
-            showToast('Free Talk prompt saved successfully!', 'success');
+            showToast('All Free Talk personas saved successfully!', 'success');
             if (saveStatus) {
               saveStatus.innerHTML = '<i class="bi bi-check2-circle text-success me-1"></i>Saved at ' + new Date().toLocaleTimeString();
             }
@@ -1022,13 +1102,18 @@ document.addEventListener('DOMContentLoaded', () => {
           } finally {
             if (btn) {
               btn.disabled = false;
-              btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Save Prompt Changes';
+              btn.innerHTML = '<i class="bi bi-check-lg me-1"></i>Save All Personas';
             }
           }
         }
 
         async function testFreeTalkDirect() {
-          const prompt = (document.getElementById('ftDirectPromptInput')?.value || '').trim() || 'You are a friendly conversation partner in Free Talk mode.';
+          const promptInput = document.getElementById('ftDirectPromptInput');
+          if (promptInput && currentFreeTalkPersonaTab) {
+            freeTalkPersonasData[currentFreeTalkPersonaTab] = promptInput.value.trim();
+          }
+
+          const selectedPersona = document.getElementById('ftSimPersona')?.value || 'friendly';
           const userMsg = (document.getElementById('ftSimInput')?.value || '').trim();
           const lang = document.getElementById('ftSimLang')?.value || 'English';
           const cefr = document.getElementById('ftSimCefr')?.value || 'Intermediate';
@@ -1041,23 +1126,32 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
           }
 
+          const personaPrompt = freeTalkPersonasData[selectedPersona] || freeTalkPersonasData.master;
+          const fullPromptToSend = `${freeTalkPersonasData.master}\n${personaPrompt}`;
+
           if (btn) btn.disabled = true;
           if (resultBox) {
-            resultBox.innerHTML = '<span class="spinner-border spinner-border-sm me-2 text-primary"></span>Generating AI response in <strong>' + lang + '</strong> (' + cefr + ')...';
+            resultBox.innerHTML = '<span class="spinner-border spinner-border-sm me-2 text-primary"></span>Simulating <strong>' + selectedPersona.toUpperCase() + '</strong> in <strong>' + lang + '</strong> (' + cefr + ')...';
           }
 
           try {
             const res = await fetch('/api/admin/scenarios/test-prompt/', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ prompt, user_message: userMsg, cefr, lang })
+              body: JSON.stringify({
+                prompt: fullPromptToSend,
+                persona: selectedPersona,
+                user_message: userMsg,
+                cefr,
+                lang
+              })
             });
             const data = await res.json();
             if (res.ok) {
               const fb = data.feedback || {};
               resultBox.innerHTML = `
                 <div class="d-flex align-items-center justify-content-between mb-2">
-                  <span class="text-primary fw-bold small"><i class="bi bi-robot me-1"></i>AI Persona (${data.target_language || lang}):</span>
+                  <span class="text-primary fw-bold small"><i class="bi bi-robot me-1"></i>AI Persona (${selectedPersona.toUpperCase()} • ${data.target_language || lang}):</span>
                   <span class="status-badge badge-lang">${data.target_language || lang} • ${data.cefr || cefr}</span>
                 </div>
                 <div class="p-2 rounded mb-2 text-main bg-dark bg-opacity-50 border border-subtle">

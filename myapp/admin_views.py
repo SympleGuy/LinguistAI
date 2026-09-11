@@ -757,6 +757,7 @@ class AdminScenariosApiView(AdminRequiredMixin, View):
             cefr = "Beginner"
             lang = "English"
             prompt_text = s.system_prompt or ""
+            personas = {}
 
             if prompt_text.startswith('{'):
                 try:
@@ -766,6 +767,7 @@ class AdminScenariosApiView(AdminRequiredMixin, View):
                     cefr = parsed.get("cefr", "Beginner")
                     lang = parsed.get("lang", "English")
                     prompt_text = parsed.get("prompt", prompt_text)
+                    personas = parsed.get("personas", {})
                 except Exception:
                     pass
 
@@ -777,6 +779,7 @@ class AdminScenariosApiView(AdminRequiredMixin, View):
                 "cefr": cefr,
                 "lang": lang,
                 "prompt": prompt_text,
+                "personas": personas,
                 "description": getattr(s, 'description', '') or s.title,
                 "video_url": s.video_url,
                 "sessions_count": sessions_count,
@@ -806,6 +809,8 @@ class AdminScenariosApiView(AdminRequiredMixin, View):
             "description": data.get('description', ''),
             "prompt": data.get('prompt', 'You are a helpful conversation partner.')
         }
+        if 'personas' in data:
+            prompt_payload['personas'] = data['personas']
 
         scenario = Scenario.objects.create(
             title=title,
@@ -860,6 +865,8 @@ class AdminScenarioDetailApiView(AdminRequiredMixin, View):
             "description": data.get('description', ''),
             "prompt": data.get('prompt', '')
         }
+        if 'personas' in data:
+            prompt_payload['personas'] = data['personas']
 
         scenario.system_prompt = json.dumps(prompt_payload)
         if 'video_url' in data:
@@ -901,12 +908,17 @@ class AdminScenarioTestPromptApiView(AdminRequiredMixin, View):
         user_message = data.get('user_message', 'Hello! Can we practice conversation?').strip()
         cefr = data.get('cefr', 'Beginner')
         lang = data.get('lang', 'English')
+        persona = data.get('persona', '').strip()
+
+        test_scenario_prompt = prompt
+        if persona:
+            test_scenario_prompt = f"{prompt}\n[Free Talk] [Persona: {persona}]"
 
         history = [{"role": "user", "content": user_message}]
 
         try:
             ai_reply = generate_ai_conversation_response(
-                scenario_prompt=prompt,
+                scenario_prompt=test_scenario_prompt,
                 user_level=cefr,
                 target_language=lang,
                 context_history=history,

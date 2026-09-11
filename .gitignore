@@ -69,3 +69,9 @@ AGENTS.md
 agents.md
 GEMINI.md
 gemini.md
+
+# Database exports & backups
+exports/
+*.dump
+*.backup
+

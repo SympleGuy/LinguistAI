@@ -660,6 +660,62 @@ class AdminDashboardViewsTestCase(TestCase):
         self.assertEqual(res_del.status_code, 200)
         self.assertFalse(Scenario.objects.filter(id=sc_id).exists())
 
+    @patch("myapp.admin_views.generate_ai_conversation_response")
+    @patch("myapp.admin_views.generate_grammar_and_feedback")
+    def test_admin_free_talk_personas_crud_and_test_prompt(self, mock_feedback, mock_ai_reply):
+        mock_ai_reply.return_value = "As your career coach, let's prepare for your job interview."
+        mock_feedback.return_value = {
+            "grammar_score": 95,
+            "pronunciation_score": 90,
+            "vocabulary_score": 92,
+            "comments": "Great phrasing!",
+            "corrections": [],
+            "suggestions": []
+        }
+
+        # 1. Update scenario with custom personas
+        personas_payload = {
+            "friendly": "Friendly persona custom prompt.",
+            "career": "Career coach custom prompt.",
+            "debate": "Debate partner custom prompt.",
+            "strict": "Strict professor custom prompt."
+        }
+        res_update = self.client.put(
+            reverse("admin_scenario_detail", kwargs={"scenario_id": self.scenario.id}),
+            data=json.dumps({
+                "title": "Free Talk Studio",
+                "prompt": "Master prompt instructions.",
+                "personas": personas_payload
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(res_update.status_code, 200)
+
+        # 2. Verify personas persisted in scenarios list API
+        res_list = self.client.get(reverse("admin_scenarios"))
+        self.assertEqual(res_list.status_code, 200)
+        scenario_data = next((s for s in res_list.json()["scenarios"] if s["id"] == self.scenario.id), None)
+        self.assertIsNotNone(scenario_data)
+        self.assertEqual(scenario_data.get("personas", {}).get("career"), "Career coach custom prompt.")
+
+        # 3. Test prompt API with persona parameter
+        res_test = self.client.post(
+            reverse("admin_scenario_test_prompt"),
+            data=json.dumps({
+                "prompt": "Master prompt",
+                "persona": "career",
+                "user_message": "How should I answer tell me about yourself?",
+                "cefr": "Intermediate",
+                "lang": "English"
+            }),
+            content_type="application/json"
+        )
+        self.assertEqual(res_test.status_code, 200)
+        self.assertIn("ai_reply", res_test.json())
+        self.assertEqual(mock_ai_reply.call_count, 1)
+        called_kwargs = mock_ai_reply.call_args[1]
+        self.assertIn("career", called_kwargs["scenario_prompt"].lower())
+
     def test_admin_sessions_and_inspector(self):
         # List sessions
         res = self.client.get(reverse("admin_sessions"))

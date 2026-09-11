@@ -189,15 +189,25 @@ def generate_ai_conversation_response(scenario_prompt, user_level="Beginner", ta
     is_free_talk = any(k in (scenario_prompt or "").lower() for k in ["free talk", "open conversation", "free conversation", "casual chat", "open talk"])
 
     if is_free_talk:
+        custom_personas = {}
+        if scenario_prompt and "{" in scenario_prompt:
+            try:
+                raw_json = scenario_prompt.split(" [Persona:")[0].strip()
+                parsed_prompt = json.loads(raw_json)
+                if isinstance(parsed_prompt, dict) and "personas" in parsed_prompt:
+                    custom_personas = parsed_prompt.get("personas") or {}
+            except Exception:
+                pass
+
         lower_prompt = (scenario_prompt or "").lower()
         if "career" in lower_prompt:
-            persona_desc = "AI Persona: Career Coach & Professional Mentor. Maintain a polished, ambitious, and encouraging tone suitable for business, careers, and interviews."
+            persona_desc = custom_personas.get("career") or "AI Persona: Career Coach & Professional Mentor. Maintain a polished, ambitious, and encouraging tone suitable for business, careers, and interviews."
         elif "debate" in lower_prompt:
-            persona_desc = "AI Persona: Intellectual Debate Partner. Offer intriguing, polite counter-arguments and thought-provoking perspectives to encourage deep reasoning."
+            persona_desc = custom_personas.get("debate") or "AI Persona: Intellectual Debate Partner. Offer intriguing, polite counter-arguments and thought-provoking perspectives to encourage deep reasoning."
         elif "strict" in lower_prompt:
-            persona_desc = "AI Persona: Academic Professor. Emphasize precise diction, eloquent expression, and grammatical elegance while being supportive."
+            persona_desc = custom_personas.get("strict") or "AI Persona: Academic Professor. Emphasize precise diction, eloquent expression, and grammatical elegance while being supportive."
         else:
-            persona_desc = "AI Persona: Friendly Pal. Warm, relatable, humorous, and curious friend chatting casually about life, hobbies, and ideas."
+            persona_desc = custom_personas.get("friendly") or "AI Persona: Friendly Pal. Warm, relatable, humorous, and curious friend chatting casually about life, hobbies, and ideas."
 
         system_instruction = (
             f"You are an AI conversation partner and language tutor helping a student practice speaking {target_language}. "
